@@ -72,7 +72,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 }
 .btn:active { transform: translateY(1px); }
 .btn-primary { background: var(--tp-grad-brand); color: #fff; box-shadow: var(--tp-shadow-brand); }
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(0, 138, 73, .38); color: #fff; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(27, 39, 180, .38); color: #fff; }
 .btn-ghost { background: #fff; color: var(--tp-green-700); border-color: var(--tp-line); }
 .btn-ghost:hover { border-color: var(--tp-green-300); color: var(--tp-green-700); transform: translateY(-2px); }
 .btn-dark { background: var(--tp-blue-900); color: #fff; }
@@ -128,8 +128,8 @@ ul { margin: 0; padding: 0; list-style: none; }
 .hero::before {
   content: ""; position: absolute; inset: 0;
   background:
-    radial-gradient(900px 460px at 88% -8%, rgba(0,168,89,.14), transparent 60%),
-    radial-gradient(680px 400px at -6% 12%, rgba(89,179,230,.13), transparent 60%);
+    radial-gradient(900px 460px at 88% -8%, rgba(20,194,173,.16), transparent 60%),
+    radial-gradient(680px 400px at -6% 12%, rgba(37,54,207,.14), transparent 60%);
   pointer-events: none;
 }
 .hero-grid { position: relative; display: grid; grid-template-columns: 1.05fr .95fr; gap: 56px; align-items: center; }
@@ -193,12 +193,12 @@ ul { margin: 0; padding: 0; list-style: none; }
 .cta-band p { color: rgba(255,255,255,.8); }
 
 /* ---------- Footer ---------- */
-.footer { background: #07271a; color: #c8d8cf; padding: var(--tp-space-7) 0 var(--tp-space-5); margin-top: var(--tp-space-8); }
-.footer a { color: #c8d8cf; font-size: var(--tp-fs-sm); }
+.footer { background: #081042; color: #c3ccea; padding: var(--tp-space-7) 0 var(--tp-space-5); margin-top: var(--tp-space-8); }
+.footer a { color: #c3ccea; font-size: var(--tp-fs-sm); }
 .footer a:hover { color: #fff; }
 .footer h4 { color: #fff; font-size: var(--tp-fs-sm); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 16px; }
 .footer-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 32px; }
-.footer-bottom { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.1); font-size: var(--tp-fs-sm); color: #8fae9f; }
+.footer-bottom { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.1); font-size: var(--tp-fs-sm); color: #8c97c0; }
 
 /* ---------- Utilidades ---------- */
 .stack > * + * { margin-top: 16px; }

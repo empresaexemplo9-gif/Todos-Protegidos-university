@@ -8,7 +8,7 @@ body.dash { background: var(--tp-bg); }
 
 /* ---------- Sidebar ---------- */
 .sidebar {
-  background: #07271a; color: #c8d8cf;
+  background: #081042; color: #c8d8cf;
   padding: 22px 18px; position: sticky; top: 0; height: 100vh;
   display: flex; flex-direction: column; gap: 8px;
 }
@@ -25,7 +25,7 @@ body.dash { background: var(--tp-bg); }
 .side-link:hover { background: rgba(255,255,255,.07); color: #fff; }
 .side-link.active { background: var(--tp-grad-brand); color: #fff; box-shadow: var(--tp-shadow-brand); }
 .side-link.active svg { opacity: 1; }
-.side-badge { margin-left: auto; background: var(--tp-amber-400); color: #07271a; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
+.side-badge { margin-left: auto; background: var(--tp-amber-400); color: #081042; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
 .side-foot { margin-top: auto; }
 .side-card { background: rgba(255,255,255,.06); border-radius: var(--tp-radius); padding: 16px; }
 .side-card .lbl { font-size: var(--tp-fs-xs); color: #9bbbab; }
@@ -96,7 +96,7 @@ body.dash { background: var(--tp-bg); }
 .track-item:hover { border-color: var(--tp-green-300); box-shadow: var(--tp-shadow-sm); }
 .track-step { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-family: var(--tp-font-sans); flex: none; }
 .track-step.done { background: var(--tp-green-500); color: #fff; }
-.track-step.current { background: var(--tp-amber-400); color: #07271a; }
+.track-step.current { background: var(--tp-amber-400); color: #081042; }
 .track-step.locked { background: var(--tp-bg-alt); color: var(--tp-muted); }
 .track-body { flex: 1; min-width: 0; }
 .track-body .t { font-weight: 600; font-family: var(--tp-font-sans); }

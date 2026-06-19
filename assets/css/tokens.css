@@ -1,52 +1,63 @@
 /* ============================================================
    TODOS PROTEGIDOS — Design Tokens
    Academia do Consultor de Proteção Veicular.
-   Verde como cor principal + azul escuro/claro de apoio.
+   Identidade oficial: AZUL ROYAL (cor principal) + TURQUESA (acento).
    ============================================================ */
 
 :root {
-  /* ---------- Marca / Verde (cor principal) ---------- */
-  --tp-green-50:  #e9f9f0;
-  --tp-green-100: #c9f0da;
-  --tp-green-200: #97e3ba;
-  --tp-green-300: #5fd394;
-  --tp-green-400: #2bbd6f;
-  --tp-green-500: #00a859;  /* verde vibrante / efervescente */
-  --tp-green-600: #008a49;
-  --tp-green-700: #00813f;  /* verde profundo (primário) */
-  --tp-green-800: #066333;
-  --tp-green-900: #064d2a;
+  /* ---------- Azul Royal (cor principal da marca) ---------- */
+  --tp-blue-50:   #eef1ff;
+  --tp-blue-100:  #dbe1ff;
+  --tp-blue-200:  #b7c2ff;
+  --tp-blue-300:  #7d8cf2;
+  --tp-blue-400:  #4a5ce6;
+  --tp-blue-500:  #2536cf;  /* azul royal (header / hero) */
+  --tp-blue-600:  #1b27b4;
+  --tp-blue-700:  #141c93;  /* azul profundo */
+  --tp-blue-900:  #0a1252;  /* azul-marinho (fundos escuros) */
 
-  /* ---------- Azul (apoio — figuras do logo) ---------- */
-  --tp-blue-50:   #e8f3fb;
-  --tp-blue-300:  #59b3e6;  /* azul claro */
-  --tp-blue-500:  #1e6fb8;
-  --tp-blue-700:  #123a63;
-  --tp-blue-900:  #0b2a4a;  /* azul escuro */
+  /* ---------- Turquesa (acento oficial / CTA / destaques) ----------
+     Mantém os nomes --tp-green-* por compatibilidade com o código
+     existente, porém agora representam o turquesa da marca.        */
+  --tp-green-50:  #e7faf7;
+  --tp-green-100: #c6f3ec;
+  --tp-green-200: #97e9df;
+  --tp-green-300: #5fdccd;
+  --tp-green-400: #2fcfba;
+  --tp-green-500: #14c2ad;  /* turquesa vibrante ("menor preço") */
+  --tp-green-600: #0ba596;
+  --tp-green-700: #0a877a;  /* turquesa profundo (texto / links) */
+  --tp-green-800: #0a6c62;
+  --tp-green-900: #0a554e;
 
-  /* ---------- Acento quente (energia / CTA / badges) ---------- */
+  /* Aliases semânticos (uso recomendado em código novo) */
+  --tp-teal-500:  var(--tp-green-500);
+  --tp-teal-700:  var(--tp-green-700);
+  --tp-royal:     var(--tp-blue-500);
+
+  /* ---------- Acento quente (energia / badges) ---------- */
   --tp-amber-400: #ffc23c;
   --tp-amber-500: #ff9f1c;
 
   /* ---------- Estado ---------- */
-  --tp-success: #00a859;
+  --tp-success: #14c2ad;
   --tp-warning: #ff9f1c;
   --tp-danger:  #e23b3b;
-  --tp-info:    #1e6fb8;
+  --tp-info:    #2536cf;
 
-  /* ---------- Neutros ---------- */
-  --tp-ink:     #11211a;  /* texto principal (verde-escuro neutro) */
-  --tp-slate:   #4a5a52;  /* texto secundário */
-  --tp-muted:   #80948b;  /* texto auxiliar */
-  --tp-muted-2: #93a39b;
-  --tp-line:    #e4ebe7;  /* bordas */
+  /* ---------- Neutros (cool / azul-tintados) ---------- */
+  --tp-ink:     #0e1726;  /* texto principal (azul-marinho neutro) */
+  --tp-slate:   #44506b;  /* texto secundário */
+  --tp-muted:   #7c879c;  /* texto auxiliar */
+  --tp-muted-2: #98a2b6;
+  --tp-line:    #e3e8f2;  /* bordas */
   --tp-surface: #ffffff;
-  --tp-bg:      #f4f8f5;  /* fundo geral (verde-claríssimo) */
-  --tp-bg-alt:  #eef4f0;
+  --tp-bg:      #f3f6fc;  /* fundo geral (azul-claríssimo) */
+  --tp-bg-alt:  #eaf0fb;
 
   /* ---------- Gradientes da marca ---------- */
-  --tp-grad-brand: linear-gradient(135deg, var(--tp-green-500) 0%, var(--tp-green-700) 100%);
-  --tp-grad-deep:  linear-gradient(150deg, var(--tp-green-700) 0%, var(--tp-blue-900) 130%);
+  --tp-grad-brand: linear-gradient(135deg, var(--tp-blue-500) 0%, var(--tp-green-500) 100%);
+  --tp-grad-deep:  linear-gradient(150deg, var(--tp-blue-700) 0%, var(--tp-blue-900) 130%);
   --tp-grad-fresh: linear-gradient(135deg, var(--tp-green-300) 0%, var(--tp-green-600) 100%);
 
   /* ---------- Tipografia ---------- */
@@ -85,12 +96,12 @@
   --tp-space-7: 48px;
   --tp-space-8: 64px;
 
-  --tp-shadow-sm: 0 1px 2px rgba(6, 77, 42, .06), 0 1px 3px rgba(6, 77, 42, .08);
-  --tp-shadow:    0 8px 24px rgba(6, 77, 42, .08), 0 2px 6px rgba(6, 77, 42, .06);
-  --tp-shadow-lg: 0 22px 48px rgba(6, 77, 42, .14);
-  --tp-shadow-brand: 0 14px 34px rgba(0, 138, 73, .30);
+  --tp-shadow-sm: 0 1px 2px rgba(10, 18, 70, .06), 0 1px 3px rgba(10, 18, 70, .08);
+  --tp-shadow:    0 8px 24px rgba(10, 18, 70, .08), 0 2px 6px rgba(10, 18, 70, .06);
+  --tp-shadow-lg: 0 22px 48px rgba(10, 18, 70, .16);
+  --tp-shadow-brand: 0 14px 34px rgba(27, 39, 180, .30);
 
-  --tp-ring: 0 0 0 4px rgba(0, 168, 89, .22);
+  --tp-ring: 0 0 0 4px rgba(20, 194, 173, .28);
 
   --tp-container: 1180px;
   --tp-transition: 180ms cubic-bezier(.4, 0, .2, 1);

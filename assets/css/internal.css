@@ -102,7 +102,7 @@
 .lesson.active { background: var(--tp-green-50); }
 .lesson .ic { width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center; }
 .lesson .ic.done { background: var(--tp-green-500); color: #fff; }
-.lesson .ic.now { background: var(--tp-amber-400); color: #07271a; }
+.lesson .ic.now { background: var(--tp-amber-400); color: #081042; }
 .lesson .ic.next { background: var(--tp-bg-alt); color: var(--tp-muted); }
 .lesson .t { flex: 1; font-size: var(--tp-fs-sm); font-weight: 600; }
 .lesson .t small { display: block; font-weight: 400; color: var(--tp-muted); }
@@ -234,7 +234,7 @@
   box-shadow: var(--tp-shadow-lg);
 }
 .cert::before { content: ""; position: absolute; inset: 10px; border: 1.5px solid var(--tp-green-200); border-radius: var(--tp-radius); pointer-events: none; }
-.cert::after { content: ""; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, rgba(0,168,89,.12), transparent 70%); }
+.cert::after { content: ""; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, rgba(20,194,173,.14), transparent 70%); }
 .cert .seal { width: 84px; height: 84px; margin: 0 auto 18px; border-radius: 50%; background: var(--tp-grad-brand); display: grid; place-items: center; box-shadow: var(--tp-shadow-brand); position: relative; z-index: 1; }
 .cert .eyebrow2 { font-family: var(--tp-font-sans); font-weight: 700; letter-spacing: .18em; text-transform: uppercase; font-size: var(--tp-fs-xs); color: var(--tp-green-700); }
 .cert h2 { font-size: var(--tp-fs-3xl); margin: 6px 0 18px; position: relative; z-index: 1; }
