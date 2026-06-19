@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Conteúdo — Todos Protegidos</title>
+  <meta name="description" content="Gestão de conteúdo do treinamento: adicione informações e vídeos para cada nível, do novato ao pro.">
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/internal.css">
+</head>
+<body class="dash">
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-brand"><a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="Todos Protegidos"></a></div>
+      <a class="side-link" href="dashboard.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Visão geral
+      </a>
+      <a class="side-link" href="aula.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13.5"/><path d="M4 19.5 12 16l8 3.5"/><path d="M9 8h6M9 12h6"/></svg>
+        Trilha de treinamento
+      </a>
+      <a class="side-link" href="dashboard.html#vendas">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Minhas vendas
+      </a>
+
+      <div class="side-label">Operação</div>
+      <a class="side-link" href="protocolos.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>
+        Padrões & protocolos
+      </a>
+      <a class="side-link" href="scripts.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/><path d="M8 9h8M8 13h5"/></svg>
+        Biblioteca de scripts
+      </a>
+      <a class="side-link active" href="gestao.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Gestão de conteúdo
+      </a>
+
+      <div class="side-foot">
+        <div class="side-card">
+          <div class="lbl">Perfil</div>
+          <div style="color:#fff;font-weight:700;font-family:var(--tp-font-sans);margin:2px 0 4px">Gestor de treinamento</div>
+          <div class="lbl">Você pode editar a trilha</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <header class="topbar">
+        <div>
+          <h1>Gestão de conteúdo</h1>
+          <p class="sub">Adicione informações e vídeos para cada nível, do novato ao pro</p>
+        </div>
+        <div class="user-chip" style="margin-left:auto"><div class="avatar">RA</div><div><div class="nm">Rafael Almeida</div><div class="rl">Gestor de treinamento</div></div></div>
+      </header>
+
+      <main class="content">
+        <div class="page-head">
+          <div>
+            <div class="crumb"><a href="dashboard.html">Visão geral</a> · Gestão de conteúdo</div>
+            <h2 style="margin:0">Trilha de formação — conteúdo por nível</h2>
+            <p class="mb-0 muted">Clique em um nível para expandir. Use os botões para adicionar vídeos, informações ou materiais.</p>
+          </div>
+          <span class="badge badge-dot">4 níveis · do novato ao pro</span>
+        </div>
+
+        <!-- NÍVEL 1 -->
+        <section class="level-card open" data-level>
+          <div class="level-head" data-toggle>
+            <div class="level-tag" style="background:var(--tp-grad-brand)">N1</div>
+            <div><h3>Nível 1 · Novato</h3><div class="d">Fundamentos da proteção veicular e cultura da empresa</div></div>
+            <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+          <div class="level-body">
+            <div class="content-list" data-list>
+              <div class="content-item"><span class="ci-ic video"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg></span><div class="ci-body"><div class="t">Vídeo · Boas-vindas e cultura Todos Protegidos</div><div class="d">Vídeo · 08:00</div></div><button class="ci-del" data-del aria-label="Remover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></div>
+              <div class="content-item"><span class="ci-ic info"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span><div class="ci-body"><div class="t">Informação · Benefícios (assistência 24h, FIPE, carro e moto)</div><div class="d">Texto de apoio</div></div><button class="ci-del" data-del aria-label="Remover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></div>
+            </div>
+            <div class="add-toolbar">
+              <button class="btn btn-ghost btn-sm" data-add="video">+ Vídeo</button>
+              <button class="btn btn-ghost btn-sm" data-add="info">+ Informação</button>
+              <button class="btn btn-ghost btn-sm" data-add="file">+ Material</button>
+            </div>
+            <form class="add-form" data-form>
+              <div class="field"><label data-label>Título</label><input class="input" data-f="title" placeholder="Ex.: Aula 1 — Fundamentos" required></div>
+              <div class="field-row">
+                <div class="field" data-url><label data-url-label>URL do vídeo</label><input class="input" data-f="url" placeholder="https://..."></div>
+                <div class="field"><label>Duração / referência</label><input class="input" data-f="meta" placeholder="Ex.: 10:00"></div>
+              </div>
+              <div class="field"><label>Descrição (opcional)</label><textarea data-f="desc" placeholder="Resumo do conteúdo..."></textarea></div>
+              <div class="form-actions"><button type="submit" class="btn btn-primary btn-sm">Adicionar ao nível</button><button type="button" class="btn btn-ghost btn-sm" data-cancel>Cancelar</button></div>
+            </form>
+          </div>
+        </section>
+
+        <!-- NÍVEL 2 -->
+        <section class="level-card" data-level>
+          <div class="level-head" data-toggle>
+            <div class="level-tag" style="background:linear-gradient(135deg,var(--tp-blue-500),var(--tp-blue-900))">N2</div>
+            <div><h3>Nível 2 · Intermediário</h3><div class="d">Padrão de atendimento e abordagem</div></div>
+            <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+          <div class="level-body">
+            <div class="content-list" data-list>
+              <div class="content-item"><span class="ci-ic video"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg></span><div class="ci-body"><div class="t">Aula · Abordagem: formas e técnicas</div><div class="d">Aula com 5 modelos de abordagem</div></div><button class="ci-del" data-del aria-label="Remover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></div>
+              <div class="content-item"><span class="ci-ic info"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span><div class="ci-body"><div class="t">Informação · Passo a passo da negociação (7 etapas)</div><div class="d">Texto de apoio</div></div><button class="ci-del" data-del aria-label="Remover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></div>
+            </div>
+            <div class="add-toolbar">
+              <button class="btn btn-ghost btn-sm" data-add="video">+ Vídeo</button>
+              <button class="btn btn-ghost btn-sm" data-add="info">+ Informação</button>
+              <button class="btn btn-ghost btn-sm" data-add="file">+ Material</button>
+            </div>
+            <form class="add-form" data-form>
+              <div class="field"><label data-label>Título</label><input class="input" data-f="title" placeholder="Ex.: Aula — Sondagem do cliente" required></div>
+              <div class="field-row">
+                <div class="field" data-url><label data-url-label>URL do vídeo</label><input class="input" data-f="url" placeholder="https://..."></div>
+                <div class="field"><label>Duração / referência</label><input class="input" data-f="meta" placeholder="Ex.: 10:00"></div>
+              </div>
+              <div class="field"><label>Descrição (opcional)</label><textarea data-f="desc" placeholder="Resumo do conteúdo..."></textarea></div>
+              <div class="form-actions"><button type="submit" class="btn btn-primary btn-sm">Adicionar ao nível</button><button type="button" class="btn btn-ghost btn-sm" data-cancel>Cancelar</button></div>
+            </form>
+          </div>
+        </section>
+
+        <!-- NÍVEL 3 -->
+        <section class="level-card" data-level>
+          <div class="level-head" data-toggle>
+            <div class="level-tag" style="background:linear-gradient(135deg,var(--tp-amber-400),var(--tp-amber-500))">N3</div>
+            <div><h3>Nível 3 · Avançado</h3><div class="d">Protocolos de venda, vistoria e objeções</div></div>
+            <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+          <div class="level-body">
+            <div class="content-list" data-list>
+              <div class="content-item"><span class="ci-ic info"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span><div class="ci-body"><div class="t">Informação · Contorno de 10 objeções</div><div class="d">Biblioteca de scripts</div></div><button class="ci-del" data-del aria-label="Remover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></div>
+              <div class="content-item"><span class="ci-ic file"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></span><div class="ci-body"><div class="t">Material · Checklist de vistoria (app Visto)</div><div class="d">PDF · documentos em JPG</div></div><button class="ci-del" data-del aria-label="Remover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></div>
+            </div>
+            <div class="add-toolbar">
+              <button class="btn btn-ghost btn-sm" data-add="video">+ Vídeo</button>
+              <button class="btn btn-ghost btn-sm" data-add="info">+ Informação</button>
+              <button class="btn btn-ghost btn-sm" data-add="file">+ Material</button>
+            </div>
+            <form class="add-form" data-form>
+              <div class="field"><label data-label>Título</label><input class="input" data-f="title" placeholder="Ex.: Protocolo de fechamento" required></div>
+              <div class="field-row">
+                <div class="field" data-url><label data-url-label>URL do vídeo</label><input class="input" data-f="url" placeholder="https://..."></div>
+                <div class="field"><label>Duração / referência</label><input class="input" data-f="meta" placeholder="Ex.: 10:00"></div>
+              </div>
+              <div class="field"><label>Descrição (opcional)</label><textarea data-f="desc" placeholder="Resumo do conteúdo..."></textarea></div>
+              <div class="form-actions"><button type="submit" class="btn btn-primary btn-sm">Adicionar ao nível</button><button type="button" class="btn btn-ghost btn-sm" data-cancel>Cancelar</button></div>
+            </form>
+          </div>
+        </section>
+
+        <!-- NÍVEL 4 -->
+        <section class="level-card" data-level>
+          <div class="level-head" data-toggle>
+            <div class="level-tag" style="background:linear-gradient(135deg,var(--tp-green-700),var(--tp-blue-900))">N4</div>
+            <div><h3>Nível 4 · Pro</h3><div class="d">Gestão de carteira, pós-venda e mentoria</div></div>
+            <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+          <div class="level-body">
+            <div class="content-list" data-list>
+              <div class="content-item"><span class="ci-ic info"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span><div class="ci-body"><div class="t">Informação · Reativação de inadimplentes</div><div class="d">Scripts de voz e WhatsApp</div></div><button class="ci-del" data-del aria-label="Remover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></div>
+              <div class="content-item"><span class="ci-ic file"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></span><div class="ci-body"><div class="t">Material · Power CRM</div><div class="d">Gestão da carteira</div></div><button class="ci-del" data-del aria-label="Remover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></div>
+            </div>
+            <div class="add-toolbar">
+              <button class="btn btn-ghost btn-sm" data-add="video">+ Vídeo</button>
+              <button class="btn btn-ghost btn-sm" data-add="info">+ Informação</button>
+              <button class="btn btn-ghost btn-sm" data-add="file">+ Material</button>
+            </div>
+            <form class="add-form" data-form>
+              <div class="field"><label data-label>Título</label><input class="input" data-f="title" placeholder="Ex.: Mentoria de novos consultores" required></div>
+              <div class="field-row">
+                <div class="field" data-url><label data-url-label>URL do vídeo</label><input class="input" data-f="url" placeholder="https://..."></div>
+                <div class="field"><label>Duração / referência</label><input class="input" data-f="meta" placeholder="Ex.: 10:00"></div>
+              </div>
+              <div class="field"><label>Descrição (opcional)</label><textarea data-f="desc" placeholder="Resumo do conteúdo..."></textarea></div>
+              <div class="form-actions"><button type="submit" class="btn btn-primary btn-sm">Adicionar ao nível</button><button type="button" class="btn btn-ghost btn-sm" data-cancel>Cancelar</button></div>
+            </form>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

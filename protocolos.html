@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Padrões & Protocolos — Todos Protegidos</title>
+  <meta name="description" content="Manual de padrões e protocolos do consultor de proteção veicular: cotação, vistoria, fechamento e pós-venda.">
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/internal.css">
+</head>
+<body class="dash">
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-brand"><a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="Todos Protegidos"></a></div>
+      <a class="side-link" href="dashboard.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Visão geral
+      </a>
+      <a class="side-link" href="aula.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13.5"/><path d="M4 19.5 12 16l8 3.5"/><path d="M9 8h6M9 12h6"/></svg>
+        Trilha de treinamento
+      </a>
+      <a class="side-link" href="dashboard.html#vendas">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Minhas vendas
+      </a>
+      <a class="side-link" href="#">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg>
+        Meus clientes
+      </a>
+
+      <div class="side-label">Operação</div>
+      <a class="side-link active" href="protocolos.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>
+        Padrões & protocolos
+      </a>
+      <a class="side-link" href="scripts.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/><path d="M8 9h8M8 13h5"/></svg>
+        Biblioteca de scripts
+      </a>
+      <a class="side-link" href="gestao.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Gestão de conteúdo
+      </a>
+
+      <div class="side-label">Carreira</div>
+      <a class="side-link" href="#">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M6 3h12v6a6 6 0 0 1-12 0Z"/><path d="M9 21h6M12 17v4"/></svg>
+        Ranking & metas
+      </a>
+      <a class="side-link" href="#">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M9 13.8 8 22l4-2.5L16 22l-1-8.2"/></svg>
+        Certificações
+      </a>
+
+      <div class="side-foot">
+        <div class="side-card">
+          <div class="lbl">Conformidade</div>
+          <div style="color:#fff;font-weight:700;font-family:var(--tp-font-sans);margin:2px 0 8px">Siga 100% dos protocolos</div>
+          <div class="progress" style="background:rgba(255,255,255,.15)"><i id="sideCompliance" style="width:0%"></i></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <header class="topbar">
+        <div>
+          <h1>Padrões & protocolos</h1>
+          <p class="sub">Manual operacional do consultor de proteção veicular</p>
+        </div>
+        <label class="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#80948b" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="search" placeholder="Buscar protocolo, etapa...">
+        </label>
+        <button class="icon-btn" aria-label="Notificações"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#11211a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="dot"></span></button>
+        <div class="user-chip"><div class="avatar">RA</div><div><div class="nm">Rafael Almeida</div><div class="rl">Consultor · Nível Prata</div></div></div>
+      </header>
+
+      <main class="content">
+        <!-- Cabeçalho -->
+        <div class="page-head">
+          <div>
+            <div class="crumb"><a href="dashboard.html">Visão geral</a> · Padrões & protocolos</div>
+            <h2 style="margin:0">Um só jeito de atender: o jeito certo</h2>
+            <p class="mb-0 muted">Marque cada etapa ao executar. Os protocolos são o padrão Todos Protegidos, do primeiro contato ao pós-venda.</p>
+          </div>
+          <a href="#" class="btn btn-ghost btn-sm">Baixar manual (PDF)</a>
+        </div>
+
+        <!-- Conformidade -->
+        <div class="panel">
+          <div class="compliance">
+            <div class="ring-stat">
+              <div class="ring" id="globalRing" style="--p:0"><b id="globalPct">0%</b></div>
+              <div>
+                <strong style="font-family:var(--tp-font-sans);font-size:var(--tp-fs-lg)">Conformidade geral</strong>
+                <div class="muted" style="font-size:var(--tp-fs-sm)"><span id="globalDone">0</span> de <span id="globalTotal">0</span> etapas seguidas</div>
+              </div>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap">
+              <span class="badge badge-dot">Cotação</span>
+              <span class="badge badge-blue badge-dot">Vistoria</span>
+              <span class="badge badge-amber badge-dot">Fechamento</span>
+              <span class="badge badge-dot">Pós-venda</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Protocolos -->
+        <div class="proto-grid">
+
+          <!-- 1. COTAÇÃO -->
+          <section class="proto-card" data-proto>
+            <div class="proto-card-head">
+              <div class="proto-num">01</div>
+              <div><h3>Protocolo de cotação</h3><div class="d">Primeiro contato e apresentação de planos</div></div>
+              <div class="proto-count"><span data-count>0/0</span></div>
+            </div>
+            <div class="proto-bar"><i data-fill></i></div>
+            <div class="checklist">
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Saudar no padrão e identificar-se como consultor Todos Protegidos</span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Coletar dados do veículo<small>Marca, modelo, ano, placa e tipo (carro/moto)</small></span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Consultar valor de referência na tabela FIPE</span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Apresentar planos (Essencial e Total) e coberturas</span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Registrar a cotação no sistema</span></label>
+            </div>
+            <div class="proto-note"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><p>Sempre informe que <strong>não há taxa de adesão</strong> nem análise de perfil.</p></div>
+          </section>
+
+          <!-- 2. VISTORIA -->
+          <section class="proto-card" data-proto>
+            <div class="proto-card-head">
+              <div class="proto-num" style="background:linear-gradient(135deg,var(--tp-blue-500),var(--tp-blue-900))">02</div>
+              <div><h3>Protocolo de vistoria</h3><div class="d">Conferência e registro do veículo</div></div>
+              <div class="proto-count"><span data-count>0/0</span></div>
+            </div>
+            <div class="proto-bar"><i data-fill></i></div>
+            <div class="checklist">
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Agendar a vistoria com o cliente</span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Registrar fotos no checklist<small>Frente, traseira, laterais, chassi e hodômetro</small></span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Conferir documento do veículo (CRLV)</span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Anotar avarias preexistentes</span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Enviar vistoria para aprovação</span></label>
+            </div>
+            <div class="proto-note"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><p>App <strong>Visto</strong>: documentos (CNH, CRLV e comprovante de endereço) somente em <strong>JPG</strong> — PDF não é aceito. Fotos nítidas e placa legível evitam recusa e retrabalho.</p></div>
+          </section>
+
+          <!-- 3. FECHAMENTO -->
+          <section class="proto-card" data-proto>
+            <div class="proto-card-head">
+              <div class="proto-num" style="background:linear-gradient(135deg,var(--tp-amber-400),var(--tp-amber-500))">03</div>
+              <div><h3>Protocolo de fechamento</h3><div class="d">Adesão e confirmação dos termos</div></div>
+              <div class="proto-count"><span data-count>0/0</span></div>
+            </div>
+            <div class="proto-bar"><i data-fill></i></div>
+            <div class="checklist">
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Tratar objeções com os argumentos padrão</span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Confirmar plano escolhido e valor da mensalidade</span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Preencher proposta de adesão</span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Explicar carências e coberturas contratadas</span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Coletar aceite e meio de pagamento</span></label>
+            </div>
+            <div class="proto-note"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><p>Transparência nas carências é obrigatória — nunca prometa o que não está em contrato.</p></div>
+          </section>
+
+          <!-- 4. PÓS-VENDA -->
+          <section class="proto-card" data-proto>
+            <div class="proto-card-head">
+              <div class="proto-num" style="background:linear-gradient(135deg,var(--tp-green-700),var(--tp-blue-900))">04</div>
+              <div><h3>Protocolo de pós-venda</h3><div class="d">Acolhimento e fidelização do associado</div></div>
+              <div class="proto-count"><span data-count>0/0</span></div>
+            </div>
+            <div class="proto-bar"><i data-fill></i></div>
+            <div class="checklist">
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Confirmar ativação da proteção (até 24h)</span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Orientar como acionar o guincho 24h e a assistência</span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Fazer contato de boas-vindas</span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Registrar canal de atendimento preferido</span></label>
+              <label class="check"><input type="checkbox"><span class="box"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Agendar acompanhamento de satisfação</span></label>
+            </div>
+            <div class="proto-note"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><p>O pós-venda é o que transforma um cliente em associado fiel e indicações.</p></div>
+          </section>
+
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

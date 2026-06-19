@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Módulo 9 · Técnicas de fechamento — Todos Protegidos</title>
+  <meta name="description" content="Player de aula da trilha do consultor de proteção veicular: técnicas de fechamento e tratamento de objeções.">
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/internal.css">
+</head>
+<body class="dash">
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-brand"><a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="Todos Protegidos"></a></div>
+      <a class="side-link" href="dashboard.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Visão geral
+      </a>
+      <a class="side-link active" href="aula.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13.5"/><path d="M4 19.5 12 16l8 3.5"/><path d="M9 8h6M9 12h6"/></svg>
+        Trilha de treinamento
+      </a>
+      <a class="side-link" href="dashboard.html#vendas">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Minhas vendas
+      </a>
+      <a class="side-link" href="#">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg>
+        Meus clientes
+      </a>
+
+      <div class="side-label">Operação</div>
+      <a class="side-link" href="protocolos.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>
+        Padrões & protocolos
+      </a>
+      <a class="side-link" href="scripts.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/><path d="M8 9h8M8 13h5"/></svg>
+        Biblioteca de scripts
+      </a>
+      <a class="side-link" href="gestao.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Gestão de conteúdo
+      </a>
+
+      <div class="side-label">Carreira</div>
+      <a class="side-link" href="#">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M6 3h12v6a6 6 0 0 1-12 0Z"/><path d="M9 21h6M12 17v4"/></svg>
+        Ranking & metas
+      </a>
+      <a class="side-link" href="#">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M9 13.8 8 22l4-2.5L16 22l-1-8.2"/></svg>
+        Certificações
+      </a>
+
+      <div class="side-foot">
+        <div class="side-card">
+          <div class="lbl">Módulo 9</div>
+          <div style="color:#fff;font-weight:700;font-family:var(--tp-font-sans);margin:2px 0 8px">Aula 3 de 5</div>
+          <div class="progress" style="background:rgba(255,255,255,.15)"><i style="width:60%"></i></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <header class="topbar">
+        <div>
+          <h1>Trilha de treinamento</h1>
+          <p class="sub">Nível 3 · Avançado — protocolos de venda</p>
+        </div>
+        <label class="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#80948b" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="search" placeholder="Buscar aula, módulo...">
+        </label>
+        <button class="icon-btn" aria-label="Notificações"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#11211a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="dot"></span></button>
+        <div class="user-chip"><div class="avatar">RA</div><div><div class="nm">Rafael Almeida</div><div class="rl">Consultor · Nível Prata</div></div></div>
+      </header>
+
+      <main class="content">
+        <div class="crumb" style="font-size:var(--tp-fs-sm);color:var(--tp-muted)"><a href="dashboard.html" style="color:var(--tp-muted)">Trilha</a> · Módulo 9 · Técnicas de fechamento</div>
+
+        <div class="lesson-grid">
+          <!-- PLAYER + INFO -->
+          <div>
+            <div class="video">
+              <button class="play" aria-label="Reproduzir aula">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+              </button>
+              <div class="meta"><span class="badge">Aula 3 · em andamento</span></div>
+              <span class="dur">14:20</span>
+            </div>
+
+            <div class="lesson-body">
+              <span class="badge badge-amber" style="margin-top:18px">Nível 3 · Avançado</span>
+              <h2>Aula 3 — Tratamento de objeções no fechamento</h2>
+              <p class="muted">Aprenda a conduzir o cliente da dúvida à decisão usando os argumentos padrão Todos Protegidos, sem pressão e dentro do protocolo.</p>
+
+              <div class="lesson-actions">
+                <button class="btn btn-primary">Marcar como concluída</button>
+                <a href="protocolos.html" class="btn btn-ghost">Ver protocolo de fechamento</a>
+                <button class="btn btn-ghost">Próxima aula →</button>
+              </div>
+
+              <!-- ABAS -->
+              <div class="tabs" role="tablist">
+                <button class="tab active" data-tab="sobre">Sobre</button>
+                <button class="tab" data-tab="materiais">Materiais</button>
+                <button class="tab" data-tab="anotacoes">Anotações</button>
+              </div>
+
+              <div class="tab-panel active" data-panel="sobre">
+                <div class="panel">
+                  <h3 style="margin-top:0">O que você vai aprender</h3>
+                  <ul class="stack">
+                    <li>✅ As 5 objeções mais comuns na proteção veicular e como respondê-las</li>
+                    <li>✅ A diferença entre objeção real e desculpa — e como identificar</li>
+                    <li>✅ O script padrão de fechamento sem taxa de adesão</li>
+                    <li>✅ Quando recuar e quando reforçar o valor da cobertura FIPE</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="tab-panel" data-panel="materiais">
+                <div class="panel stack">
+                  <a class="track-item" href="#" style="text-decoration:none">
+                    <div class="track-step done" style="width:38px;height:38px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></div>
+                    <div class="track-body"><div class="t">Script de fechamento (PDF)</div><div class="d">2 páginas · padrão de atendimento</div></div>
+                  </a>
+                  <a class="track-item" href="#" style="text-decoration:none">
+                    <div class="track-step done" style="width:38px;height:38px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></div>
+                    <div class="track-body"><div class="t">Tabela de objeções e respostas</div><div class="d">Material de apoio</div></div>
+                  </a>
+                </div>
+              </div>
+
+              <div class="tab-panel" data-panel="anotacoes">
+                <div class="panel">
+                  <h3 style="margin-top:0">Minhas anotações</h3>
+                  <textarea placeholder="Escreva suas anotações sobre esta aula..." style="width:100%;min-height:120px;border:1px solid var(--tp-line);border-radius:var(--tp-radius);padding:14px;font:inherit;resize:vertical;outline:none"></textarea>
+                  <div style="margin-top:12px"><button class="btn btn-primary btn-sm">Salvar anotação</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PLAYLIST -->
+          <aside class="playlist">
+            <div class="playlist-head">
+              <h3>Módulo 9 · Técnicas de fechamento</h3>
+              <div class="d">3 de 5 aulas · 60% concluído</div>
+              <div class="progress" style="margin-top:10px"><i style="width:60%"></i></div>
+            </div>
+            <div class="lesson">
+              <span class="ic done"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+              <div class="t">Aula 1 — A psicologia da decisão<small>Concluída</small></div><span class="dur">11:05</span>
+            </div>
+            <div class="lesson">
+              <span class="ic done"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+              <div class="t">Aula 2 — Apresentando o valor da cobertura<small>Concluída</small></div><span class="dur">09:42</span>
+            </div>
+            <div class="lesson active">
+              <span class="ic now"><svg width="14" height="14" viewBox="0 0 24 24" fill="#07271a"><path d="M8 5v14l11-7z"/></svg></span>
+              <div class="t">Aula 3 — Tratamento de objeções<small>Assistindo agora</small></div><span class="dur">14:20</span>
+            </div>
+            <div class="lesson">
+              <span class="ic next">4</span>
+              <div class="t">Aula 4 — O script de fechamento<small>A seguir</small></div><span class="dur">12:10</span>
+            </div>
+            <a class="lesson" href="quiz.html" style="text-decoration:none">
+              <span class="ic next">5</span>
+              <div class="t">Aula 5 — Avaliação do módulo<small>Quiz · libera certificado</small></div><span class="dur">Quiz</span>
+            </a>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

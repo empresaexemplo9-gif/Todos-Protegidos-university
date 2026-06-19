@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Biblioteca de Scripts & Objeções — Todos Protegidos</title>
+  <meta name="description" content="Biblioteca de scripts do consultor de proteção veicular: reativação, Cartão de Todos e contorno de objeções.">
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/internal.css">
+</head>
+<body class="dash">
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-brand"><a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="Todos Protegidos"></a></div>
+      <a class="side-link" href="dashboard.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Visão geral
+      </a>
+      <a class="side-link" href="aula.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13.5"/><path d="M4 19.5 12 16l8 3.5"/><path d="M9 8h6M9 12h6"/></svg>
+        Trilha de treinamento
+      </a>
+      <a class="side-link" href="dashboard.html#vendas">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Minhas vendas
+      </a>
+
+      <div class="side-label">Operação</div>
+      <a class="side-link" href="protocolos.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>
+        Padrões & protocolos
+      </a>
+      <a class="side-link active" href="scripts.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/><path d="M8 9h8M8 13h5"/></svg>
+        Biblioteca de scripts
+      </a>
+      <a class="side-link" href="gestao.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Gestão de conteúdo
+      </a>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <header class="topbar">
+        <div>
+          <h1>Biblioteca de scripts & objeções</h1>
+          <p class="sub">Material de apoio para abordagem, reativação e fechamento</p>
+        </div>
+        <label class="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#80948b" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="search" placeholder="Buscar script, objeção...">
+        </label>
+        <div class="user-chip"><div class="avatar">RA</div><div><div class="nm">Rafael Almeida</div><div class="rl">Consultor · Nível Prata</div></div></div>
+      </header>
+
+      <main class="content">
+        <div class="disclaimer">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          <p>O script serve apenas como um <strong>direcionamento estratégico</strong>. Não é para repetir frases como um robô, mas usar técnicas e argumentos que conduzam a conversa com <strong>confiança, autenticidade e conexão</strong>.</p>
+        </div>
+
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="reativacao">Reativação</button>
+          <button class="tab" data-tab="cartao">Cartão de Todos</button>
+          <button class="tab" data-tab="objecoes">Contorno de objeções</button>
+        </div>
+
+        <!-- REATIVAÇÃO -->
+        <div class="tab-panel active" data-panel="reativacao">
+          <div class="grid grid-2" style="align-items:start">
+            <div class="panel">
+              <div class="panel-head"><h3>Reativação · contato de voz 📞</h3><span class="badge">2 meses fora da base</span></div>
+              <div class="script"><span class="who">Consultor</span><p>“Olá, bom dia! Tudo bem? 😊 Aqui é da [Nome da Associação]. Estamos entrando em contato porque sentimos sua falta em nossa base de associados e gostaríamos muito de ter você novamente conosco. Você é proprietário do veículo de placa [informe a placa]? Você já conhece nossa proteção e sabe a importância de dirigir com tranquilidade, com assistência e suporte sempre que precisar.”</p></div>
+              <div class="script"><span class="who">Oferta</span><p>“E pensando em facilitar seu retorno, estamos com uma condição especial: ✅ reativando agora, você recebe isenção da 2ª mensalidade. Gostaria que eu apresentasse as condições para ativarmos novamente sua proteção?”</p></div>
+              <div class="script amber"><span class="who">Fechamento mais forte 🔥</span><p>“[Nome], hoje você tem a oportunidade de voltar a ter proteção e segurança no seu dia a dia com uma condição exclusiva para ex-associados. Aproveitando a isenção da 2ª mensalidade, você retorna protegido pagando menos. Podemos já deixar sua reativação encaminhada?”</p></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><h3>Reativação · WhatsApp 💬</h3><span class="badge badge-blue">4 mensagens</span></div>
+              <div class="script blue"><span class="who">1 · Reaproximação</span><p>“Olá, [Nome]! 😊 Aqui é da [Nome da Associação]. Sentimos sua falta em nossa base de associados e gostaríamos muito de ter você novamente conosco.”</p></div>
+              <div class="script blue"><span class="who">2 · Oferta especial</span><p>“Pensando em facilitar seu retorno, estamos com uma condição especial: 🎁 reative sua proteção veicular e ganhe isenção da 2ª mensalidade.”</p></div>
+              <div class="script blue"><span class="who">3 · Benefícios</span><p>“Assim, você volta a contar com: ✅ Assistência 24h ✅ Proteção contra roubo e furto ✅ Cobertura para terceiros ✅ Guincho e auxílio emergencial ✅ Mais tranquilidade no dia a dia 🚗”</p></div>
+              <div class="script blue"><span class="who">4 · Fechamento</span><p>“Posso verificar agora uma condição especial para reativarmos sua proteção ainda hoje? 😊”</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARTÃO DE TODOS -->
+        <div class="tab-panel" data-panel="cartao">
+          <div class="grid grid-2" style="align-items:start">
+            <div class="panel">
+              <div class="panel-head"><h3>Atendimento · Cartão de Todos</h3></div>
+              <div class="script blue"><span class="who">WhatsApp 💬</span><p>“Bom dia! Seja bem-vindo ao Cartão de Todos! 😊 Agora, além de todos os benefícios que você já possui, você também pode proteger seu veículo com condições especiais exclusivas para associados. Nossa proteção oferece assistência 24h, cobertura completa e atendimento humanizado. Me permite te apresentar rapidinho como funciona?”</p></div>
+              <div class="script"><span class="who">Voz 📞</span><p>“Bom dia! Seja muito bem-vindo ao Cartão de Todos! 😊 Estamos felizes em ter você no nosso clube de benefícios. E você sabia que agora também pode contar com o benefício de Proteção Veicular? [Identifique se o cliente possui veículo.] Posso te apresentar rapidamente como funciona?”</p></div>
+              <div class="proto-note"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><p>Identifique se o cliente possui veículo e trate as objeções caso ele apresente alguma.</p></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><h3>Fechamento · proteção veicular 🚗</h3><span class="badge badge-amber">5 passos</span></div>
+              <div class="script"><span class="who">1 · Confirmação de interesse</span><p>“Pelo que conversamos, você procura justamente mais tranquilidade e suporte no dia a dia, correto?” 👉 Objetivo: fazer o cliente dizer “sim”.</p></div>
+              <div class="script"><span class="who">2 · Gerar segurança</span><p>“Nosso objetivo é trazer segurança, atendimento rápido e suporte que realmente funcione quando você precisar. Muitos associados escolhem nossa proteção pela tranquilidade, sem burocracia.” 👉 Reforça confiança, não pressão.</p></div>
+              <div class="script"><span class="who">3 · Direcionar à decisão</span><p>Nunca pergunte “você quer fechar?”. Prefira: “Para já deixar sua proteção ativa, preciso apenas confirmar alguns dados.” ou “Qual a melhor forma de enviarmos sua adesão: WhatsApp ou e-mail?”</p></div>
+              <div class="script amber"><span class="who">4 · Quebra de objeção</span><p>“Vou pensar” → “Me diga: o que ficou faltando para você se sentir seguro em iniciar hoje?” · “Está caro” → “Diante do custo de qualquer imprevisto, a proteção é um investimento muito menor pela tranquilidade que você recebe.”</p></div>
+              <div class="script amber"><span class="who">5 · Fechamento final 🔥</span><p>“Vamos fazer assim: já deixamos sua adesão encaminhada hoje para você garantir os benefícios e rodar com mais tranquilidade. Posso dar andamento?”</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- OBJEÇÕES -->
+        <div class="tab-panel" data-panel="objecoes">
+          <div class="panel">
+            <div class="panel-head"><h3>Contorno de objeções — proteção veicular</h3><span class="badge">10 objeções</span></div>
+            <div class="obj-item"><div class="obj-q"><span class="qn">1</span> “Vou pensar.”</div><p class="obj-a">“Perfeito, é importante analisar com calma. Mas me fala: o que você gostaria de avaliar melhor? Assim consigo te ajudar de forma mais objetiva e transparente.”</p></div>
+            <div class="obj-item"><div class="obj-q"><span class="qn">2</span> “Já tenho seguro/proteção.”</div><p class="obj-a">“Excelente, isso mostra que você entende a importância de proteger seu patrimônio. Não quero falar mal do que você tem, mas te apresentar uma comparação de benefícios, atendimento e custo para você avaliar se faz sentido.”</p></div>
+            <div class="obj-item"><div class="obj-q"><span class="qn">3</span> “Está caro.”</div><p class="obj-a">“Entendo. O valor precisa fazer sentido no seu orçamento. Mas quando analisamos assistência 24h, suporte, cobertura e tranquilidade, o custo-benefício é muito vantajoso. Inclusive consigo verificar uma opção mais confortável pra você.”</p></div>
+            <div class="obj-item"><div class="obj-q"><span class="qn">4</span> “Não conheço a associação.”</div><p class="obj-a">“É normal ter essa preocupação. Por isso trabalhamos com transparência, atendimento próximo e suporte ao associado. Posso te apresentar nossa estrutura, benefícios e a experiência de outros clientes para você se sentir mais seguro.”</p></div>
+            <div class="obj-item"><div class="obj-q"><span class="qn">5</span> “Nunca precisei disso.”</div><p class="obj-a">“E tomara que nunca precise usar. A proteção é justamente para garantir tranquilidade caso um imprevisto aconteça — você fica preparado sem sofrer um impacto financeiro maior no futuro.”</p></div>
+            <div class="obj-item"><div class="obj-q"><span class="qn">6</span> “Vou ver depois.”</div><p class="obj-a">“Claro, sem problemas. Só que muitas vezes deixamos para depois algo importante e acabamos esquecendo. Me permite ao menos te enviar as informações no WhatsApp para você já ter salvo quando quiser analisar?”</p></div>
+            <div class="obj-item"><div class="obj-q"><span class="qn">7</span> “Preciso falar com meu marido/esposa.”</div><p class="obj-a">“Perfeito, é importante que a decisão seja confortável para todos. Posso te enviar uma apresentação completa para vocês analisarem juntos? Se preferir, explico os benefícios para ambos.”</p></div>
+            <div class="obj-item"><div class="obj-q"><span class="qn">8</span> “Não confio muito nessas proteções.”</div><p class="obj-a">“Entendo sua preocupação, hoje as pessoas precisam analisar bem antes de contratar. Por isso nosso trabalho é baseado em clareza, suporte e acompanhamento ao associado desde o primeiro atendimento.”</p></div>
+            <div class="obj-item"><div class="obj-q"><span class="qn">9</span> “Meu carro fica mais parado.”</div><p class="obj-a">“Mesmo parado, imprevistos podem acontecer: roubo, fenômenos naturais, terceiros ou problemas em deslocamentos ocasionais. A proteção é uma segurança para qualquer situação inesperada.”</p></div>
+            <div class="obj-item"><div class="obj-q"><span class="qn">10</span> “Agora não é prioridade.”</div><p class="obj-a">“Compreendo. Muitas vezes só percebemos a importância da proteção quando acontece um imprevisto. O interessante é se organizar antes, garantindo tranquilidade sem lidar com prejuízos maiores no futuro.”</p></div>
+            <div class="proto-note" style="margin-top:16px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><p><strong>Frase final de fechamento:</strong> “Meu objetivo aqui não é te pressionar, mas te ajudar a tomar uma decisão consciente e segura sobre a proteção do seu patrimônio.”</p></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

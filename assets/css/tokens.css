@@ -1,0 +1,97 @@
+/* ============================================================
+   TODOS PROTEGIDOS — Design Tokens
+   Academia do Consultor de Proteção Veicular.
+   Verde como cor principal + azul escuro/claro de apoio.
+   ============================================================ */
+
+:root {
+  /* ---------- Marca / Verde (cor principal) ---------- */
+  --tp-green-50:  #e9f9f0;
+  --tp-green-100: #c9f0da;
+  --tp-green-200: #97e3ba;
+  --tp-green-300: #5fd394;
+  --tp-green-400: #2bbd6f;
+  --tp-green-500: #00a859;  /* verde vibrante / efervescente */
+  --tp-green-600: #008a49;
+  --tp-green-700: #00813f;  /* verde profundo (primário) */
+  --tp-green-800: #066333;
+  --tp-green-900: #064d2a;
+
+  /* ---------- Azul (apoio — figuras do logo) ---------- */
+  --tp-blue-50:   #e8f3fb;
+  --tp-blue-300:  #59b3e6;  /* azul claro */
+  --tp-blue-500:  #1e6fb8;
+  --tp-blue-700:  #123a63;
+  --tp-blue-900:  #0b2a4a;  /* azul escuro */
+
+  /* ---------- Acento quente (energia / CTA / badges) ---------- */
+  --tp-amber-400: #ffc23c;
+  --tp-amber-500: #ff9f1c;
+
+  /* ---------- Estado ---------- */
+  --tp-success: #00a859;
+  --tp-warning: #ff9f1c;
+  --tp-danger:  #e23b3b;
+  --tp-info:    #1e6fb8;
+
+  /* ---------- Neutros ---------- */
+  --tp-ink:     #11211a;  /* texto principal (verde-escuro neutro) */
+  --tp-slate:   #4a5a52;  /* texto secundário */
+  --tp-muted:   #80948b;  /* texto auxiliar */
+  --tp-muted-2: #93a39b;
+  --tp-line:    #e4ebe7;  /* bordas */
+  --tp-surface: #ffffff;
+  --tp-bg:      #f4f8f5;  /* fundo geral (verde-claríssimo) */
+  --tp-bg-alt:  #eef4f0;
+
+  /* ---------- Gradientes da marca ---------- */
+  --tp-grad-brand: linear-gradient(135deg, var(--tp-green-500) 0%, var(--tp-green-700) 100%);
+  --tp-grad-deep:  linear-gradient(150deg, var(--tp-green-700) 0%, var(--tp-blue-900) 130%);
+  --tp-grad-fresh: linear-gradient(135deg, var(--tp-green-300) 0%, var(--tp-green-600) 100%);
+
+  /* ---------- Tipografia ---------- */
+  --tp-font-sans: "Poppins", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  --tp-font-body: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+
+  --tp-fs-xs:   0.75rem;
+  --tp-fs-sm:   0.875rem;
+  --tp-fs-base: 1rem;
+  --tp-fs-lg:   1.125rem;
+  --tp-fs-xl:   1.375rem;
+  --tp-fs-2xl:  1.75rem;
+  --tp-fs-3xl:  2.25rem;
+  --tp-fs-4xl:  3rem;
+  --tp-fs-5xl:  3.75rem;
+
+  --tp-fw-regular: 400;
+  --tp-fw-medium:  500;
+  --tp-fw-semi:    600;
+  --tp-fw-bold:    700;
+  --tp-fw-extra:   800;
+
+  /* ---------- Raio / Espaçamento / Sombra ---------- */
+  --tp-radius-sm: 8px;
+  --tp-radius:    14px;
+  --tp-radius-lg: 22px;
+  --tp-radius-xl: 30px;
+  --tp-radius-pill: 999px;
+
+  --tp-space-1: 4px;
+  --tp-space-2: 8px;
+  --tp-space-3: 12px;
+  --tp-space-4: 16px;
+  --tp-space-5: 24px;
+  --tp-space-6: 32px;
+  --tp-space-7: 48px;
+  --tp-space-8: 64px;
+
+  --tp-shadow-sm: 0 1px 2px rgba(6, 77, 42, .06), 0 1px 3px rgba(6, 77, 42, .08);
+  --tp-shadow:    0 8px 24px rgba(6, 77, 42, .08), 0 2px 6px rgba(6, 77, 42, .06);
+  --tp-shadow-lg: 0 22px 48px rgba(6, 77, 42, .14);
+  --tp-shadow-brand: 0 14px 34px rgba(0, 138, 73, .30);
+
+  --tp-ring: 0 0 0 4px rgba(0, 168, 89, .22);
+
+  --tp-container: 1180px;
+  --tp-transition: 180ms cubic-bezier(.4, 0, .2, 1);
+}

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design System — Todos Protegidos</title>
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <style>
+    .swatch { border-radius: var(--tp-radius); height: 96px; display: flex; align-items: flex-end; padding: 10px; color: #fff; font-size: var(--tp-fs-xs); font-weight: 600; box-shadow: var(--tp-shadow-sm); }
+    .swatch.dark-text { color: var(--tp-ink); }
+    .sw-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+    .sw-name { display: block; opacity: .85; font-weight: 700; }
+    .doc-section { padding: 40px 0; border-top: 1px solid var(--tp-line); }
+    @media (max-width: 720px){ .sw-grid{ grid-template-columns: repeat(2,1fr);} }
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="Todos Protegidos"></a>
+      <div class="nav-cta">
+        <a href="index.html" class="btn btn-ghost btn-sm">Landing</a>
+        <a href="dashboard.html" class="btn btn-primary btn-sm">Dashboard</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container">
+      <span class="eyebrow">Design System</span>
+      <h1>Identidade visual Todos Protegidos</h1>
+      <p class="lead" style="max-width:640px">Sistema de design da plataforma de capacitação de consultores de proteção veicular: verde como cor principal, azul de apoio e acento quente para energia. Use este guia para manter a consistência em toda a interface.</p>
+
+      <!-- LOGO -->
+      <div class="doc-section">
+        <h2>Logo</h2>
+        <div class="grid grid-2" style="margin-top:20px">
+          <div class="card" style="display:flex;align-items:center;justify-content:center;min-height:160px"><img src="assets/img/logo.svg" alt="Logo principal" style="height:56px"></div>
+          <div class="card" style="display:flex;align-items:center;justify-content:center;min-height:160px;background:var(--tp-blue-900)"><img src="assets/img/logo-mark.svg" alt="Símbolo" style="height:72px"></div>
+        </div>
+        <p class="muted" style="margin-top:14px">O símbolo combina um <strong>escudo</strong> (proteção) com um <strong>arco de abraço/infinito</strong> e um <strong>check de confiança</strong>.</p>
+      </div>
+
+      <!-- CORES -->
+      <div class="doc-section">
+        <h2>Paleta de cores</h2>
+        <h3 style="margin-top:24px">Verde · principal</h3>
+        <div class="sw-grid" style="margin-bottom:24px">
+          <div class="swatch" style="background:var(--tp-green-300)"><span><span class="sw-name">green-300</span>#5fd394</span></div>
+          <div class="swatch" style="background:var(--tp-green-500)"><span><span class="sw-name">green-500</span>#00a859</span></div>
+          <div class="swatch" style="background:var(--tp-green-600)"><span><span class="sw-name">green-600</span>#008a49</span></div>
+          <div class="swatch" style="background:var(--tp-green-700)"><span><span class="sw-name">green-700</span>#00813f</span></div>
+          <div class="swatch" style="background:var(--tp-green-900)"><span><span class="sw-name">green-900</span>#064d2a</span></div>
+        </div>
+        <h3>Azul · apoio &nbsp;/&nbsp; Acento</h3>
+        <div class="sw-grid">
+          <div class="swatch" style="background:var(--tp-blue-300)"><span><span class="sw-name">blue-300</span>#59b3e6</span></div>
+          <div class="swatch" style="background:var(--tp-blue-500)"><span><span class="sw-name">blue-500</span>#1e6fb8</span></div>
+          <div class="swatch" style="background:var(--tp-blue-900)"><span><span class="sw-name">blue-900</span>#0b2a4a</span></div>
+          <div class="swatch dark-text" style="background:var(--tp-amber-400)"><span><span class="sw-name">amber-400</span>#ffc23c</span></div>
+          <div class="swatch dark-text" style="background:var(--tp-bg)"><span><span class="sw-name">bg</span>#f4f8f5</span></div>
+        </div>
+      </div>
+
+      <!-- TIPOGRAFIA -->
+      <div class="doc-section">
+        <h2>Tipografia</h2>
+        <p class="muted">Títulos em <strong>Poppins</strong> · Texto em <strong>Inter</strong></p>
+        <div class="card" style="margin-top:16px">
+          <h1 style="margin:0">Aa — Título Display</h1>
+          <h2 style="margin:12px 0 0">Aa — Título de Seção</h2>
+          <h3 style="margin:12px 0 0">Aa — Subtítulo</h3>
+          <p style="margin:12px 0 0">Inter Regular — Formação de consultores de proteção veicular, do novato ao pro, com padrão e protocolo.</p>
+        </div>
+      </div>
+
+      <!-- COMPONENTES -->
+      <div class="doc-section">
+        <h2>Componentes</h2>
+        <div class="card" style="margin-top:16px;display:flex;flex-wrap:wrap;gap:14px;align-items:center">
+          <button class="btn btn-primary">Botão primário</button>
+          <button class="btn btn-ghost">Botão secundário</button>
+          <button class="btn btn-dark">Botão escuro</button>
+          <button class="btn btn-primary btn-sm">Pequeno</button>
+        </div>
+        <div class="card" style="margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+          <span class="badge badge-dot">Ativo</span>
+          <span class="badge badge-blue">Informação</span>
+          <span class="badge badge-amber badge-dot">Pendente</span>
+          <span class="badge badge-danger badge-dot">Cancelado</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-bottom" style="border:0;margin:0">
+      <span>© 2026 Todos Protegidos · Design System</span>
+      <span>Academia do Consultor · do novato ao pro</span>
+    </div>
+  </footer>
+</body>
+</html>

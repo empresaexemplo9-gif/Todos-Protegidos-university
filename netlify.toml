@@ -1,0 +1,22 @@
+# Configuração de deploy no Netlify
+# Site estático (HTML/CSS/JS) — não há etapa de build.
+
+[build]
+  # Publica os arquivos a partir da raiz do repositório
+  publish = "."
+  # Sem comando de build (página estática)
+  command = ""
+
+# Página de erro amigável para rotas inexistentes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 404
+
+# Cabeçalhos básicos de segurança
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard do Consultor — Todos Protegidos</title>
+  <meta name="description" content="Área do consultor Todos Protegidos: treinamento do novato ao pro, vendas, comissões e ranking.">
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+</head>
+<body class="dash">
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="Todos Protegidos"></a>
+      </div>
+
+      <a class="side-link active" href="#">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Visão geral
+      </a>
+      <a class="side-link" href="aula.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13.5"/><path d="M4 19.5 12 16l8 3.5"/><path d="M9 8h6M9 12h6"/></svg>
+        Trilha de treinamento <span class="side-badge">3 novas</span>
+      </a>
+      <a class="side-link" href="#">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Minhas vendas
+      </a>
+      <a class="side-link" href="#">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg>
+        Meus clientes
+      </a>
+
+      <div class="side-label">Operação</div>
+      <a class="side-link" href="protocolos.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>
+        Padrões & protocolos
+      </a>
+      <a class="side-link" href="scripts.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/><path d="M8 9h8M8 13h5"/></svg>
+        Biblioteca de scripts
+      </a>
+      <a class="side-link" href="gestao.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Gestão de conteúdo
+      </a>
+
+      <div class="side-label">Carreira</div>
+      <a class="side-link" href="#">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M6 3h12v6a6 6 0 0 1-12 0Z"/><path d="M9 21h6M12 17v4"/></svg>
+        Ranking & metas
+      </a>
+      <a class="side-link" href="#">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M9 13.8 8 22l4-2.5L16 22l-1-8.2"/></svg>
+        Certificações
+      </a>
+      <a class="side-link" href="#">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 6.6 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 4 13.6H4a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 5 6.6l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10.4 4h.2a2 2 0 1 1 4 0v.1A1.6 1.6 0 0 0 18 5.6l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8Z"/></svg>
+        Configurações
+      </a>
+
+      <div class="side-foot">
+        <div class="side-card">
+          <div class="lbl">Próximo nível</div>
+          <div style="color:#fff;font-weight:700;font-family:var(--tp-font-sans);margin:2px 0 8px">Consultor Pro 🏆</div>
+          <div class="progress" style="background:rgba(255,255,255,.15)"><i style="width:72%"></i></div>
+          <div class="lbl" style="margin-top:8px">Faltam 4 vendas para subir de nível</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <!-- TOPBAR -->
+      <header class="topbar">
+        <div>
+          <h1>Visão geral</h1>
+          <p class="sub">Sexta, 19 de junho de 2026 · bom te ver de volta!</p>
+        </div>
+        <label class="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#80948b" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="search" placeholder="Buscar cliente, módulo, venda...">
+        </label>
+        <button class="icon-btn" aria-label="Notificações">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#11211a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          <span class="dot"></span>
+        </button>
+        <div class="user-chip">
+          <div class="avatar">RA</div>
+          <div>
+            <div class="nm">Rafael Almeida</div>
+            <div class="rl">Consultor · Nível Prata</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- CONTENT -->
+      <main class="content">
+
+        <!-- WELCOME -->
+        <section class="welcome">
+          <div>
+            <h2>Olá, Rafael! Você está a caminho do topo 🚀</h2>
+            <p>Sua jornada "do novato ao pro" está 72% concluída. Continue de onde parou e bata sua meta do mês.</p>
+            <div style="margin-top:18px"><a href="aula.html" class="btn btn-primary btn-sm">Continuar treinamento</a></div>
+          </div>
+          <div class="lvl">
+            <span class="tag">🏅 Nível Prata</span>
+            <div style="font-family:var(--tp-font-sans);font-weight:800;font-size:var(--tp-fs-3xl);margin-top:10px">72%</div>
+            <div style="color:rgba(255,255,255,.8);font-size:var(--tp-fs-sm)">rumo a Consultor Pro</div>
+          </div>
+        </section>
+
+        <!-- KPIs -->
+        <section class="kpis">
+          <div class="kpi">
+            <div class="kpi-top"><div class="kpi-ico green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="trend up">+18%</span></div>
+            <div class="val">R$ 8.420</div>
+            <div class="lbl">Comissão no mês</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-top"><div class="kpi-ico blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V5l-8-3Z"/><path d="M9 12l2 2 4-4"/></svg></div><span class="trend up">+6</span></div>
+            <div class="val">23</div>
+            <div class="lbl">Veículos protegidos</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-top"><div class="kpi-ico amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13.5"/><path d="M9 8h6M9 12h6"/></svg></div><span class="trend up">+3</span></div>
+            <div class="val">9/12</div>
+            <div class="lbl">Módulos concluídos</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-top"><div class="kpi-ico dark"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg></div><span class="trend up">82%</span></div>
+            <div class="val">82%</div>
+            <div class="lbl">Taxa de conversão</div>
+          </div>
+        </section>
+
+        <!-- COLS -->
+        <section class="cols">
+
+          <!-- ESQUERDA -->
+          <div class="stack" style="display:flex;flex-direction:column;gap:24px">
+
+            <!-- TRILHA -->
+            <div class="panel" id="trilha">
+              <div class="panel-head">
+                <h3>Trilha de treinamento · do novato ao pro</h3>
+                <a href="#">Ver tudo</a>
+              </div>
+              <div class="track">
+                <div class="track-item">
+                  <div class="track-step done"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+                  <div class="track-body">
+                    <div class="t">Módulo 1 · Boas-vindas e cultura Todos Protegidos</div>
+                    <div class="d">Concluído · certificado emitido</div>
+                  </div>
+                  <span class="badge badge-dot">Concluído</span>
+                </div>
+                <div class="track-item">
+                  <div class="track-step done"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+                  <div class="track-body">
+                    <div class="t">Módulo 2 · Produtos: proteção de carro e moto</div>
+                    <div class="d">Concluído · nota 95</div>
+                  </div>
+                  <span class="badge badge-dot">Concluído</span>
+                </div>
+                <div class="track-item">
+                  <div class="track-step done"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+                  <div class="track-body">
+                    <div class="t">Módulo 5 · Abordagem: formas e técnicas</div>
+                    <div class="d">5 modelos de abordagem · scripts de sinaleiro e área comercial</div>
+                  </div>
+                  <a href="aula-abordagem.html" class="btn btn-ghost btn-sm">Revisar</a>
+                </div>
+                <div class="track-item" style="border-color:var(--tp-amber-400)">
+                  <div class="track-step current">9</div>
+                  <div class="track-body">
+                    <div class="t">Módulo 9 · Técnicas de fechamento e objeções</div>
+                    <div class="d">Em andamento · aula 3 de 5</div>
+                    <div class="progress"><i style="width:60%"></i></div>
+                  </div>
+                  <a href="aula.html" class="btn btn-primary btn-sm">Continuar</a>
+                </div>
+                <div class="track-item">
+                  <div class="track-step locked"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+                  <div class="track-body">
+                    <div class="t">Módulo 10 · Pós-venda e fidelização</div>
+                    <div class="d">Bloqueado · conclua o módulo 9 para liberar</div>
+                  </div>
+                  <span class="badge" style="background:var(--tp-bg-alt);color:var(--tp-muted)">Bloqueado</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- VENDAS RECENTES -->
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Vendas recentes</h3>
+                <a href="#">Relatório completo</a>
+              </div>
+              <table class="table">
+                <thead><tr><th>Cliente</th><th>Plano</th><th>Veículo</th><th>Comissão</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><div class="who"><span class="rank-av" style="background:var(--tp-green-600)">JM</span>João Martins</div></td>
+                    <td>Total</td><td>Carro</td><td><strong>R$ 92,40</strong></td>
+                    <td><span class="badge badge-dot">Ativo</span></td>
+                  </tr>
+                  <tr>
+                    <td><div class="who"><span class="rank-av" style="background:var(--tp-blue-500)">CL</span>Carla Lopes</div></td>
+                    <td>Essencial</td><td>Moto</td><td><strong>R$ 61,10</strong></td>
+                    <td><span class="badge badge-dot">Ativo</span></td>
+                  </tr>
+                  <tr>
+                    <td><div class="who"><span class="rank-av" style="background:var(--tp-amber-500)">PS</span>Paulo Souza</div></td>
+                    <td>Total</td><td>Carro</td><td><strong>R$ 92,40</strong></td>
+                    <td><span class="badge badge-amber badge-dot">Vistoria</span></td>
+                  </tr>
+                  <tr>
+                    <td><div class="who"><span class="rank-av" style="background:var(--tp-blue-900)">RN</span>Renata Nunes</div></td>
+                    <td>Essencial</td><td>Carro</td><td><strong>R$ 74,90</strong></td>
+                    <td><span class="badge badge-dot">Ativo</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- DIREITA -->
+          <div class="stack" style="display:flex;flex-direction:column;gap:24px">
+
+            <!-- META / CHART -->
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Vendas por semana</h3>
+                <span class="badge">Junho</span>
+              </div>
+              <div class="chart">
+                <div class="bar-col"><div class="bar" style="height:45%"></div><span class="bar-lbl">S1</span></div>
+                <div class="bar-col"><div class="bar" style="height:62%"></div><span class="bar-lbl">S2</span></div>
+                <div class="bar-col"><div class="bar" style="height:78%"></div><span class="bar-lbl">S3</span></div>
+                <div class="bar-col"><div class="bar" style="height:100%"></div><span class="bar-lbl">S4</span></div>
+                <div class="bar-col"><div class="bar alt" style="height:30%"></div><span class="bar-lbl">S5</span></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:16px;border-top:1px solid var(--tp-line)">
+                <div><div class="lbl muted" style="font-size:var(--tp-fs-xs)">Meta do mês</div><strong style="font-family:var(--tp-font-sans)">30 vendas</strong></div>
+                <div style="text-align:right"><div class="lbl muted" style="font-size:var(--tp-fs-xs)">Realizado</div><strong style="font-family:var(--tp-font-sans);color:var(--tp-green-700)">23 vendas</strong></div>
+              </div>
+            </div>
+
+            <!-- RANKING -->
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Ranking de consultores</h3>
+                <a href="#">Geral</a>
+              </div>
+              <div class="rank-row"><span class="rank-pos top">1</span><span class="rank-av" style="background:var(--tp-amber-500)">FM</span><span class="rank-name">Fernanda Mota</span><span class="rank-val">41</span></div>
+              <div class="rank-row"><span class="rank-pos top">2</span><span class="rank-av" style="background:var(--tp-green-600)">LB</span><span class="rank-name">Lucas Braga</span><span class="rank-val">37</span></div>
+              <div class="rank-row"><span class="rank-pos top">3</span><span class="rank-av" style="background:var(--tp-blue-500)">AC</span><span class="rank-name">Ana Castro</span><span class="rank-val">29</span></div>
+              <div class="rank-row me-row"><span class="rank-pos">7</span><span class="rank-av" style="background:var(--tp-grad-brand)">RA</span><span class="rank-name">Você · Rafael Almeida</span><span class="rank-val">23</span></div>
+            </div>
+
+            <!-- PADRÕES & PROTOCOLOS -->
+            <div class="panel" id="protocolos">
+              <div class="panel-head">
+                <h3>Padrões & protocolos</h3>
+                <a href="protocolos.html">Abrir manual</a>
+              </div>
+              <div class="track" style="gap:10px">
+                <a class="track-item" href="#" style="padding:12px">
+                  <div class="track-step done" style="width:36px;height:36px">1</div>
+                  <div class="track-body"><div class="t" style="font-size:var(--tp-fs-sm)">Protocolo de cotação</div><div class="d">Padrão FIPE · carro e moto</div></div>
+                </a>
+                <a class="track-item" href="#" style="padding:12px">
+                  <div class="track-step done" style="width:36px;height:36px">2</div>
+                  <div class="track-body"><div class="t" style="font-size:var(--tp-fs-sm)">Protocolo de vistoria</div><div class="d">Checklist de fotos e registro</div></div>
+                </a>
+                <a class="track-item" href="#" style="padding:12px">
+                  <div class="track-step current" style="width:36px;height:36px">3</div>
+                  <div class="track-body"><div class="t" style="font-size:var(--tp-fs-sm)">Protocolo de fechamento</div><div class="d">Objeções e adesão sem taxa</div></div>
+                </a>
+                <a class="track-item" href="#" style="padding:12px">
+                  <div class="track-step locked" style="width:36px;height:36px">4</div>
+                  <div class="track-body"><div class="t" style="font-size:var(--tp-fs-sm)">Protocolo de pós-venda</div><div class="d">Guincho 24h e fidelização</div></div>
+                </a>
+              </div>
+            </div>
+
+            <!-- CONQUISTA -->
+            <div class="panel" style="background:var(--tp-grad-fresh);border:0;color:#063a20">
+              <div style="display:flex;align-items:center;gap:14px">
+                <div style="width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.6);display:grid;place-items:center;font-size:26px">🏆</div>
+                <div>
+                  <strong style="font-family:var(--tp-font-sans);font-size:var(--tp-fs-lg)">Nova conquista!</strong>
+                  <div style="font-size:var(--tp-fs-sm)">Você desbloqueou "Vendedor do mês — Prata". Continue assim!</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

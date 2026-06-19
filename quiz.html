@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avaliação do módulo — Todos Protegidos</title>
+  <meta name="description" content="Avaliação do módulo do consultor de proteção veicular. Acerte a nota mínima e receba seu certificado.">
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/internal.css">
+</head>
+<body class="dash">
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-brand"><a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="Todos Protegidos"></a></div>
+      <a class="side-link" href="dashboard.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Visão geral
+      </a>
+      <a class="side-link active" href="aula.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13.5"/><path d="M4 19.5 12 16l8 3.5"/><path d="M9 8h6M9 12h6"/></svg>
+        Trilha de treinamento
+      </a>
+      <a class="side-link" href="dashboard.html#vendas">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Minhas vendas
+      </a>
+
+      <div class="side-label">Operação</div>
+      <a class="side-link" href="protocolos.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>
+        Padrões & protocolos
+      </a>
+      <a class="side-link" href="scripts.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/><path d="M8 9h8M8 13h5"/></svg>
+        Biblioteca de scripts
+      </a>
+      <a class="side-link" href="gestao.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Gestão de conteúdo
+      </a>
+
+      <div class="side-foot">
+        <div class="side-card">
+          <div class="lbl">Avaliação</div>
+          <div style="color:#fff;font-weight:700;font-family:var(--tp-font-sans);margin:2px 0 4px">Nota mínima: 70%</div>
+          <div class="lbl">Acerte 5 de 7 para certificar</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <header class="topbar">
+        <div>
+          <h1>Avaliação do módulo</h1>
+          <p class="sub">Módulo 5 · Abordagem: formas e técnicas</p>
+        </div>
+        <div class="user-chip" style="margin-left:auto"><div class="avatar">RA</div><div><div class="nm">Rafael Almeida</div><div class="rl">Consultor · Nível Prata</div></div></div>
+      </header>
+
+      <main class="content">
+        <div class="crumb quiz-print-hide" style="font-size:var(--tp-fs-sm);color:var(--tp-muted)"><a href="aula-abordagem.html" style="color:var(--tp-muted)">Abordagem</a> · Avaliação</div>
+
+        <!-- Intro + progresso -->
+        <div class="panel quiz-print-hide" id="quizIntro">
+          <div class="panel-head"><h3>Teste seus conhecimentos</h3><span class="badge">7 questões</span></div>
+          <p class="muted" style="margin-top:-6px">Responda às questões com base no que você aprendeu sobre abordagem, objeções, vistoria e produto. É preciso acertar <strong>no mínimo 70%</strong> (5 de 7) para liberar o certificado.</p>
+          <div class="quiz-progress"><span class="lbl"><span id="answered">0</span>/7</span><div class="bar"><i id="quizBar"></i></div></div>
+        </div>
+
+        <!-- QUESTÕES -->
+        <form id="quizForm" class="quiz-print-hide">
+          <div class="quiz-q" data-q>
+            <div class="qhead"><span class="qn">1</span><div class="qtitle">Qual o tempo máximo recomendado para uma abordagem em sinaleiro?</div></div>
+            <label class="opt"><input type="radio" name="q1"><span class="mark"></span><span class="otext">De 2 a 3 minutos, para explicar tudo</span></label>
+            <label class="opt"><input type="radio" name="q1" data-correct><span class="mark"></span><span class="otext">De 15 a 30 segundos</span></label>
+            <label class="opt"><input type="radio" name="q1"><span class="mark"></span><span class="otext">O tempo que o cliente permitir, sem limite</span></label>
+          </div>
+
+          <div class="quiz-q" data-q>
+            <div class="qhead"><span class="qn">2</span><div class="qtitle">Qual é o objetivo principal da abordagem no sinaleiro?</div></div>
+            <label class="opt"><input type="radio" name="q2"><span class="mark"></span><span class="otext">Fechar a venda ali mesmo, no sinal</span></label>
+            <label class="opt"><input type="radio" name="q2"><span class="mark"></span><span class="otext">Explicar todas as coberturas em detalhe</span></label>
+            <label class="opt"><input type="radio" name="q2" data-correct><span class="mark"></span><span class="otext">Captar o contato do motorista para um atendimento consultivo depois</span></label>
+          </div>
+
+          <div class="quiz-q" data-q>
+            <div class="qhead"><span class="qn">3</span><div class="qtitle">O cliente diz “Está caro.” Qual a melhor condução?</div></div>
+            <label class="opt"><input type="radio" name="q3"><span class="mark"></span><span class="otext">Insistir que o preço não tem como mudar</span></label>
+            <label class="opt"><input type="radio" name="q3" data-correct><span class="mark"></span><span class="otext">Mostrar o custo-benefício (assistência 24h, suporte e tranquilidade) e verificar uma opção mais confortável</span></label>
+            <label class="opt"><input type="radio" name="q3"><span class="mark"></span><span class="otext">Encerrar o atendimento, pois não há interesse</span></label>
+          </div>
+
+          <div class="quiz-q" data-q>
+            <div class="qhead"><span class="qn">4</span><div class="qtitle">No aplicativo Visto, qual formato de documento é aceito?</div></div>
+            <label class="opt"><input type="radio" name="q4"><span class="mark"></span><span class="otext">PDF</span></label>
+            <label class="opt"><input type="radio" name="q4" data-correct><span class="mark"></span><span class="otext">Imagem JPG (foto) — PDF não é aceito</span></label>
+            <label class="opt"><input type="radio" name="q4"><span class="mark"></span><span class="otext">Qualquer formato, o sistema converte sozinho</span></label>
+          </div>
+
+          <div class="quiz-q" data-q>
+            <div class="qhead"><span class="qn">5</span><div class="qtitle">Em caso de perda total, qual a cobertura da proteção?</div></div>
+            <label class="opt"><input type="radio" name="q5"><span class="mark"></span><span class="otext">50% do valor de mercado</span></label>
+            <label class="opt"><input type="radio" name="q5"><span class="mark"></span><span class="otext">Um valor fixo definido no contrato</span></label>
+            <label class="opt"><input type="radio" name="q5" data-correct><span class="mark"></span><span class="otext">100% da tabela FIPE</span></label>
+          </div>
+
+          <div class="quiz-q" data-q>
+            <div class="qhead"><span class="qn">6</span><div class="qtitle">No fechamento, em vez de perguntar “Você quer fechar?”, o ideal é:</div></div>
+            <label class="opt"><input type="radio" name="q6" data-correct><span class="mark"></span><span class="otext">Usar pergunta de continuidade: “Para já deixar sua proteção ativa, preciso confirmar alguns dados.”</span></label>
+            <label class="opt"><input type="radio" name="q6"><span class="mark"></span><span class="otext">Pressionar com prazo final imediato</span></label>
+            <label class="opt"><input type="radio" name="q6"><span class="mark"></span><span class="otext">Perguntar várias vezes se ele vai fechar</span></label>
+          </div>
+
+          <div class="quiz-q" data-q>
+            <div class="qhead"><span class="qn">7</span><div class="qtitle">Na reativação de um ex-associado, qual condição especial é oferecida?</div></div>
+            <label class="opt"><input type="radio" name="q7"><span class="mark"></span><span class="otext">Devolução de todas as mensalidades pagas</span></label>
+            <label class="opt"><input type="radio" name="q7" data-correct><span class="mark"></span><span class="otext">Isenção da 2ª mensalidade</span></label>
+            <label class="opt"><input type="radio" name="q7"><span class="mark"></span><span class="otext">Proteção gratuita por 6 meses</span></label>
+          </div>
+
+          <div class="lesson-actions">
+            <button type="submit" class="btn btn-primary" id="quizSubmit">Enviar respostas</button>
+            <button type="button" class="btn btn-ghost" id="quizReset" style="display:none">Refazer avaliação</button>
+          </div>
+        </form>
+
+        <!-- RESULTADO -->
+        <div class="quiz-result quiz-print-hide" id="quizResult">
+          <div class="score" id="quizScore">0%</div>
+          <h3 id="quizMsg" style="margin:8px 0 0;color:inherit"></h3>
+          <p id="quizSub" style="margin:6px 0 0;color:inherit;opacity:.85"></p>
+        </div>
+
+        <!-- CERTIFICADO -->
+        <div class="cert-wrap" id="certWrap" style="margin-top:24px">
+          <div class="cert">
+            <div class="seal"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M9 13.8 8 22l4-2.5L16 22l-1-8.2"/></svg></div>
+            <div class="eyebrow2">Certificado de conclusão</div>
+            <h2>Academia do Consultor · Todos Protegidos</h2>
+            <p class="desc">Certificamos que</p>
+            <div class="name">Rafael Almeida</div>
+            <p class="desc">concluiu com aproveitamento o módulo <strong>Abordagem: formas e técnicas</strong> da formação de consultores de proteção veicular, demonstrando domínio do padrão de atendimento e dos protocolos da Todos Protegidos.</p>
+            <div class="foot">
+              <div class="it"><b id="certScore">—</b><span>Aproveitamento</span></div>
+              <div class="it"><b id="certDate">—</b><span>Data de conclusão</span></div>
+              <div class="it"><b id="certId">—</b><span>Código de validação</span></div>
+            </div>
+          </div>
+          <div class="lesson-actions quiz-print-hide">
+            <button class="btn btn-primary" onclick="window.print()">Imprimir / salvar PDF</button>
+            <a href="dashboard.html" class="btn btn-ghost">Voltar ao painel</a>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
