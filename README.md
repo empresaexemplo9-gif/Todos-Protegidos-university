@@ -1,19 +1,24 @@
 # Todos Protegidos — Novato ao Pro
 
-Interface e **Dashboard** da plataforma **Todos Protegidos** (proteção veicular),
-incluindo a área de treinamento de consultores "do novato ao pro".
+Interface e **Dashboard** da **Academia do Consultor** da **Todos Protegidos**
+(proteção veicular): a plataforma que treina e orienta consultores "do novato ao
+pro", com **padrão de atendimento** e **protocolos** de cotação, vistoria, venda
+e pós-venda.
 
-A identidade visual foi construída a partir das características da marca
-(parceira do **Cartão de TODOS** 🍀): **verde** como cor principal, **azul** de
-apoio e um acento quente para dar energia — com logo, nome e cores aplicados em
-toda a interface.
+> O foco é a **capacitação de consultores de proteção veicular** com padrão e
+> protocolo. O **Cartão de TODOS** é citado apenas na apresentação institucional
+> da empresa (seção "A empresa").
+
+A identidade visual usa **verde** como cor principal, **azul** de apoio e um
+acento quente para dar energia — com logo, nome e cores aplicados em toda a
+interface.
 
 ## 📄 Páginas
 
 | Arquivo | Descrição |
 |---|---|
-| `index.html` | Landing / interface principal (proteção veicular, cotação, benefícios) |
-| `dashboard.html` | Dashboard do consultor — treinamento, vendas, comissões e ranking |
+| `index.html` | Landing da Academia do Consultor (apresentação da empresa, método, padrão & protocolo, trilha do novato ao pro) |
+| `dashboard.html` | Dashboard do consultor — trilha de treinamento, padrões & protocolos, vendas, comissões e ranking |
 | `styleguide.html` | Referência do Design System (cores, logo, tipografia, componentes) |
 
 ## 🎨 Design System
