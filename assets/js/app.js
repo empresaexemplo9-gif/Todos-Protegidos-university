@@ -71,75 +71,194 @@
     });
   }
 
-  // ---- Gestão de conteúdo: expandir nível, adicionar e remover ----
-  var levels = document.querySelectorAll("[data-level]");
-  if (levels.length) {
+  // ---- Gestão de conteúdo: módulos, aulas e vídeos (persistente) ----
+  var gestaoRoot = document.getElementById("gestaoRoot");
+  if (gestaoRoot) {
+    var STORE = "tp_modulos";
     var ICONS = {
       video: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>',
+      aula: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13.5"/><path d="M4 19.5 12 16l8 3.5"/><path d="M9 8h6M9 12h6"/></svg>',
       info: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',
       file: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>'
     };
-    var LABELS = { video: "Vídeo", info: "Informação", file: "Material" };
+    var CHEV = '<svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
     var DEL = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>';
+    var LABELS = { video: "Vídeo", aula: "Aula", info: "Informação", file: "Material" };
+    var TAGS = [
+      "var(--tp-grad-brand)",
+      "linear-gradient(135deg,var(--tp-blue-500),var(--tp-blue-900))",
+      "linear-gradient(135deg,var(--tp-amber-400),var(--tp-amber-500))",
+      "linear-gradient(135deg,var(--tp-green-700),var(--tp-blue-900))"
+    ];
 
-    function bindDelete(btn) {
-      btn.addEventListener("click", function () {
-        var item = btn.closest(".content-item");
-        if (item) item.remove();
-      });
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+    function defaults() {
+      return [
+        { id: uid(), titulo: "Nível 1 · Novato", sub: "Fundamentos da proteção veicular e cultura da empresa", open: true, itens: [
+          { id: uid(), tipo: "video", titulo: "Boas-vindas e cultura Todos Protegidos", meta: "08:00", url: "", desc: "" },
+          { id: uid(), tipo: "info", titulo: "Benefícios (assistência 24h, FIPE, carro e moto)", meta: "Texto de apoio", url: "", desc: "" }
+        ] },
+        { id: uid(), titulo: "Nível 2 · Intermediário", sub: "Padrão de atendimento e abordagem", open: false, itens: [
+          { id: uid(), tipo: "aula", titulo: "Abordagem: formas e técnicas", meta: "5 modelos de abordagem", url: "", desc: "" }
+        ] },
+        { id: uid(), titulo: "Nível 3 · Avançado", sub: "Protocolos de venda, vistoria e objeções", open: false, itens: [
+          { id: uid(), tipo: "info", titulo: "Contorno de 10 objeções", meta: "Biblioteca de scripts", url: "", desc: "" },
+          { id: uid(), tipo: "file", titulo: "Checklist de vistoria", meta: "PDF", url: "", desc: "" }
+        ] },
+        { id: uid(), titulo: "Nível 4 · Pro", sub: "Gestão de carteira, pós-venda e mentoria", open: false, itens: [
+          { id: uid(), tipo: "info", titulo: "Reativação de inadimplentes", meta: "Scripts de voz e WhatsApp", url: "", desc: "" }
+        ] }
+      ];
     }
-    document.querySelectorAll("[data-del]").forEach(bindDelete);
 
-    levels.forEach(function (level) {
-      var head = level.querySelector("[data-toggle]");
-      var form = level.querySelector("[data-form]");
-      var list = level.querySelector("[data-list]");
-      var urlField = form ? form.querySelector("[data-url]") : null;
-      var typeLabel = form ? form.querySelector("[data-label]") : null;
-      var current = "video";
+    function load() {
+      try { var d = JSON.parse(localStorage.getItem(STORE)); if (Array.isArray(d)) return d; } catch (e) {}
+      return defaults();
+    }
+    function save() { try { localStorage.setItem(STORE, JSON.stringify(modulos)); } catch (e) {} }
 
-      if (head) head.addEventListener("click", function () { level.classList.toggle("open"); });
+    var modulos = load();
 
-      level.querySelectorAll("[data-add]").forEach(function (btn) {
+    function elt(html) { var d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstChild; }
+
+    function tagFor(i) { return TAGS[i % TAGS.length]; }
+    function nTag(i) { return "M" + (i + 1); }
+
+    function renderItem(mod, item) {
+      var row = document.createElement("div");
+      row.className = "content-item";
+      row.innerHTML =
+        '<span class="ci-ic ' + item.tipo + '">' + (ICONS[item.tipo] || ICONS.info) + '</span>' +
+        '<div class="ci-body"><div class="t"></div><div class="d"></div></div>' +
+        '<button class="ci-del" aria-label="Remover">' + DEL + '</button>';
+      var sub = LABELS[item.tipo] || "Item";
+      if (item.meta) sub += " · " + item.meta;
+      if (item.desc) sub += " — " + item.desc;
+      row.querySelector(".t").textContent = (item.url ? "▶ " : "") + item.titulo;
+      row.querySelector(".d").textContent = sub;
+      row.querySelector(".ci-del").addEventListener("click", function () {
+        mod.itens = mod.itens.filter(function (it) { return it.id !== item.id; });
+        save(); render();
+      });
+      return row;
+    }
+
+    function renderModule(mod, i) {
+      var card = document.createElement("section");
+      card.className = "level-card" + (mod.open ? " open" : "");
+
+      var head = elt(
+        '<div class="level-head">' +
+          '<div class="level-tag" style="background:' + tagFor(i) + '">' + nTag(i) + '</div>' +
+          '<div class="lvl-info"><h3></h3><div class="d"></div></div>' +
+          '<div class="lvl-actions">' +
+            '<button class="lvl-del" title="Excluir módulo" aria-label="Excluir módulo">' + DEL + '</button>' +
+            CHEV +
+          '</div>' +
+        '</div>'
+      );
+      head.querySelector("h3").textContent = mod.titulo;
+      head.querySelector(".lvl-info .d").textContent = mod.sub || "";
+      head.addEventListener("click", function (e) {
+        if (e.target.closest(".lvl-del")) return;
+        mod.open = !mod.open; card.classList.toggle("open", mod.open); save();
+      });
+      head.querySelector(".lvl-del").addEventListener("click", function () {
+        if (confirm("Excluir o módulo \"" + mod.titulo + "\" e todo o seu conteúdo?")) {
+          modulos = modulos.filter(function (m) { return m.id !== mod.id; });
+          save(); render();
+        }
+      });
+      card.appendChild(head);
+
+      var body = document.createElement("div");
+      body.className = "level-body";
+
+      var list = document.createElement("div");
+      list.className = "content-list";
+      list.style.display = "grid";
+      list.style.gap = "10px";
+      list.style.marginBottom = "14px";
+      mod.itens.forEach(function (item) { list.appendChild(renderItem(mod, item)); });
+      body.appendChild(list);
+
+      var toolbar = elt(
+        '<div class="add-toolbar">' +
+          '<button class="btn btn-ghost btn-sm" data-add="aula">+ Aula</button>' +
+          '<button class="btn btn-ghost btn-sm" data-add="video">+ Vídeo</button>' +
+          '<button class="btn btn-ghost btn-sm" data-add="info">+ Informação</button>' +
+          '<button class="btn btn-ghost btn-sm" data-add="file">+ Material</button>' +
+        '</div>'
+      );
+      body.appendChild(toolbar);
+
+      var form = elt(
+        '<form class="add-form">' +
+          '<div class="field"><label data-label>Título</label><input class="input" data-f="title" placeholder="Ex.: Aula 1 — Fundamentos" required></div>' +
+          '<div class="field-row">' +
+            '<div class="field" data-url><label>URL do vídeo</label><input class="input" data-f="url" placeholder="https://..."></div>' +
+            '<div class="field"><label>Duração / referência</label><input class="input" data-f="meta" placeholder="Ex.: 10:00"></div>' +
+          '</div>' +
+          '<div class="field"><label>Descrição (opcional)</label><textarea data-f="desc" placeholder="Resumo do conteúdo..."></textarea></div>' +
+          '<div class="form-actions" style="display:flex;gap:10px"><button type="submit" class="btn btn-primary btn-sm">Adicionar</button><button type="button" class="btn btn-ghost btn-sm" data-cancel>Cancelar</button></div>' +
+        '</form>'
+      );
+      var current = "aula";
+      var urlField = form.querySelector("[data-url]");
+      var typeLabel = form.querySelector("[data-label]");
+
+      toolbar.querySelectorAll("[data-add]").forEach(function (btn) {
         btn.addEventListener("click", function () {
           current = btn.getAttribute("data-add");
-          if (urlField) urlField.style.display = current === "video" ? "" : "none";
-          if (typeLabel) typeLabel.textContent = "Título d" + (current === "info" ? "a informação" : current === "file" ? "o material" : "o vídeo");
+          urlField.style.display = (current === "video" || current === "aula") ? "" : "none";
+          typeLabel.textContent = "Título d" + (current === "info" ? "a informação" : current === "file" ? "o material" : current === "aula" ? "a aula" : "o vídeo");
           form.classList.add("open");
           var t = form.querySelector('[data-f="title"]'); if (t) t.focus();
         });
       });
+      form.querySelector("[data-cancel]").addEventListener("click", function () { form.classList.remove("open"); form.reset(); });
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var get = function (k) { var el = form.querySelector('[data-f="' + k + '"]'); return el ? el.value.trim() : ""; };
+        var titulo = get("title"); if (!titulo) return;
+        mod.itens.push({ id: uid(), tipo: current, titulo: titulo, meta: get("meta"), url: get("url"), desc: get("desc") });
+        mod.open = true; save(); render();
+      });
+      body.appendChild(form);
 
-      if (form) {
-        var cancel = form.querySelector("[data-cancel]");
-        if (cancel) cancel.addEventListener("click", function () { form.classList.remove("open"); form.reset(); });
+      card.appendChild(body);
+      return card;
+    }
 
-        form.addEventListener("submit", function (e) {
-          e.preventDefault();
-          var get = function (k) { var el = form.querySelector('[data-f="' + k + '"]'); return el ? el.value.trim() : ""; };
-          var title = get("title"); if (!title) return;
-          var meta = get("meta"), url = get("url"), desc = get("desc");
-          var sub = LABELS[current];
-          if (current === "video" && meta) sub = "Vídeo · " + meta;
-          else if (meta) sub = sub + " · " + meta;
-          if (desc) sub = sub + " — " + desc;
+    function render() {
+      gestaoRoot.innerHTML = "";
+      if (!modulos.length) {
+        gestaoRoot.appendChild(elt('<div class="gestao-empty">Nenhum módulo ainda. Clique em <strong>“+ Novo módulo”</strong> para começar.</div>'));
+        return;
+      }
+      modulos.forEach(function (mod, i) { gestaoRoot.appendChild(renderModule(mod, i)); });
+    }
 
-          var item = document.createElement("div");
-          item.className = "content-item";
-          item.innerHTML =
-            '<span class="ci-ic ' + current + '">' + ICONS[current] + "</span>" +
-            '<div class="ci-body"><div class="t"></div><div class="d"></div></div>' +
-            '<button class="ci-del" aria-label="Remover">' + DEL + "</button>";
-          item.querySelector(".t").textContent = (url ? "▶ " : "") + title;
-          item.querySelector(".d").textContent = sub;
-          bindDelete(item.querySelector(".ci-del"));
-          list.appendChild(item);
+    var addModuloBtn = document.getElementById("addModulo");
+    if (addModuloBtn) addModuloBtn.addEventListener("click", function () {
+      var nome = prompt("Nome do módulo:", "Novo módulo");
+      if (nome === null) return;
+      nome = nome.trim(); if (!nome) return;
+      var desc = prompt("Descrição do módulo (opcional):", "") || "";
+      modulos.push({ id: uid(), titulo: nome, sub: desc.trim(), open: true, itens: [] });
+      save(); render();
+      gestaoRoot.lastChild.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
 
-          form.reset();
-          form.classList.remove("open");
-        });
+    var resetBtn = document.getElementById("gestaoReset");
+    if (resetBtn) resetBtn.addEventListener("click", function () {
+      if (confirm("Restaurar a trilha padrão? As alterações salvas neste navegador serão perdidas.")) {
+        modulos = defaults(); save(); render();
       }
     });
+
+    render();
   }
 
   // ---- Avaliação / quiz + certificado ----

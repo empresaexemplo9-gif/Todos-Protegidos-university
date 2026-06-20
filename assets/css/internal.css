@@ -125,8 +125,15 @@
 .content-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--tp-line); border-radius: var(--tp-radius); }
 .content-item .ci-ic { width: 36px; height: 36px; border-radius: 9px; flex: none; display: grid; place-items: center; }
 .content-item .ci-ic.video { background: #fde6e6; color: #c0392b; }
+.content-item .ci-ic.aula  { background: var(--tp-green-50); color: var(--tp-green-700); }
 .content-item .ci-ic.info  { background: var(--tp-blue-50); color: var(--tp-blue-500); }
-.content-item .ci-ic.file  { background: var(--tp-green-50); color: var(--tp-green-600); }
+.content-item .ci-ic.file  { background: #fff4dd; color: var(--tp-amber-500); }
+/* Cabeçalho de módulo com ações (excluir) */
+.level-head .lvl-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.level-head .lvl-del { background: none; border: 0; cursor: pointer; color: var(--tp-muted); padding: 6px; border-radius: 8px; }
+.level-head .lvl-del:hover { background: #fde6e6; color: var(--tp-danger); }
+.content-list:empty::after { content: "Nenhum conteúdo ainda. Use os botões abaixo para adicionar."; display: block; color: var(--tp-muted); font-size: var(--tp-fs-sm); padding: 10px 2px; }
+.gestao-empty { text-align: center; color: var(--tp-muted); padding: 40px; border: 1px dashed var(--tp-line); border-radius: var(--tp-radius-lg); }
 .content-item .ci-body { flex: 1; min-width: 0; }
 .content-item .ci-body .t { font-weight: 600; font-size: var(--tp-fs-sm); }
 .content-item .ci-body .d { font-size: var(--tp-fs-xs); color: var(--tp-muted); }
