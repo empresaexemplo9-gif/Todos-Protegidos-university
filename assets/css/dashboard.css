@@ -11,8 +11,10 @@ body.dash { background: var(--tp-bg); }
   background: var(--tp-side-bg, #081042); color: var(--tp-side-fg, #c8d8cf);
   padding: 22px 18px; position: sticky; top: 0; height: 100vh;
   overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: none; -ms-overflow-style: none;
   display: flex; flex-direction: column; gap: 8px;
 }
+.sidebar::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .sidebar .brand img { height: 44px; }
 .sidebar-brand { padding: 6px 8px 22px; }
 .side-label { font-size: var(--tp-fs-xs); text-transform: uppercase; letter-spacing: .12em; color: var(--tp-side-label, #6e8d7d); padding: 16px 12px 8px; }
