@@ -108,6 +108,13 @@
     uploadFile: function () {
       return Promise.resolve({ ok: false, error: "O upload de vídeo está disponível no modo nuvem (Supabase). Cole a URL do vídeo." });
     },
+    getProgress: function () { return Promise.resolve(lsGet("tp_progresso", [])); },
+    setProgress: function (itemId, done) {
+      var p = lsGet("tp_progresso", []);
+      if (done) { if (p.indexOf(itemId) < 0) p.push(itemId); } else { p = p.filter(function (x) { return x !== itemId; }); }
+      lsSet("tp_progresso", p);
+      return Promise.resolve({ ok: true });
+    },
 
     listModules: function () {
       var m = lsGet("tp_modulos", null);
@@ -201,6 +208,20 @@
           return { ok: true, url: pub.data.publicUrl };
         });
     },
+    getProgress: function () {
+      return sb.auth.getUser().then(function (r) {
+        var u = r.data && r.data.user; if (!u) return [];
+        return sb.from("progresso").select("item_id").eq("user_id", u.id)
+          .then(function (res) { return (res.data || []).map(function (x) { return x.item_id; }); });
+      });
+    },
+    setProgress: function (itemId, done) {
+      return sb.auth.getUser().then(function (r) {
+        var u = r.data && r.data.user; if (!u) return { ok: false, error: "Sessão expirada." };
+        if (done) return sb.from("progresso").upsert({ user_id: u.id, item_id: itemId }).then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+        return sb.from("progresso").delete().eq("user_id", u.id).eq("item_id", itemId).then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+      });
+    },
     listModules: function () {
       return Promise.all([
         sb.from("modulos").select("*").order("ordem", { ascending: true }),
@@ -253,6 +274,8 @@
     updatePassword: function (nova) { return impl.updatePassword(nova); },
     updateEmail: function (novo) { return impl.updateEmail(novo); },
     uploadFile: function (file) { return impl.uploadFile(file); },
+    getProgress: function () { return impl.getProgress(); },
+    setProgress: function (id, done) { return impl.setProgress(id, done); },
     listModules: function () { return impl.listModules(); },
     addModule: function (t, s) { return impl.addModule(t, s); },
     deleteModule: function (id) { return impl.deleteModule(id); },

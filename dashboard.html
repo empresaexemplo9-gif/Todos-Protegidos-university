@@ -71,9 +71,9 @@
       <div class="side-foot">
         <div class="side-card">
           <div class="lbl">Seu nível</div>
-          <div style="color:#fff;font-weight:700;font-family:var(--tp-font-sans);margin:2px 0 8px">Novato</div>
-          <div class="progress" style="background:rgba(255,255,255,.15)"><i style="width:0%"></i></div>
-          <div class="lbl" style="margin-top:8px">Comece sua trilha para evoluir</div>
+          <div id="sideLevel" style="color:#fff;font-weight:700;font-family:var(--tp-font-sans);margin:2px 0 8px">Novato</div>
+          <div class="progress" style="background:rgba(255,255,255,.15)"><i id="sideProg" style="width:0%"></i></div>
+          <div class="lbl" id="sideHint" style="margin-top:8px">Comece sua trilha para evoluir</div>
         </div>
       </div>
     </aside>
@@ -110,12 +110,12 @@
         <section class="welcome">
           <div>
             <h2>Bem-vindo(a)! Comece sua jornada do novato ao pro 🚀</h2>
-            <p>Sua trilha está 0% concluída. Comece pelo primeiro módulo e evolua de nível conforme avança.</p>
+            <p id="welcomeText">Sua trilha está 0% concluída. Comece pelo primeiro módulo e evolua de nível conforme avança.</p>
             <div style="margin-top:18px"><a href="aula.html" class="btn btn-primary btn-sm">Começar treinamento</a></div>
           </div>
           <div class="lvl">
-            <span class="tag">🏁 Nível Novato</span>
-            <div style="font-family:var(--tp-font-sans);font-weight:800;font-size:var(--tp-fs-3xl);margin-top:10px">0%</div>
+            <span class="tag" id="welcomeLevel">🏁 Nível Novato</span>
+            <div id="welcomePct" style="font-family:var(--tp-font-sans);font-weight:800;font-size:var(--tp-fs-3xl);margin-top:10px">0%</div>
             <div style="color:rgba(255,255,255,.8);font-size:var(--tp-fs-sm)">rumo a Consultor Pro</div>
           </div>
         </section>
@@ -134,8 +134,8 @@
           </div>
           <div class="kpi">
             <div class="kpi-top"><div class="kpi-ico amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13.5"/><path d="M9 8h6M9 12h6"/></svg></div></div>
-            <div class="val">0</div>
-            <div class="lbl">Módulos concluídos</div>
+            <div class="val" id="kpiAulas">0</div>
+            <div class="lbl">Aulas concluídas</div>
           </div>
           <div class="kpi">
             <div class="kpi-top"><div class="kpi-ico dark"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg></div></div>

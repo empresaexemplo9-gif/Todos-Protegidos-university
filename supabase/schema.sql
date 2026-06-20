@@ -161,6 +161,27 @@ create policy "itens_write" on public.itens
   for all using (public.is_admin() and tenant_id = public.current_tenant_id())
   with check (public.is_admin() and tenant_id = public.current_tenant_id());
 
+-- 8.1) PROGRESSO do consultor (aulas concluídas) — cada um vê/edita só o seu
+create table if not exists public.progresso (
+  user_id      uuid not null references auth.users(id) on delete cascade,
+  item_id      uuid not null references public.itens(id) on delete cascade,
+  completed_at timestamptz not null default now(),
+  primary key (user_id, item_id)
+);
+alter table public.progresso enable row level security;
+
+drop policy if exists "progresso_select_own" on public.progresso;
+create policy "progresso_select_own" on public.progresso
+  for select using (user_id = auth.uid());
+
+drop policy if exists "progresso_insert_own" on public.progresso;
+create policy "progresso_insert_own" on public.progresso
+  for insert with check (user_id = auth.uid());
+
+drop policy if exists "progresso_delete_own" on public.progresso;
+create policy "progresso_delete_own" on public.progresso
+  for delete using (user_id = auth.uid());
+
 -- 9) Tenant inicial (necessário para os primeiros cadastros).
 --    A trilha começa VAZIA — o admin de cada tenant cria os módulos.
 insert into public.tenants (nome, slug)

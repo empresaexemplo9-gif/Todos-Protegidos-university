@@ -289,23 +289,49 @@
     }, function () { restrito(); });
   }
 
-  // ---- Trilha resumida no dashboard (lê módulos do backend) ----
+  // ---- Trilha resumida + progresso real no dashboard ----
   var trilhaLista = document.getElementById("trilhaLista");
   if (trilhaLista) {
     var escT = function (s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; };
-    TPData.listModules().then(function (mods) {
-      mods = mods || [];
+    var setTxt = function (id, t) { var e = document.getElementById(id); if (e) e.textContent = t; };
+    var setW = function (id, w) { var e = document.getElementById(id); if (e) e.style.width = w; };
+    function nivelInfo(pct) {
+      if (pct >= 80) return { nome: "Pro", tag: "🏆 Nível Pro" };
+      if (pct >= 50) return { nome: "Avançado", tag: "🥇 Nível Avançado" };
+      if (pct >= 25) return { nome: "Intermediário", tag: "🥈 Nível Intermediário" };
+      return { nome: "Novato", tag: "🏁 Nível Novato" };
+    }
+    Promise.all([TPData.listModules(), TPData.getProgress()]).then(function (res) {
+      var mods = res[0] || [], done = res[1] || [];
+      function isD(id) { return done.indexOf(id) >= 0; }
+      var total = 0, dn = 0;
+      mods.forEach(function (m) { (m.itens || []).forEach(function (it) { total++; if (isD(it.id)) dn++; }); });
+      var pct = total ? Math.round(dn / total * 100) : 0;
+      var info = nivelInfo(pct);
+      setTxt("welcomePct", pct + "%");
+      setTxt("welcomeLevel", info.tag);
+      setTxt("welcomeText", total ? ("Sua trilha está " + pct + "% concluída — " + dn + " de " + total + " aulas. Continue de onde parou.") : "Sua trilha aparece aqui assim que a gestão publicar os módulos.");
+      setTxt("sideLevel", info.nome);
+      setW("sideProg", pct + "%");
+      setTxt("sideHint", total ? (dn >= total ? "Trilha concluída! 🎉" : "Faltam " + (total - dn) + " aula(s) para 100%") : "Comece sua trilha para evoluir");
+      setTxt("kpiAulas", String(dn));
+
       if (!mods.length) {
         trilhaLista.innerHTML = '<div class="gestao-empty" style="padding:28px">Sua trilha aparece aqui assim que a gestão publicar os módulos.<div style="margin-top:12px"><a class="btn btn-primary btn-sm" href="gestao.html">Ir para a gestão</a></div></div>';
         return;
       }
       var html = "";
       mods.forEach(function (m) {
-        var n = (m.itens || []).length;
-        html += '<div class="track-item"><div class="track-step current">' + n + '</div>' +
-          '<div class="track-body"><div class="t">' + escT(m.titulo) + '</div><div class="d">' + escT(m.sub || "") + (m.sub ? " · " : "") + n + ' ' + (n === 1 ? "item" : "itens") + '</div></div>';
+        var n = (m.itens || []).length, d2 = 0;
+        (m.itens || []).forEach(function (it) { if (isD(it.id)) d2++; });
+        var full = n > 0 && d2 >= n;
+        var step = full
+          ? '<div class="track-step done"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>'
+          : '<div class="track-step current">' + d2 + '</div>';
+        html += '<div class="track-item">' + step +
+          '<div class="track-body"><div class="t">' + escT(m.titulo) + '</div><div class="d">' + escT(m.sub || "") + (m.sub ? " · " : "") + d2 + '/' + n + ' concluídas</div></div>';
         var firstVid = (m.itens || []).filter(function (it) { return it.tipo === "aula" || it.tipo === "video"; })[0];
-        if (firstVid) html += '<a class="btn btn-primary btn-sm" href="aula.html?item=' + encodeURIComponent(firstVid.id) + '">Assistir</a>';
+        if (firstVid) html += '<a class="btn ' + (full ? "btn-ghost" : "btn-primary") + ' btn-sm" href="aula.html?item=' + encodeURIComponent(firstVid.id) + '">' + (full ? "Revisar" : "Assistir") + '</a>';
         else html += '<a class="btn btn-ghost btn-sm" href="aula.html">Abrir</a>';
         html += '</div>';
       });
@@ -331,12 +357,19 @@
     }
     function flatten(mods) { var l = []; mods.forEach(function (m) { (m.itens || []).forEach(function (it) { l.push({ mod: m, item: it }); }); }); return l; }
 
+    var doneSet = [], modulesCache = [];
+    function isDone(id) { return doneSet.indexOf(id) >= 0; }
+    function modDone(m) { var d = 0; (m.itens || []).forEach(function (it) { if (isDone(it.id)) d++; }); return d; }
+    var ICODONE = '<span class="ic done"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>';
+    var ICOPLAY = '<span class="ic now"><svg width="14" height="14" viewBox="0 0 24 24" fill="#081042"><path d="M8 5v14l11-7z"/></svg></span>';
+
     function renderPlayer(mods, currentId) {
       var flat = flatten(mods);
       if (!flat.length) { playerApp.innerHTML = '<div class="gestao-empty" style="padding:48px">Nenhuma aula publicada ainda. Assim que a gestão adicionar conteúdo, ele aparece aqui.</div>'; return; }
       var sel = null;
       flat.forEach(function (e) { if (e.item.id === currentId) sel = e; });
       if (!sel) sel = flat.filter(function (e) { return isPlayable(e.item); })[0] || flat[0];
+      var done = isDone(sel.item.id);
 
       var html = '<div class="crumb" style="font-size:var(--tp-fs-sm);color:var(--tp-muted);margin-bottom:14px"><a href="dashboard.html" style="color:var(--tp-muted)">Visão geral</a> · ' + esc(sel.mod.titulo) + '</div>';
       html += '<div class="lesson-grid"><div>';
@@ -346,30 +379,47 @@
       html += '<span class="badge badge-amber" style="margin-top:18px">' + esc(sel.mod.titulo) + '</span>';
       html += '<h2>' + esc(sel.item.titulo) + '</h2>';
       html += '<p class="muted">' + (sel.item.desc ? esc(sel.item.desc) : (sel.item.meta ? esc(sel.item.meta) : "—")) + '</p>';
-      if (sel.item.url && !isPlayable(sel.item)) html += '<div class="lesson-actions"><a class="btn btn-primary" href="' + esc(sel.item.url).replace(/"/g, "%22") + '" target="_blank" rel="noopener">Abrir material</a></div>';
+      html += '<div class="lesson-actions">';
+      html += '<button class="btn ' + (done ? "btn-ghost" : "btn-primary") + '" id="btnDone">' + (done ? "✓ Concluída — desmarcar" : "Marcar como concluída") + '</button>';
+      if (sel.item.url && !isPlayable(sel.item)) html += '<a class="btn btn-ghost" href="' + esc(sel.item.url).replace(/"/g, "%22") + '" target="_blank" rel="noopener">Abrir material</a>';
+      html += '</div>';
       html += '</div></div>';
 
       html += '<aside class="playlist">';
       mods.forEach(function (m) {
         if (!(m.itens || []).length) return;
-        html += '<div class="playlist-head"><h3>' + esc(m.titulo) + '</h3><div class="d">' + m.itens.length + ' ' + (m.itens.length === 1 ? "item" : "itens") + '</div></div>';
+        var dn = modDone(m), tot = m.itens.length, pct = Math.round(dn / tot * 100);
+        html += '<div class="playlist-head"><h3>' + esc(m.titulo) + '</h3><div class="d">' + dn + '/' + tot + ' concluídas</div><div class="progress" style="margin-top:8px"><i style="width:' + pct + '%"></i></div></div>';
         m.itens.forEach(function (it) {
           var active = it.id === sel.item.id ? " active" : "";
-          var ico = isPlayable(it)
-            ? '<span class="ic now"><svg width="14" height="14" viewBox="0 0 24 24" fill="#081042"><path d="M8 5v14l11-7z"/></svg></span>'
-            : '<span class="ic next">•</span>';
+          var ico = isDone(it.id) ? ICODONE : (isPlayable(it) ? ICOPLAY : '<span class="ic next">•</span>');
           html += '<a class="lesson' + active + '" href="aula.html?item=' + encodeURIComponent(it.id) + '" style="text-decoration:none;color:inherit">' + ico + '<div class="t">' + esc(it.titulo) + '<small>' + esc(TYPELBL[it.tipo] || "") + (it.meta ? " · " + esc(it.meta) : "") + '</small></div></a>';
         });
       });
       html += '<a class="lesson" href="quiz.html" style="text-decoration:none;color:inherit"><span class="ic next">★</span><div class="t">Avaliação do módulo<small>Quiz · libera certificado</small></div></a>';
       html += '</aside></div>';
       playerApp.innerHTML = html;
+
+      var b = document.getElementById("btnDone");
+      if (b) b.addEventListener("click", function () {
+        b.disabled = true;
+        var novo = !isDone(sel.item.id);
+        TPData.setProgress(sel.item.id, novo).then(function (r) {
+          if (r && r.ok === false) { b.disabled = false; alert(r.error || "Não foi possível salvar o progresso."); return; }
+          if (novo) { if (doneSet.indexOf(sel.item.id) < 0) doneSet.push(sel.item.id); }
+          else doneSet = doneSet.filter(function (x) { return x !== sel.item.id; });
+          renderPlayer(modulesCache, sel.item.id);
+        }, function () { b.disabled = false; alert("Erro de conexão ao salvar o progresso."); });
+      });
     }
 
     var wantId = new URLSearchParams(location.search).get("item");
     TPData.session().then(function (s) {
       if (!s) { window.location.href = "login.html"; return; }
-      TPData.listModules().then(function (mods) { renderPlayer(mods || [], wantId); }, function () {
+      Promise.all([TPData.listModules(), TPData.getProgress()]).then(function (res) {
+        modulesCache = res[0] || []; doneSet = res[1] || [];
+        renderPlayer(modulesCache, wantId);
+      }, function () {
         playerApp.innerHTML = '<div class="gestao-empty" style="padding:40px">Não foi possível carregar as aulas. Recarregue a página.</div>';
       });
     }, function () { window.location.href = "login.html"; });

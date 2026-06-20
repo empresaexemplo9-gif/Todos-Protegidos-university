@@ -19,6 +19,7 @@ drop function if exists public.current_tenant_id() cascade;
 drop function if exists public.tenant_existe(text) cascade;
 
 -- 3) Tabelas (CASCADE remove também políticas RLS, FKs e o seed)
+drop table if exists public.progresso cascade;
 drop table if exists public.itens   cascade;
 drop table if exists public.modulos cascade;
 drop table if exists public.profiles cascade;

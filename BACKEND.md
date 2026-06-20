@@ -24,6 +24,9 @@ Nada no front-end precisa ser reescrito para ativar — basta configurar.
 3. Para o **upload de videoaulas**, rode também [`supabase/storage.sql`](supabase/storage.sql).
    - Cria o bucket público `midia` (leitura pública para o vídeo tocar; envio só para admins).
    - Para vídeos grandes, ajuste o limite em **Storage → Settings → File size limit**.
+4. Para o **acompanhamento de progresso** (aulas concluídas), rode [`supabase/progress.sql`](supabase/progress.sql).
+   - Cria a tabela `progresso` (cada consultor vê/edita só o próprio progresso).
+   - Já incluído no `schema.sql` para instalações novas; o `progress.sql` é para quem já rodou o schema antes.
 
 ### 3. Pegar as chaves de API
 1. **Project Settings → API**.
