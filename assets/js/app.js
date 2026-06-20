@@ -517,9 +517,11 @@
         setT("certScore", pct + "%");
         var d = new Date();
         setT("certDate", d.toLocaleDateString("pt-BR"));
-        setT("certId", "TP-" + d.getFullYear() + "-" + String(Date.now()).slice(-6));
+        var validId = "TP-" + d.getFullYear() + "-" + String(Date.now()).slice(-6);
+        setT("certId", validId);
         if (sessao) setT("certName", sessao.nome);
         setT("certModulo", moduloTitulo || "—");
+        if (TPData.addCertificate) TPData.addCertificate({ modulo_id: modId, modulo_titulo: moduloTitulo, score: pct, id_validacao: validId, data: d.toISOString().slice(0, 10) });
         cw.scrollIntoView({ behavior: "smooth" });
       } else { result.scrollIntoView({ behavior: "smooth" }); }
     });
@@ -958,6 +960,37 @@
     }, function () {
       vendasRecentesEl.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--tp-muted);padding:20px 12px">Vendas indisponíveis (rode <code>db/migrations.sql</code> no Supabase).</td></tr>';
     });
+  }
+
+  // ---- Certificações: listagem ----
+  var certRoot = document.getElementById("certificacoesRoot");
+  if (certRoot) {
+    var certEmpty = function (msg) { certRoot.innerHTML = '<div class="gestao-empty">' + msg + '</div>'; };
+    var certEsc = function (s) { return (s == null ? "" : String(s)).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); };
+    var certDate = function (s) { if (!s) return "—"; var p = String(s).slice(0, 10).split("-"); return p.length === 3 ? p[2] + "/" + p[1] + "/" + p[0] : s; };
+    function renderCerts(list, nome) {
+      if (!list.length) { certEmpty('Você ainda não tem certificados. Conclua um módulo e seja aprovado na prova (≥70%) para liberar o seu. <a href="aula.html">Ir para a trilha</a>.'); return; }
+      certRoot.innerHTML = '<div class="cert-list">' + list.map(function (c) {
+        return '<div class="cert">' +
+          '<div class="seal"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M9 13.8 8 22l4-2.5L16 22l-1-8.2"/></svg></div>' +
+          '<div class="eyebrow2">Todos Protegidos University</div>' +
+          '<h2>Certificado de Conclusão</h2>' +
+          '<p class="desc">Certificamos que</p>' +
+          '<div class="name">' + certEsc(nome || "Consultor") + '</div>' +
+          '<p class="desc">concluiu com aproveitamento o módulo <strong>' + certEsc(c.modulo_titulo || "—") + '</strong> da formação de consultores de proteção veicular da Todos Protegidos University.</p>' +
+          '<div class="foot"><div class="it"><b>' + (Number(c.score) || 0) + '%</b><span>Aproveitamento</span></div><div class="it"><b>' + certDate(c.data) + '</b><span>Data de conclusão</span></div><div class="it"><b>' + certEsc(c.id_validacao || "—") + '</b><span>Código de validação</span></div></div>' +
+          '</div>';
+      }).join("") + '</div><div class="quiz-print-hide" style="margin-top:20px;text-align:center"><button class="btn btn-ghost btn-sm" id="certPrint">Imprimir / salvar PDF</button></div>';
+      var pb = document.getElementById("certPrint"); if (pb) pb.addEventListener("click", function () { window.print(); });
+    }
+    certEmpty("Carregando certificados…");
+    if (window.TPData) {
+      TPData.session().then(function (s) {
+        if (!s) { window.location.href = "login.html"; return; }
+        TPData.listCertificates().then(function (list) { renderCerts(list || [], s.nome); },
+          function () { certEmpty('Não foi possível carregar seus certificados. Se a tabela ainda não existe no Supabase, rode <code>db/migrations.sql</code> no SQL Editor.'); });
+      }, function () { certEmpty("Sessão indisponível."); });
+    }
   }
 
   // ---- Reflete a sessão (nome/perfil) e injeta o botão "Sair" ----

@@ -42,7 +42,7 @@
     ] },
     { section: "Carreira", items: [
       { id: "ranking", label: "Ranking & metas", href: "dashboard.html#ranking", icon: "trophy", state: "soon" },
-      { id: "cert",    label: "Certificações",   href: "#",                      icon: "medal",  state: "soon" },
+      { id: "cert",    label: "Certificações",   href: "certificacoes.html",     icon: "medal",  match: ["certificacoes.html"] },
       { id: "conta",   label: "Minha conta",     href: "conta.html",             icon: "gear",   match: ["conta.html"] }
     ] }
   ];

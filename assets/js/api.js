@@ -204,6 +204,14 @@
     deleteVenda: function (id) {
       lsSet("tp_vendas", lsGet("tp_vendas", []).filter(function (v) { return v.id !== id; }));
       return Promise.resolve({ ok: true });
+    },
+
+    listCertificates: function () { return Promise.resolve(lsGet("tp_certificados", [])); },
+    addCertificate: function (d) {
+      var arr = lsGet("tp_certificados", []).filter(function (c) { return !d.modulo_id || c.modulo_id !== d.modulo_id; });
+      var c = { id: uid(), modulo_id: d.modulo_id || null, modulo_titulo: d.modulo_titulo || "", score: Number(d.score) || 0, id_validacao: d.id_validacao || "", data: d.data || new Date().toISOString().slice(0, 10), criado_em: new Date().toISOString() };
+      arr.unshift(c); lsSet("tp_certificados", arr);
+      return Promise.resolve({ ok: true, certificado: c });
     }
   };
 
@@ -381,6 +389,23 @@
     deleteVenda: function (id) {
       return sb.from("vendas").delete().eq("id", id)
         .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+    },
+
+    listCertificates: function () {
+      return sb.auth.getUser().then(function (r) {
+        var u = r.data && r.data.user; if (!u) return [];
+        return sb.from("certificados").select("*").eq("user_id", u.id).order("data", { ascending: false })
+          .then(function (res) { if (res.error) throw res.error; return res.data || []; });
+      });
+    },
+    addCertificate: function (d) {
+      return sb.auth.getUser().then(function (r) {
+        var u = r.data && r.data.user; if (!u) return { ok: false, error: "Sessão expirada." };
+        var row = { user_id: u.id, modulo_id: d.modulo_id || null, modulo_titulo: d.modulo_titulo, score: Number(d.score) || 0, id_validacao: d.id_validacao, data: d.data || new Date().toISOString().slice(0, 10) };
+        var ins = function () { return sb.from("certificados").insert(row).select().single().then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true, certificado: res.data }; }); };
+        if (row.modulo_id) return sb.from("certificados").delete().eq("user_id", u.id).eq("modulo_id", row.modulo_id).then(ins);
+        return ins();
+      });
     }
   };
 
@@ -416,6 +441,8 @@
     listVendas: function () { return impl.listVendas(); },
     addVenda: function (d) { return impl.addVenda(d); },
     updateVenda: function (id, d) { return impl.updateVenda(id, d); },
-    deleteVenda: function (id) { return impl.deleteVenda(id); }
+    deleteVenda: function (id) { return impl.deleteVenda(id); },
+    listCertificates: function () { return impl.listCertificates(); },
+    addCertificate: function (d) { return impl.addCertificate(d); }
   };
 })();

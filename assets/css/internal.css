@@ -235,6 +235,7 @@
 /* Certificado */
 .cert-wrap { display: none; }
 .cert-wrap.show { display: block; }
+.cert-list { display: flex; flex-direction: column; gap: 24px; }
 .cert {
   position: relative; background: #fff; border-radius: var(--tp-radius-lg);
   border: 2px solid var(--tp-green-500); padding: 48px; text-align: center; overflow: hidden;
