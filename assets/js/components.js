@@ -142,6 +142,68 @@
     root.innerHTML = html;
     var burger = root.querySelector(".nav-burger");
     if (burger) burger.addEventListener("click", toggleDrawer);
+    wireSearch(root);
+  }
+
+  // ---- Busca global (módulos + aulas) --------------------------------------
+  var searchIndex = null;
+  function norm(s) {
+    s = (s || "").toLowerCase();
+    return s.normalize ? s.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : s;
+  }
+  function tipoLabel(t) { return t === "video" ? "Vídeo" : t === "quiz" ? "Prova" : t === "texto" ? "Material" : "Aula"; }
+  function tipoIcon(t) { return t === "quiz" ? "medal" : t === "video" ? "book" : "file"; }
+  function loadIndex() {
+    if (searchIndex) return Promise.resolve(searchIndex);
+    if (!(window.TPData && TPData.listModules)) { searchIndex = []; return Promise.resolve(searchIndex); }
+    return TPData.listModules().then(function (mods) {
+      var idx = [];
+      (mods || []).forEach(function (m) {
+        idx.push({ type: "Módulo", label: m.titulo, sub: m.sub || "", href: "aula.html", icon: "book" });
+        (m.itens || []).forEach(function (it) {
+          idx.push({ type: tipoLabel(it.tipo), label: it.titulo, sub: m.titulo, href: "aula.html?item=" + encodeURIComponent(it.id), icon: tipoIcon(it.tipo) });
+        });
+      });
+      searchIndex = idx; return idx;
+    }, function () { searchIndex = []; return searchIndex; });
+  }
+  function esc(s) { return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function wireSearch(scope) {
+    var label = scope.querySelector(".search");
+    if (!label) return;
+    var input = label.querySelector("input");
+    if (!input) return;
+    input.setAttribute("autocomplete", "off");
+    var box = document.createElement("div");
+    box.className = "search-results";
+    box.setAttribute("hidden", "");
+    label.appendChild(box);
+    var timer;
+    function close() { box.setAttribute("hidden", ""); box.innerHTML = ""; }
+    function run() {
+      var q = norm(input.value.trim());
+      if (q.length < 2) { close(); return; }
+      loadIndex().then(function (idx) {
+        var hits = [];
+        for (var i = 0; i < idx.length && hits.length < 8; i++) {
+          if (norm(idx[i].label).indexOf(q) !== -1 || norm(idx[i].sub).indexOf(q) !== -1) hits.push(idx[i]);
+        }
+        if (!hits.length) {
+          box.innerHTML = '<div class="search-empty">Nada encontrado para “' + esc(input.value.trim()) + '”.</div>';
+        } else {
+          box.innerHTML = hits.map(function (h) {
+            return '<a class="search-item" href="' + h.href + '">' + icon(h.icon, 16) +
+                   '<span class="si-main"><span class="si-label">' + esc(h.label) + '</span>' +
+                   '<span class="si-sub">' + esc(h.type) + (h.sub ? " · " + esc(h.sub) : "") + '</span></span></a>';
+          }).join("");
+        }
+        box.removeAttribute("hidden");
+      });
+    }
+    input.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(run, 160); });
+    input.addEventListener("focus", run);
+    input.addEventListener("keydown", function (e) { if (e.key === "Escape" || e.keyCode === 27) { close(); input.blur(); } });
+    document.addEventListener("click", function (e) { if (!label.contains(e.target)) close(); });
   }
 
   // ---- Gate por papel (mostra "Gestão de conteúdo" só p/ admin) -------------
