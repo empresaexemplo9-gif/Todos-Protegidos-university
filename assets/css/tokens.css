@@ -103,6 +103,12 @@
 
   --tp-ring: 0 0 0 4px rgba(20, 194, 173, .28);
 
+  /* Sidebar (área interna) */
+  --tp-side-bg:    #081042;
+  --tp-side-fg:    #c8d8cf;
+  --tp-side-label: #6e8d7d;
+  --tp-side-muted: #9bbbab;
+
   --tp-container: 1180px;
   --tp-transition: 180ms cubic-bezier(.4, 0, .2, 1);
 }

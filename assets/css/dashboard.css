@@ -8,28 +8,28 @@ body.dash { background: var(--tp-bg); }
 
 /* ---------- Sidebar ---------- */
 .sidebar {
-  background: #081042; color: #c8d8cf;
+  background: var(--tp-side-bg); color: var(--tp-side-fg);
   padding: 22px 18px; position: sticky; top: 0; height: 100vh;
   display: flex; flex-direction: column; gap: 8px;
 }
 .sidebar .brand img { height: 44px; }
 .sidebar-brand { padding: 6px 8px 22px; }
-.side-label { font-size: var(--tp-fs-xs); text-transform: uppercase; letter-spacing: .12em; color: #6e8d7d; padding: 16px 12px 8px; }
+.side-label { font-size: var(--tp-fs-xs); text-transform: uppercase; letter-spacing: .12em; color: var(--tp-side-label); padding: 16px 12px 8px; }
 .side-link {
   display: flex; align-items: center; gap: 12px;
   padding: 11px 12px; border-radius: var(--tp-radius-sm);
-  color: #c8d8cf; font-size: var(--tp-fs-sm); font-weight: var(--tp-fw-medium);
+  color: var(--tp-side-fg); font-size: var(--tp-fs-sm); font-weight: var(--tp-fw-medium);
   transition: background var(--tp-transition), color var(--tp-transition);
 }
 .side-link svg { opacity: .85; }
 .side-link:hover { background: rgba(255,255,255,.07); color: #fff; }
 .side-link.active { background: var(--tp-grad-brand); color: #fff; box-shadow: var(--tp-shadow-brand); }
 .side-link.active svg { opacity: 1; }
-.side-badge { margin-left: auto; background: var(--tp-amber-400); color: #081042; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
+.side-badge { margin-left: auto; background: var(--tp-amber-400); color: var(--tp-side-bg); font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
 .side-foot { margin-top: auto; }
 .side-credit { margin-top: 14px; text-align: center; }
 .side-card { background: rgba(255,255,255,.06); border-radius: var(--tp-radius); padding: 16px; }
-.side-card .lbl { font-size: var(--tp-fs-xs); color: #9bbbab; }
+.side-card .lbl { font-size: var(--tp-fs-xs); color: var(--tp-side-muted); }
 .side-card-val { color: #fff; font-weight: 700; font-family: var(--tp-font-sans); margin: 2px 0 8px; }
 .side-card .progress, .side-progress { background: rgba(255,255,255,.15); }
 .side-link span { min-width: 0; }

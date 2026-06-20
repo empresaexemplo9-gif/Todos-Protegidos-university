@@ -68,6 +68,11 @@
   // ---- Abas (scripts / aula) com ARIA + teclado ----
   var tabs = document.querySelectorAll(".tab[data-tab]");
   if (tabs.length) {
+    var panelFor = function (name) {
+      var found = null;
+      document.querySelectorAll(".tab-panel").forEach(function (p) { if (p.getAttribute("data-panel") === name) found = p; });
+      return found;
+    };
     var selectTab = function (tab) {
       var name = tab.getAttribute("data-tab");
       tabs.forEach(function (t) {
@@ -81,7 +86,17 @@
       });
     };
     tabs.forEach(function (tab, i) {
+      var name = tab.getAttribute("data-tab");
       tab.setAttribute("role", "tab");
+      if (!tab.id) tab.id = "tab-" + name;
+      var panel = panelFor(name);
+      if (panel) {
+        if (!panel.id) panel.id = "panel-" + name;
+        panel.setAttribute("role", "tabpanel");
+        panel.setAttribute("aria-labelledby", tab.id);
+        panel.setAttribute("tabindex", "0");
+        tab.setAttribute("aria-controls", panel.id);
+      }
       var on = tab.classList.contains("active");
       tab.setAttribute("aria-selected", on ? "true" : "false");
       tab.setAttribute("tabindex", on ? "0" : "-1");
@@ -96,6 +111,10 @@
       });
     });
   }
+
+  // ---- Baixar manual (PDF) via impressão ----
+  var baixarManual = document.getElementById("baixarManual");
+  if (baixarManual) baixarManual.addEventListener("click", function () { window.print(); });
 
   // ---- Gestão de conteúdo: módulos, aulas e vídeos (Supabase/local) ----
   var gestaoRoot = document.getElementById("gestaoRoot");
