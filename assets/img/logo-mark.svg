@@ -1,15 +1,17 @@
 <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Todos Protegidos">
   <defs>
-    <linearGradient id="tpMark" x1="14" y1="6" x2="56" y2="66" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#3FE0CE"/>
-      <stop offset="1" stop-color="#0BA596"/>
+    <linearGradient id="tpShieldM" x1="12" y1="8" x2="60" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#27D8C6"/>
+      <stop offset="1" stop-color="#1746B0"/>
     </linearGradient>
   </defs>
-  <!-- Escudo arredondado (proteção) -->
-  <path d="M36 4c8.5 3.4 15.6 5 22 5.5 0 14.7 1.1 31.9-22 53C12.9 41.4 14 24.2 14 9.5 20.4 9 27.5 7.4 36 4Z" fill="url(#tpMark)"/>
-  <!-- Swoosh / abraço (duas curvas brancas que envolvem) -->
-  <path d="M24.5 30c0-3.6 3-6.5 6.6-6.5 2.7 0 5 1.6 6 4" stroke="#fff" stroke-width="4.2" stroke-linecap="round" fill="none" opacity=".55"/>
-  <path d="M47.5 30c0-3.6-3-6.5-6.6-6.5-2.7 0-5 1.6-6 4" stroke="#fff" stroke-width="4.2" stroke-linecap="round" fill="none" opacity=".55"/>
-  <!-- Check de confiança -->
-  <path d="M25 37.5 33 45.5 49 28.5" stroke="#fff" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Escudo (proteção) -->
+  <path d="M36 5c11.2 0 19.9 2.3 24 4.6 0 18.2-1.4 39.6-24 57.4C13.4 49.2 12 27.8 12 9.6 16.1 7.3 24.8 5 36 5Z" fill="url(#tpShieldM)"/>
+  <!-- Hélice branca de 3 pás -->
+  <g fill="#fff" transform="translate(36,33)">
+    <rect x="-5.6" y="-19" width="11.2" height="16" rx="5.6"/>
+    <rect x="-5.6" y="-19" width="11.2" height="16" rx="5.6" transform="rotate(120)"/>
+    <rect x="-5.6" y="-19" width="11.2" height="16" rx="5.6" transform="rotate(240)"/>
+    <circle r="4.8"/>
+  </g>
 </svg>
