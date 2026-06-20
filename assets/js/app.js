@@ -216,6 +216,48 @@
     updateProgress();
   }
 
+  // ---- Cadastro do consultor (criar o próprio acesso) ----
+  var cadastroForm = document.getElementById("cadastroForm");
+  if (cadastroForm) {
+    var msg = document.getElementById("formMsg");
+    function showMsg(text, ok) {
+      msg.textContent = text;
+      msg.className = "form-msg show " + (ok ? "ok" : "err");
+      if (!ok) msg.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ""; }
+
+    cadastroForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var nome = val("nome"), email = val("email").toLowerCase();
+      var telefone = val("telefone"), senha = val("senha"), senha2 = val("senha2");
+      var termos = document.getElementById("termos");
+
+      if (!nome || nome.split(" ").length < 2) return showMsg("Informe seu nome completo.", false);
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showMsg("Digite um e-mail válido.", false);
+      if (senha.length < 6) return showMsg("A senha deve ter pelo menos 6 caracteres.", false);
+      if (senha !== senha2) return showMsg("As senhas não conferem.", false);
+      if (termos && !termos.checked) return showMsg("É preciso aceitar os termos para continuar.", false);
+
+      var consultores = [];
+      try { consultores = JSON.parse(localStorage.getItem("tp_consultores") || "[]"); } catch (err) {}
+      if (consultores.some(function (c) { return c.email === email; })) {
+        return showMsg("Já existe um acesso com esse e-mail. Tente entrar.", false);
+      }
+
+      var conta = { nome: nome, email: email, telefone: telefone, criadoEm: new Date().toISOString() };
+      consultores.push(conta);
+      try {
+        localStorage.setItem("tp_consultores", JSON.stringify(consultores));
+        localStorage.setItem("tp_sessao", JSON.stringify({ nome: nome, email: email }));
+      } catch (err) {}
+
+      showMsg("Acesso criado com sucesso! Redirecionando para a plataforma…", true);
+      cadastroForm.querySelector('button[type="submit"]').disabled = true;
+      setTimeout(function () { window.location.href = "dashboard.html"; }, 1400);
+    });
+  }
+
   // Rolagem suave já é via CSS; aqui animamos as barras do dashboard ao carregar
   window.addEventListener("load", function () {
     document.querySelectorAll(".chart .bar").forEach(function (bar, i) {

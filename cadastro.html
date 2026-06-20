@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criar meu acesso — Todos Protegidos</title>
+  <meta name="description" content="Crie seu acesso de consultor da Todos Protegidos e comece sua formação do novato ao pro.">
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+  <meta name="theme-color" content="#2536cf">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <style>
+    .auth { min-height: 100vh; display: grid; grid-template-columns: 1.05fr .95fr; }
+    .auth-aside { background: var(--tp-grad-deep); color: #fff; padding: 56px 48px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
+    .auth-aside::before { content: ""; position: absolute; inset: 0; background: radial-gradient(680px 420px at 110% -10%, rgba(20,194,173,.35), transparent 60%); pointer-events: none; }
+    .auth-aside .brand img { height: 40px; filter: brightness(0) invert(1); }
+    .auth-aside h1 { color: #fff; font-size: var(--tp-fs-3xl); max-width: 13ch; }
+    .auth-aside p { color: rgba(255,255,255,.85); max-width: 38ch; }
+    .auth-bullets { display: grid; gap: 14px; margin-top: 8px; position: relative; }
+    .auth-bullets li { display: flex; gap: 12px; align-items: flex-start; color: rgba(255,255,255,.92); font-size: var(--tp-fs-sm); }
+    .auth-bullets .dot { width: 22px; height: 22px; border-radius: 50%; background: var(--tp-green-500); display: grid; place-items: center; flex: none; }
+    .auth-main { display: grid; place-items: center; padding: 40px 24px; background: var(--tp-bg); }
+    .auth-card { width: 100%; max-width: 420px; }
+    .auth-card h2 { font-size: var(--tp-fs-2xl); }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-family: var(--tp-font-sans); font-weight: var(--tp-fw-semi); font-size: var(--tp-fs-sm); margin-bottom: 6px; color: var(--tp-ink); }
+    .field input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--tp-line); border-radius: var(--tp-radius-sm); font: inherit; color: var(--tp-ink); background: #fff; transition: border-color var(--tp-transition), box-shadow var(--tp-transition); }
+    .field input:focus { outline: none; border-color: var(--tp-green-400); box-shadow: var(--tp-ring); }
+    .field .hint { font-size: var(--tp-fs-xs); color: var(--tp-muted); margin-top: 5px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-msg { display: none; padding: 11px 14px; border-radius: var(--tp-radius-sm); font-size: var(--tp-fs-sm); margin-bottom: 14px; }
+    .form-msg.show { display: block; }
+    .form-msg.err { background: #fde6e6; color: var(--tp-danger); }
+    .form-msg.ok { background: var(--tp-green-50); color: var(--tp-green-700); }
+    .check-line { display: flex; gap: 9px; align-items: flex-start; font-size: var(--tp-fs-sm); color: var(--tp-slate); margin: 4px 0 18px; }
+    .check-line input { margin-top: 3px; }
+    .auth-foot { text-align: center; margin-top: 18px; font-size: var(--tp-fs-sm); color: var(--tp-slate); }
+    .auth-foot a { font-weight: 600; }
+    @media (max-width: 860px) { .auth { grid-template-columns: 1fr; } .auth-aside { display: none; } .form-row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="auth">
+    <!-- Lateral institucional -->
+    <aside class="auth-aside">
+      <a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="Todos Protegidos"></a>
+      <div>
+        <h1>Seja um consultor Todos Protegidos</h1>
+        <p>Crie seu acesso e comece a formação do novato ao pro: conteúdo, padrão de atendimento e protocolos para vender proteção veicular com excelência.</p>
+        <ul class="auth-bullets">
+          <li><span class="dot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Trilha completa em 4 níveis</li>
+          <li><span class="dot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Protocolos de cotação, vistoria e venda</li>
+          <li><span class="dot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Certificação oficial por nível</li>
+        </ul>
+      </div>
+      <span style="color:rgba(255,255,255,.6);font-size:var(--tp-fs-xs)">© 2026 Todos Protegidos · Proteção Veicular</span>
+    </aside>
+
+    <!-- Formulário -->
+    <section class="auth-main">
+      <div class="auth-card">
+        <span class="eyebrow">Acesso do consultor</span>
+        <h2>Criar meu acesso</h2>
+        <p class="muted" style="margin-top:-4px">Leva menos de 1 minuto. Já tem cadastro? <a href="dashboard.html">Entrar</a>.</p>
+
+        <div id="formMsg" class="form-msg"></div>
+
+        <form id="cadastroForm" novalidate>
+          <div class="field">
+            <label for="nome">Nome completo</label>
+            <input id="nome" name="nome" type="text" autocomplete="name" placeholder="Seu nome" required>
+          </div>
+          <div class="field">
+            <label for="email">E-mail</label>
+            <input id="email" name="email" type="email" autocomplete="email" placeholder="voce@email.com" required>
+          </div>
+          <div class="field">
+            <label for="telefone">Telefone / WhatsApp</label>
+            <input id="telefone" name="telefone" type="tel" autocomplete="tel" placeholder="(00) 00000-0000">
+            <span class="hint">Opcional — usamos para suporte e avisos da turma.</span>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="senha">Senha</label>
+              <input id="senha" name="senha" type="password" autocomplete="new-password" placeholder="Mín. 6 caracteres" required>
+            </div>
+            <div class="field">
+              <label for="senha2">Confirmar senha</label>
+              <input id="senha2" name="senha2" type="password" autocomplete="new-password" placeholder="Repita a senha" required>
+            </div>
+          </div>
+          <label class="check-line">
+            <input id="termos" type="checkbox" required>
+            <span>Li e aceito os termos de uso e a política de privacidade da Todos Protegidos.</span>
+          </label>
+          <button type="submit" class="btn btn-primary btn-block">Criar meu acesso</button>
+        </form>
+
+        <p class="auth-foot"><a href="index.html">← Voltar para a página inicial</a></p>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
