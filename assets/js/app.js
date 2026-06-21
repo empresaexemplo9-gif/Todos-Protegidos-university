@@ -4,7 +4,7 @@
 
   // Sessão / logout (via camada de dados TPData — Supabase ou local)
   function logout() {
-    var done = function () { try { localStorage.removeItem("tp_sessao"); } catch (e) {} window.location.href = "login.html"; };
+    var done = function () { try { localStorage.removeItem("tp_sessao"); } catch (e) {} window.location.href = "index.html"; };
     if (window.TPData) { TPData.logout().then(done, done); } else { done(); }
   }
   // Rótulo de cargo/perfil exibido na interface
