@@ -89,7 +89,7 @@
   // ---- Sidebar --------------------------------------------------------------
   function buildSidebar(root) {
     var explicit = root.getAttribute("data-active");
-    var html = '<div class="sidebar-brand"><a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="Todos Protegidos"></a></div>';
+    var html = '<div class="sidebar-brand"><a class="brand" href="dashboard.html"><img src="assets/img/logo.svg" alt="Todos Protegidos"></a></div>';
     NAV.forEach(function (group) {
       if (group.section) html += '<div class="side-label">' + group.section + '</div>';
       group.items.forEach(function (item) {

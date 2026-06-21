@@ -19,6 +19,16 @@
   // Liga botões "Sair" estáticos (páginas sem topbar)
   Array.prototype.forEach.call(document.querySelectorAll("[data-logout]"), function (b) { b.addEventListener("click", logout); });
 
+  // Guarda de sessão das páginas internas (body.dash): sem sessão -> login.
+  // Cobre também a volta pelo botão "voltar" após logout (restauração via bfcache).
+  if (document.body && document.body.classList.contains("dash") && window.TPData) {
+    var sessionGuard = function () {
+      TPData.session().then(function (s) { if (!s) window.location.replace("login.html"); }, function () {});
+    };
+    sessionGuard();
+    window.addEventListener("pageshow", function (e) { if (e.persisted) sessionGuard(); });
+  }
+
   // Menu mobile (landing) — alterna só a classe; o visual fica no CSS (.nav-links.nav-open)
   var toggle = document.querySelector(".nav-toggle");
   var links = document.querySelector(".nav-links");
