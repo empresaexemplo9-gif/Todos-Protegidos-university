@@ -35,6 +35,9 @@ Nada no front-end precisa ser reescrito para ativar — basta configurar.
      where id = (select id from auth.users where email = 'ubirani@SEU-DOMINIO.com');
      ```
      *(Mesmo sem rodar esse update, qualquer usuário cujo nome contenha "Ubirani" já aparece como "Presidente da empresa" na interface.)*
+6. **(Opcional) Conteúdo completo da trilha** — rode [`supabase/conteudo.sql`](supabase/conteudo.sql).
+   - Cria **7 módulos** com aulas/roteiros e **10 questões por módulo** (baseados em SPIN, Challenger e Sandler aplicados à proteção veicular), no tenant `matriz`.
+   - Idempotente: pula módulos que já existem. O admin pode editar tudo depois pela Gestão.
 
 ### 3. Pegar as chaves de API
 1. **Project Settings → API**.

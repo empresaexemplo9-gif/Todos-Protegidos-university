@@ -418,7 +418,7 @@
       html += '<div class="lesson-body">';
       html += '<span class="badge badge-amber" style="margin-top:18px">' + esc(sel.mod.titulo) + '</span>';
       html += '<h2>' + esc(sel.item.titulo) + '</h2>';
-      html += '<p class="muted">' + (sel.item.desc ? esc(sel.item.desc) : (sel.item.meta ? esc(sel.item.meta) : "—")) + '</p>';
+      html += '<p class="muted" style="white-space:pre-line">' + (sel.item.desc ? esc(sel.item.desc) : (sel.item.meta ? esc(sel.item.meta) : "—")) + '</p>';
       html += '<div class="lesson-actions">';
       html += '<button class="btn ' + (done ? "btn-ghost" : "btn-primary") + '" id="btnDone">' + (done ? "✓ Concluída — desmarcar" : "Marcar como concluída") + '</button>';
       if (sel.item.url && !isPlayable(sel.item)) html += '<a class="btn btn-ghost" href="' + esc(sel.item.url).replace(/"/g, "%22") + '" target="_blank" rel="noopener">Abrir material</a>';
