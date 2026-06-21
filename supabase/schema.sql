@@ -221,6 +221,39 @@ create policy "questoes_write" on public.questoes
   for all using (public.is_admin() and tenant_id = public.current_tenant_id())
   with check (public.is_admin() and tenant_id = public.current_tenant_id());
 
+-- 8.4) RESULTADOS das provas (nota + aprovação por consultor/módulo)
+create table if not exists public.resultados (
+  user_id   uuid not null references auth.users(id) on delete cascade,
+  modulo_id uuid not null references public.modulos(id) on delete cascade,
+  nota      int not null default 0,
+  aprovado  boolean not null default false,
+  feito_em  timestamptz not null default now(),
+  primary key (user_id, modulo_id)
+);
+alter table public.resultados enable row level security;
+
+drop policy if exists "resultados_select_own" on public.resultados;
+create policy "resultados_select_own" on public.resultados
+  for select using (user_id = auth.uid());
+
+drop policy if exists "resultados_insert_own" on public.resultados;
+create policy "resultados_insert_own" on public.resultados
+  for insert with check (user_id = auth.uid());
+
+drop policy if exists "resultados_update_own" on public.resultados;
+create policy "resultados_update_own" on public.resultados
+  for update using (user_id = auth.uid());
+
+-- admin vê os resultados da equipe do seu tenant (painel)
+drop policy if exists "resultados_admin_select" on public.resultados;
+create policy "resultados_admin_select" on public.resultados
+  for select using (
+    public.is_admin() and exists (
+      select 1 from public.profiles p
+      where p.id = resultados.user_id and p.tenant_id = public.current_tenant_id()
+    )
+  );
+
 -- 9) Tenant inicial (necessário para os primeiros cadastros).
 --    A trilha começa VAZIA — o admin de cada tenant cria os módulos.
 insert into public.tenants (nome, slug)

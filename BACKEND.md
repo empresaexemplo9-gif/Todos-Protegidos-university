@@ -40,6 +40,8 @@ Nada no front-end precisa ser reescrito para ativar — basta configurar.
    - Idempotente: pula módulos que já existem. O admin pode editar tudo depois pela Gestão.
 7. **Painel da equipe (admin)** — rode [`supabase/equipe.sql`](supabase/equipe.sql).
    - Cria a política que permite ao **admin enxergar o progresso dos consultores do seu tenant** (página "Progresso da equipe"). Já incluído no `schema.sql` para instalações novas.
+8. **Resultados das provas** — rode [`supabase/resultados.sql`](supabase/resultados.sql).
+   - Cria a tabela `resultados` (nota + aprovação por consultor/módulo) e as políticas (cada um grava o seu; admin lê a equipe). Faz o painel mostrar **provas aprovadas**. Já incluído no `schema.sql` para instalações novas.
 
 ### 3. Pegar as chaves de API
 1. **Project Settings → API**.

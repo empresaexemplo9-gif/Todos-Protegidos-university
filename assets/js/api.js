@@ -173,6 +173,17 @@
       return Promise.resolve(lsGet("tp_consultores", []).map(function (c) { return { id: c.email, nome: c.nome, role: c.role || "consultor", titulo: c.titulo || "" }; }));
     },
     listAllProgress: function () { return Promise.resolve([]); },
+    saveQuizResult: function (modId, nota, aprovado) {
+      var all = lsGet("tp_resultados", {});
+      all[modId] = { nota: nota, aprovado: aprovado, feito_em: new Date().toISOString() };
+      lsSet("tp_resultados", all);
+      return Promise.resolve({ ok: true });
+    },
+    listAllResults: function () { return Promise.resolve([]); },
+    listQuizModules: function () {
+      var q = lsGet("tp_questoes", {});
+      return Promise.resolve(Object.keys(q).filter(function (k) { return (q[k] || []).length; }));
+    },
 
     listClientes: function () { return Promise.resolve(lsGet("tp_clientes", [])); },
     addCliente: function (d) {
@@ -373,6 +384,22 @@
       return sb.from("progresso").select("user_id,item_id")
         .then(function (res) { return res.data || []; });
     },
+    saveQuizResult: function (modId, nota, aprovado) {
+      return sb.auth.getUser().then(function (r) {
+        var u = r.data && r.data.user; if (!u) return { ok: false, error: "Sessão expirada." };
+        return sb.from("resultados").upsert({ user_id: u.id, modulo_id: modId, nota: nota, aprovado: aprovado, feito_em: new Date().toISOString() })
+          .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+      });
+    },
+    listAllResults: function () {
+      return sb.from("resultados").select("user_id,modulo_id,nota,aprovado").then(function (res) { return res.data || []; });
+    },
+    listQuizModules: function () {
+      return sb.from("questoes").select("modulo_id").then(function (res) {
+        var set = {}; (res.data || []).forEach(function (x) { set[x.modulo_id] = 1; });
+        return Object.keys(set);
+      });
+    },
 
     listClientes: function () {
       return sb.auth.getUser().then(function (r) {
@@ -483,6 +510,9 @@
     resetModules: function () { return impl.resetModules(); },
     listTeam: function () { return impl.listTeam(); },
     listAllProgress: function () { return impl.listAllProgress(); },
+    saveQuizResult: function (m, n, a) { return impl.saveQuizResult(m, n, a); },
+    listAllResults: function () { return impl.listAllResults(); },
+    listQuizModules: function () { return impl.listQuizModules(); },
     listClientes: function () { return impl.listClientes(); },
     addCliente: function (d) { return impl.addCliente(d); },
     updateCliente: function (id, d) { return impl.updateCliente(id, d); },
