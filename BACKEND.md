@@ -1,5 +1,11 @@
 # Backend (Supabase) — Todos Protegidos
 
+> **Deploy (GitHub Pages):** se o repositório for renomeado, o GitHub Pages é
+> desativado e o deploy passa a falhar em "Configure Pages" (`Resource not
+> accessible by integration`). Para religar: **Settings → Pages → Source:
+> "GitHub Actions"** (e repor o domínio personalizado, se houver). Depois, um
+> novo push na `main` publica normalmente.
+
 A plataforma funciona em **dois modos**, decididos automaticamente:
 
 - **Modo local** (padrão): enquanto `assets/js/config.js` estiver sem chaves, os dados ficam no navegador (bom para demonstração).
