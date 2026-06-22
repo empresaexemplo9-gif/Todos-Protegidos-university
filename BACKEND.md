@@ -46,6 +46,8 @@ Nada no front-end precisa ser reescrito para ativar — basta configurar.
    - Cria a tabela `manual` (diretrizes/orientações de atendimento). **Leitura:** todos do tenant. **Escrita (criar/editar/excluir):** só **admin/presidente**. Já vem com a “Diretriz de Atendimento aos Associados” (0800 / Setor de Eventos).
 10. **(Opcional) Conteúdo aprofundado** — rode [`supabase/conteudo-aprofundado.sql`](supabase/conteudo-aprofundado.sql) **depois** do `conteudo.sql`.
     - Reordena os institucionais (**Palavra do Presidente** vira Módulo 1 e **Filosofia** Módulo 2), substitui as descrições das aulas de vendas por **material de estudo completo** (leitura aprofundada, sem depender de vídeo) e adiciona uma aula de “Leitura aprofundada” em cada módulo de vendas. Seguro rodar mais de uma vez.
+11. **(Opcional) Boas práticas do mercado** — rode [`supabase/conteudo-web.sql`](supabase/conteudo-web.sql) **depois** dos anteriores.
+    - Adiciona em cada módulo de vendas (3–9) uma aula **“Boas práticas do mercado (pesquisa)”**, destilada de referências consagradas de vendas e de conteúdos de proteção veicular, **com as fontes citadas**. Idempotente.
 
 ### 3. Pegar as chaves de API
 1. **Project Settings → API**.
