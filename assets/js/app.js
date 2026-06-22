@@ -329,6 +329,149 @@
     }, function () { restrito(); });
   }
 
+  // ---- Manual do consultor: orientações (CRUD restrito a admin/presidente) ----
+  var manualRoot = document.getElementById("manualRoot");
+  if (manualRoot) {
+    var M_EDIT = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+    var M_TRASH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+    var manEsc = function (s) { return (s == null ? "" : String(s)).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); };
+    var manItens = [], manPodeEditar = false;
+    var manAddBtn = document.getElementById("addManual");
+    var manActions = document.getElementById("manualActions");
+
+    function manFind(id) { return manItens.filter(function (x) { return x.id === id; })[0]; }
+    function manEmpty(msg) { manualRoot.innerHTML = '<div class="gestao-empty" style="padding:32px">' + msg + '</div>'; }
+
+    function manRender() {
+      if (!manItens.length) {
+        manEmpty(manPodeEditar
+          ? 'Nenhuma orientação cadastrada ainda. Clique em <strong>“+ Nova orientação”</strong> para começar.'
+          : 'Nenhuma orientação publicada ainda. Assim que a direção publicar, ela aparece aqui.');
+        return;
+      }
+      manualRoot.innerHTML = manItens.map(function (it) {
+        var tools = manPodeEditar
+          ? '<div style="display:flex;gap:6px;margin-left:auto"><button class="btn btn-ghost btn-sm" data-medit="' + it.id + '">' + M_EDIT + ' Editar</button><button class="btn btn-ghost btn-sm" data-mdel="' + it.id + '">' + M_TRASH + ' Excluir</button></div>'
+          : '';
+        return '<section class="card" style="padding:22px 24px">' +
+          '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px">' +
+            '<h3 style="margin:0;font-family:var(--tp-font-sans);font-size:var(--tp-fs-lg);color:var(--tp-ink)">' + manEsc(it.titulo) + '</h3>' + tools +
+          '</div>' +
+          '<div class="muted" style="white-space:pre-line;line-height:1.7;color:var(--tp-slate)">' + manEsc(it.conteudo) + '</div>' +
+        '</section>';
+      }).join("");
+      Array.prototype.forEach.call(manualRoot.querySelectorAll("[data-medit]"), function (b) { b.addEventListener("click", function () { manForm(manFind(b.getAttribute("data-medit"))); }); });
+      Array.prototype.forEach.call(manualRoot.querySelectorAll("[data-mdel]"), function (b) { b.addEventListener("click", function () { manDel(manFind(b.getAttribute("data-mdel"))); }); });
+    }
+
+    function manForm(it) {
+      var editing = !!it; it = it || {};
+      var ov = document.createElement("div"); ov.className = "modal-overlay";
+      ov.innerHTML = '<div class="modal" role="dialog" aria-modal="true">' +
+        '<h3 style="margin:0">' + (editing ? "Editar orientação" : "Nova orientação") + '</h3>' +
+        '<form class="m-form">' +
+          '<label class="m-field"><span>Título*</span><input name="titulo" type="text" value="' + manEsc(it.titulo) + '" placeholder="Ex.: Diretriz de Atendimento aos Associados"></label>' +
+          '<label class="m-field"><span>Texto / mensagem*</span><textarea name="conteudo" rows="10" placeholder="Escreva a orientação...">' + manEsc(it.conteudo) + '</textarea></label>' +
+          '<div class="m-msg" hidden></div>' +
+          '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px"><button type="button" class="btn btn-ghost btn-sm" data-cancel>Cancelar</button><button type="submit" class="btn btn-primary btn-sm">' + (editing ? "Salvar" : "Publicar") + '</button></div>' +
+        '</form></div>';
+      document.body.appendChild(ov); document.body.classList.add("nav-locked");
+      function close() { ov.parentNode && ov.parentNode.removeChild(ov); document.body.classList.remove("nav-locked"); }
+      ov.addEventListener("click", function (e) { if (e.target === ov) close(); });
+      ov.querySelector("[data-cancel]").addEventListener("click", close);
+      var form = ov.querySelector(".m-form");
+      var tEl = form.querySelector('[name="titulo"]'); if (tEl) tEl.focus();
+      function msg(t) { var m = form.querySelector(".m-msg"); m.textContent = t; m.hidden = false; }
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var titulo = (form.querySelector('[name="titulo"]').value || "").trim();
+        var conteudo = (form.querySelector('[name="conteudo"]').value || "").trim();
+        if (!titulo) return msg("Informe um título.");
+        if (!conteudo) return msg("Escreva o texto da orientação.");
+        var btn = form.querySelector('[type="submit"]'); btn.disabled = true;
+        var p = editing ? TPData.updateManual(it.id, { titulo: titulo, conteudo: conteudo }) : TPData.addManual({ titulo: titulo, conteudo: conteudo });
+        p.then(function (res) {
+          btn.disabled = false;
+          if (res && res.ok === false) return msg(res.error || "Não foi possível salvar.");
+          close(); manReload();
+        }, function () { btn.disabled = false; msg("Erro de conexão. Tente novamente."); });
+      });
+    }
+
+    function manDel(it) {
+      if (!it) return;
+      if (!window.confirm('Excluir a orientação "' + it.titulo + '"? Esta ação não pode ser desfeita.')) return;
+      TPData.deleteManual(it.id).then(manReload);
+    }
+
+    function manReload() {
+      manEmpty("Carregando…");
+      return TPData.listManual().then(function (list) { manItens = list || []; manRender(); },
+        function () { manEmpty('Não foi possível carregar o manual. Se a tabela ainda não existe no Supabase, rode <code>supabase/manual.sql</code> no SQL Editor.'); });
+    }
+
+    if (manAddBtn) manAddBtn.addEventListener("click", function () { manForm(null); });
+    manEmpty("Carregando…");
+    TPData.session().then(function (s) {
+      if (!s) { window.location.href = "login.html"; return; }
+      manPodeEditar = s.role === "admin" || s.role === "superadmin";
+      if (manPodeEditar && manActions) manActions.style.display = "flex";
+      manReload();
+    }, function () { manReload(); });
+  }
+
+  // ---- Institucional: módulos da Presidência (Palavra do Presidente + Filosofia) ----
+  var institucionalRoot = document.getElementById("institucionalRoot");
+  if (institucionalRoot) {
+    var instEsc = function (s) { return (s == null ? "" : String(s)).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); };
+    var instTipo = { aula: "Aula", video: "Vídeo", info: "Leitura", file: "Material" };
+    function instEhInstitucional(m) { return /presidente|filosofia|cultura|institucional/i.test(m.titulo || ""); }
+
+    institucionalRoot.innerHTML = '<div class="gestao-empty" style="padding:32px">Carregando…</div>';
+    TPData.session().then(function (s) {
+      if (!s) { window.location.href = "login.html"; return; }
+      var ehAdmin = s.role === "admin" || s.role === "superadmin";
+      TPData.listModules().then(function (mods) {
+        mods = mods || [];
+        var inst = mods.filter(instEhInstitucional);
+        if (!inst.length) inst = mods.slice(0, 2);
+        // Presidente primeiro, filosofia em segundo
+        inst.sort(function (a, b) {
+          var ap = /presidente/i.test(a.titulo) ? 0 : 1, bp = /presidente/i.test(b.titulo) ? 0 : 1;
+          return ap - bp;
+        });
+        if (!inst.length) {
+          institucionalRoot.innerHTML = '<div class="gestao-empty" style="padding:40px">O conteúdo institucional aparece aqui assim que a direção publicá-lo.' +
+            (ehAdmin ? '<div style="margin-top:12px"><a class="btn btn-primary btn-sm" href="gestao.html">Ir para a gestão</a></div>' : '') + '</div>';
+          return;
+        }
+        var html = "";
+        inst.forEach(function (m) {
+          html += '<section class="panel">' +
+            '<div class="panel-head"><h3 style="margin:0">' + instEsc(m.titulo) + '</h3>' + (m.sub ? '<span class="badge">' + instEsc(m.sub) + '</span>' : '') + '</div>';
+          var itens = m.itens || [];
+          if (!itens.length) {
+            html += '<div class="gestao-empty" style="padding:24px">Conteúdo em preparação.</div>';
+          } else {
+            html += '<div style="display:grid;gap:14px">';
+            itens.forEach(function (it) {
+              html += '<article class="card" style="padding:18px 20px">' +
+                '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span class="badge badge-blue">' + instEsc(instTipo[it.tipo] || "Conteúdo") + '</span><strong style="font-family:var(--tp-font-sans);color:var(--tp-ink)">' + instEsc(it.titulo) + '</strong></div>';
+              if (it.url) html += '<a class="btn btn-primary btn-sm" href="aula.html?item=' + encodeURIComponent(it.id) + '">▶ Assistir</a>';
+              if (it.desc) html += '<div class="muted" style="white-space:pre-line;line-height:1.7;margin-top:' + (it.url ? "12px" : "0") + '">' + instEsc(it.desc) + '</div>';
+              else if (it.meta) html += '<div class="muted" style="margin-top:6px">' + instEsc(it.meta) + '</div>';
+              html += '</article>';
+            });
+            html += '</div>';
+          }
+          if (ehAdmin) html += '<div style="margin-top:14px"><a class="btn btn-ghost btn-sm" href="gestao.html">Editar na Gestão de conteúdo</a></div>';
+          html += '</section>';
+        });
+        institucionalRoot.innerHTML = html;
+      }, function () { institucionalRoot.innerHTML = '<div class="gestao-empty" style="padding:40px">Não foi possível carregar o conteúdo institucional.</div>'; });
+    }, function () { window.location.href = "login.html"; });
+  }
+
   // ---- Trilha resumida + progresso real no dashboard ----
   var trilhaLista = document.getElementById("trilhaLista");
   if (trilhaLista) {

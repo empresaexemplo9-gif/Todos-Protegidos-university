@@ -46,6 +46,13 @@
     ];
   }
 
+  function manualDefault() {
+    return [
+      { id: uid(), ordem: 1, titulo: "Diretriz de Atendimento aos Associados",
+        conteudo: "Sempre que um associado entrar em contato com o consultor solicitando informações, suporte ou acionamento relacionado à assistência 24 horas ou sinistro, o consultor deverá orientá-lo a entrar em contato diretamente com a Central de Atendimento da Todos Protegidos, por meio do telefone 0800. É importante informar ao associado que a equipe especializada fornecerá todas as orientações necessárias, garantindo maior agilidade, precisão e qualidade no atendimento.\n\nNos casos em que o associado buscar informações sobre eventos já registrados, tais como sinistros, colisões, roubos, furtos ou demais ocorrências em análise, o consultor deverá direcioná-lo para o canal específico do Setor de Eventos. Dessa forma, as informações serão prestadas pela área responsável, assegurando maior fidelidade, atualização e detalhamento sobre o andamento e as particularidades de cada caso.\n\nO direcionamento correto dos atendimentos contribui para a eficiência dos processos, reduz retrabalhos e garante uma experiência mais segura e satisfatória ao associado.\n\nOrientação resumida:\n• Assistência 24h e abertura de sinistros: encaminhar para o 0800 da Todos Protegidos.\n• Informações sobre processos já existentes (colisão, roubo, furto, indenização e demais eventos): encaminhar para o Setor de Eventos.\n• Evitar repassar informações sem validação da área responsável, garantindo a precisão das informações fornecidas ao associado." }
+    ];
+  }
+
   // =================== Modo LOCAL ===================
   var Local = {
     register: function (d) {
@@ -183,6 +190,27 @@
     listQuizModules: function () {
       var q = lsGet("tp_questoes", {});
       return Promise.resolve(Object.keys(q).filter(function (k) { return (q[k] || []).length; }));
+    },
+
+    listManual: function () {
+      var m = lsGet("tp_manual", null);
+      if (!Array.isArray(m)) { m = manualDefault(); lsSet("tp_manual", m); }
+      return Promise.resolve(m.slice().sort(function (a, b) { return (a.ordem || 0) - (b.ordem || 0); }));
+    },
+    addManual: function (d) {
+      var arr = lsGet("tp_manual", []);
+      var item = { id: uid(), titulo: d.titulo || "", conteudo: d.conteudo || "", ordem: Date.now() };
+      arr.push(item); lsSet("tp_manual", arr);
+      return Promise.resolve({ ok: true, item: item });
+    },
+    updateManual: function (id, d) {
+      var arr = lsGet("tp_manual", []);
+      arr.forEach(function (x) { if (x.id === id) { x.titulo = d.titulo; x.conteudo = d.conteudo; } });
+      lsSet("tp_manual", arr); return Promise.resolve({ ok: true });
+    },
+    deleteManual: function (id) {
+      lsSet("tp_manual", lsGet("tp_manual", []).filter(function (x) { return x.id !== id; }));
+      return Promise.resolve({ ok: true });
     },
 
     listClientes: function () { return Promise.resolve(lsGet("tp_clientes", [])); },
@@ -401,6 +429,23 @@
       });
     },
 
+    listManual: function () {
+      return sb.from("manual").select("*").order("ordem", { ascending: true })
+        .then(function (res) { return (res.data || []).map(function (x) { return { id: x.id, titulo: x.titulo || "", conteudo: x.conteudo || "", ordem: x.ordem }; }); });
+    },
+    addManual: function (d) {
+      return sb.from("manual").insert({ titulo: d.titulo, conteudo: d.conteudo, ordem: Date.now() }).select().single()
+        .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true, item: { id: res.data.id, titulo: res.data.titulo, conteudo: res.data.conteudo, ordem: res.data.ordem } }; });
+    },
+    updateManual: function (id, d) {
+      return sb.from("manual").update({ titulo: d.titulo, conteudo: d.conteudo }).eq("id", id)
+        .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+    },
+    deleteManual: function (id) {
+      return sb.from("manual").delete().eq("id", id)
+        .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+    },
+
     listClientes: function () {
       return sb.auth.getUser().then(function (r) {
         var u = r.data && r.data.user; if (!u) return [];
@@ -513,6 +558,10 @@
     saveQuizResult: function (m, n, a) { return impl.saveQuizResult(m, n, a); },
     listAllResults: function () { return impl.listAllResults(); },
     listQuizModules: function () { return impl.listQuizModules(); },
+    listManual: function () { return impl.listManual(); },
+    addManual: function (d) { return impl.addManual(d); },
+    updateManual: function (id, d) { return impl.updateManual(id, d); },
+    deleteManual: function (id) { return impl.deleteManual(id); },
     listClientes: function () { return impl.listClientes(); },
     addCliente: function (d) { return impl.addCliente(d); },
     updateCliente: function (id, d) { return impl.updateCliente(id, d); },

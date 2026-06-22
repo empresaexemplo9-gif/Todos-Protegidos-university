@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual do Consultor — Todos Protegidos University</title>
+  <meta name="description" content="Manual do consultor: diretrizes e orientações oficiais de atendimento da Todos Protegidos.">
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+  <meta name="theme-color" content="#2536cf">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/internal.css">
+</head>
+<body class="dash">
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar-root" class="sidebar" data-active="manual"><noscript><a href="dashboard.html">Visão geral</a> · <a href="aula.html">Trilha</a> · <a href="protocolos.html">Padrões &amp; protocolos</a> · <a href="scripts.html">Scripts</a> · <a href="conta.html">Minha conta</a></noscript></aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <header id="topbar-root" class="topbar" data-title="Manual do consultor" data-sub="Diretrizes e orientações oficiais de atendimento"></header>
+
+      <main class="content">
+        <div class="page-head">
+          <div>
+            <div class="crumb"><a href="dashboard.html">Visão geral</a> · Manual do consultor</div>
+            <h2 style="margin:0">Diretrizes oficiais de atendimento</h2>
+            <p class="mb-0 muted">Orientações que todo consultor deve seguir. Mantido pela direção da Todos Protegidos.</p>
+          </div>
+          <div id="manualActions" style="display:none;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" id="addManual">+ Nova orientação</button>
+          </div>
+        </div>
+
+        <!-- Conteúdo gerenciado dinamicamente (Supabase quando configurado; senão local) -->
+        <div id="manualRoot" style="display:grid;gap:16px"></div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script src="assets/js/config.js"></script>
+
+  <script src="assets/js/api.js"></script>
+
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

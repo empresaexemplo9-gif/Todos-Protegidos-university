@@ -42,6 +42,10 @@ Nada no front-end precisa ser reescrito para ativar — basta configurar.
    - Cria a política que permite ao **admin enxergar o progresso dos consultores do seu tenant** (página "Progresso da equipe"). Já incluído no `schema.sql` para instalações novas.
 8. **Resultados das provas** — rode [`supabase/resultados.sql`](supabase/resultados.sql).
    - Cria a tabela `resultados` (nota + aprovação por consultor/módulo) e as políticas (cada um grava o seu; admin lê a equipe). Faz o painel mostrar **provas aprovadas**. Já incluído no `schema.sql` para instalações novas.
+9. **Manual do consultor** — rode [`supabase/manual.sql`](supabase/manual.sql).
+   - Cria a tabela `manual` (diretrizes/orientações de atendimento). **Leitura:** todos do tenant. **Escrita (criar/editar/excluir):** só **admin/presidente**. Já vem com a “Diretriz de Atendimento aos Associados” (0800 / Setor de Eventos).
+10. **(Opcional) Conteúdo aprofundado** — rode [`supabase/conteudo-aprofundado.sql`](supabase/conteudo-aprofundado.sql) **depois** do `conteudo.sql`.
+    - Reordena os institucionais (**Palavra do Presidente** vira Módulo 1 e **Filosofia** Módulo 2), substitui as descrições das aulas de vendas por **material de estudo completo** (leitura aprofundada, sem depender de vídeo) e adiciona uma aula de “Leitura aprofundada” em cada módulo de vendas. Seguro rodar mais de uma vez.
 
 ### 3. Pegar as chaves de API
 1. **Project Settings → API**.
