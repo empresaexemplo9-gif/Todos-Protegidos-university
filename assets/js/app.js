@@ -491,6 +491,65 @@
     }, function () { window.location.href = "login.html"; });
   }
 
+  // ---- Operação (CRM): dados vindos do Power CRM ----
+  var operacaoApp = document.getElementById("operacaoApp");
+  if (operacaoApp) {
+    var opEsc = function (s) { return (s == null ? "" : String(s)).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); };
+    var opBRL = function (n) { n = Number(n); return isFinite(n) && n ? "R$ " + n.toFixed(2).replace(".", ",") : "—"; };
+    var opData = function (s) { if (!s) return "—"; var d = new Date(s); return isNaN(d) ? "—" : d.toLocaleDateString("pt-BR"); };
+    var opKpi = function (val, lbl) { return '<div class="kpi"><div class="val">' + val + '</div><div class="lbl">' + lbl + '</div></div>'; };
+    function opTabela(titulo, n, cols, rows) {
+      var h = '<section class="panel"><div class="panel-head"><h3 style="margin:0">' + titulo + '</h3><span class="badge">' + n + '</span></div>';
+      if (!n) { h += '<div class="gestao-empty" style="padding:24px">Nada recebido ainda.</div></section>'; return h; }
+      h += '<div class="table-wrap"><table class="table"><thead><tr>' + cols.map(function (c) { return '<th>' + c + '</th>'; }).join("") + '</tr></thead><tbody>' + rows + '</tbody></table></div></section>';
+      return h;
+    }
+
+    operacaoApp.innerHTML = '<div class="gestao-empty" style="padding:32px">Carregando…</div>';
+    TPData.session().then(function (s) {
+      if (!s) { window.location.href = "login.html"; return; }
+      if (!(s.role === "admin" || s.role === "superadmin")) { operacaoApp.innerHTML = '<div class="gestao-empty" style="padding:48px">Acesso restrito a administradores.</div>'; return; }
+      Promise.all([TPData.listCrmCotacoes(), TPData.listCrmClientes(), TPData.listCrmVistorias(), TPData.listCrmContratos()]).then(function (res) {
+        var cot = res[0] || [], cli = res[1] || [], vis = res[2] || [], con = res[3] || [];
+        if (!cot.length && !cli.length && !vis.length && !con.length) {
+          operacaoApp.innerHTML = '<div class="gestao-empty" style="padding:44px 32px">' +
+            '<div style="font-family:var(--tp-font-sans);font-weight:800;font-size:var(--tp-fs-xl);color:var(--tp-ink);margin-bottom:8px">Aguardando dados do Power CRM</div>' +
+            '<p style="max-width:54ch;margin:0 auto">Assim que a integração com o Power CRM estiver configurada (webhook apontando para a função <code>powercrm-webhook</code>), as cotações, cadastros, vistorias e contratos aparecem aqui automaticamente.</p>' +
+            '<p style="max-width:54ch;margin:10px auto 0;color:var(--tp-muted);font-size:var(--tp-fs-sm)">Passo a passo da configuração: arquivo <code>POWERCRM.md</code> no repositório.</p>' +
+            '</div>';
+          return;
+        }
+        var html = '<div class="v-summary">' +
+          opKpi(cot.length, "Cotações") + opKpi(cli.length, "Clientes/Leads") +
+          opKpi(vis.length, "Vistorias") + opKpi(con.length, "Contratos") + '</div>';
+
+        html += opTabela("Cotações", cot.length, ["Data", "Cliente", "Veículo", "Plano", "Valor", "Status", "Consultor"],
+          cot.map(function (c) {
+            return '<tr><td>' + opData(c.criado_em) + '</td><td style="font-weight:600">' + (opEsc(c.nome) || "—") + '</td><td>' + (opEsc(c.veiculo) || "—") + '</td><td>' + (opEsc(c.plano) || "—") + '</td><td>' + opBRL(c.valor) + '</td><td><span class="badge badge-blue">' + (opEsc(c.status) || "—") + '</span></td><td>' + (opEsc(c.consultor) || "—") + '</td></tr>';
+          }).join(""));
+
+        html += opTabela("Vistorias", vis.length, ["Data", "Cliente", "Veículo", "Código (Visto)", "Link", "Status"],
+          vis.map(function (v) {
+            var link = v.link_visto ? '<a href="' + opEsc(v.link_visto).replace(/"/g, "%22") + '" target="_blank" rel="noopener">abrir</a>' : "—";
+            return '<tr><td>' + opData(v.criado_em) + '</td><td style="font-weight:600">' + (opEsc(v.nome) || "—") + '</td><td>' + (opEsc(v.veiculo) || "—") + '</td><td>' + (opEsc(v.codigo_visto) || "—") + '</td><td>' + link + '</td><td><span class="badge badge-amber">' + (opEsc(v.status) || "—") + '</span></td></tr>';
+          }).join(""));
+
+        html += opTabela("Contratos de adesão", con.length, ["Data", "Cliente", "Plano", "Valor", "Status", "Documento"],
+          con.map(function (c) {
+            var link = c.url ? '<a href="' + opEsc(c.url).replace(/"/g, "%22") + '" target="_blank" rel="noopener">abrir</a>' : "—";
+            return '<tr><td>' + opData(c.criado_em) + '</td><td style="font-weight:600">' + (opEsc(c.nome) || "—") + '</td><td>' + (opEsc(c.plano) || "—") + '</td><td>' + opBRL(c.valor) + '</td><td><span class="badge">' + (opEsc(c.status) || "—") + '</span></td><td>' + link + '</td></tr>';
+          }).join(""));
+
+        html += opTabela("Clientes / Leads", cli.length, ["Data", "Nome", "Telefone", "Veículo", "Status"],
+          cli.map(function (c) {
+            return '<tr><td>' + opData(c.criado_em) + '</td><td style="font-weight:600">' + (opEsc(c.nome) || "—") + '</td><td>' + (opEsc(c.telefone) || "—") + '</td><td>' + (opEsc(c.veiculo) || "—") + '</td><td>' + (opEsc(c.status) || "—") + '</td></tr>';
+          }).join(""));
+
+        operacaoApp.innerHTML = html;
+      }, function () { operacaoApp.innerHTML = '<div class="gestao-empty" style="padding:40px">Não foi possível carregar os dados. Se as tabelas ainda não existem no Supabase, rode <code>supabase/crm.sql</code>.</div>'; });
+    }, function () { window.location.href = "login.html"; });
+  }
+
   // ---- Trilha resumida + progresso real no dashboard ----
   var trilhaLista = document.getElementById("trilhaLista");
   if (trilhaLista) {

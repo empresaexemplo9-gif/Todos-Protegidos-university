@@ -216,6 +216,11 @@
     getInstitucional: function () { return Promise.resolve(lsGet("tp_institucional", "")); },
     saveInstitucional: function (conteudo) { lsSet("tp_institucional", conteudo || ""); return Promise.resolve({ ok: true }); },
 
+    listCrmClientes: function () { return Promise.resolve([]); },
+    listCrmCotacoes: function () { return Promise.resolve([]); },
+    listCrmVistorias: function () { return Promise.resolve([]); },
+    listCrmContratos: function () { return Promise.resolve([]); },
+
     listClientes: function () { return Promise.resolve(lsGet("tp_clientes", [])); },
     addCliente: function (d) {
       var arr = lsGet("tp_clientes", []);
@@ -458,6 +463,11 @@
         .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
     },
 
+    listCrmClientes: function () { return sb.from("crm_clientes").select("*").order("criado_em", { ascending: false }).then(function (res) { return res.data || []; }, function () { return []; }); },
+    listCrmCotacoes: function () { return sb.from("crm_cotacoes").select("*").order("criado_em", { ascending: false }).then(function (res) { return res.data || []; }, function () { return []; }); },
+    listCrmVistorias: function () { return sb.from("crm_vistorias").select("*").order("criado_em", { ascending: false }).then(function (res) { return res.data || []; }, function () { return []; }); },
+    listCrmContratos: function () { return sb.from("crm_contratos").select("*").order("criado_em", { ascending: false }).then(function (res) { return res.data || []; }, function () { return []; }); },
+
     listClientes: function () {
       return sb.auth.getUser().then(function (r) {
         var u = r.data && r.data.user; if (!u) return [];
@@ -576,6 +586,10 @@
     deleteManual: function (id) { return impl.deleteManual(id); },
     getInstitucional: function () { return impl.getInstitucional(); },
     saveInstitucional: function (c) { return impl.saveInstitucional(c); },
+    listCrmClientes: function () { return impl.listCrmClientes(); },
+    listCrmCotacoes: function () { return impl.listCrmCotacoes(); },
+    listCrmVistorias: function () { return impl.listCrmVistorias(); },
+    listCrmContratos: function () { return impl.listCrmContratos(); },
     listClientes: function () { return impl.listClientes(); },
     addCliente: function (d) { return impl.addCliente(d); },
     updateCliente: function (id, d) { return impl.updateCliente(id, d); },

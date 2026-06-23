@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operação (CRM) — Todos Protegidos University</title>
+  <meta name="description" content="Cotações, clientes, vistorias e contratos vindos do Power CRM.">
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+  <meta name="theme-color" content="#2536cf">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/internal.css">
+</head>
+<body class="dash">
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar-root" class="sidebar" data-active="operacao"><noscript><a href="dashboard.html">Visão geral</a> · <a href="aula.html">Trilha</a> · <a href="conta.html">Minha conta</a></noscript></aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <header id="topbar-root" class="topbar" data-title="Operação (CRM)" data-sub="Cotações, clientes, vistorias e contratos — integrados ao Power CRM"></header>
+
+      <main class="content">
+        <div class="page-head">
+          <div>
+            <div class="crumb"><a href="dashboard.html">Visão geral</a> · Operação (CRM)</div>
+            <h2 style="margin:0">Operação em tempo real</h2>
+            <p class="mb-0 muted">Dados que chegam automaticamente do Power CRM: cotações, cadastros, vistorias liberadas e contratos de adesão.</p>
+          </div>
+        </div>
+
+        <div id="operacaoApp" style="display:grid;gap:18px"></div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script src="assets/js/config.js"></script>
+
+  <script src="assets/js/api.js"></script>
+
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

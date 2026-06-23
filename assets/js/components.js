@@ -18,6 +18,7 @@
     gear:   '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 6.6 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 4 13.6H4a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 5 6.6l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10.4 4h.2a2 2 0 1 1 4 0v.1A1.6 1.6 0 0 0 18 5.6l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8Z"/>',
     flag:   '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1Z"/><path d="M4 22V4"/>',
     life:   '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="m4.9 4.9 4.2 4.2M14.9 14.9l4.2 4.2M14.9 9.1l4.2-4.2M9.1 14.9l-4.2 4.2"/>',
+    bolt:   '<path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/>',
     menu:   '<path d="M4 7h16M4 12h16M4 17h16"/>'
   };
   function icon(name, size) {
@@ -42,6 +43,7 @@
       { id: "protocolos", label: "Padrões & protocolos", href: "protocolos.html", icon: "file", match: ["protocolos.html"] },
       { id: "scripts",    label: "Biblioteca de scripts", href: "scripts.html",   icon: "chat", match: ["scripts.html"] },
       { id: "manual",     label: "Manual do consultor",   href: "manual.html",    icon: "life", match: ["manual.html"] },
+      { id: "operacao",   label: "Operação (CRM)",        href: "operacao.html",  icon: "bolt", match: ["operacao.html"], roles: ["admin", "superadmin"] },
       { id: "gestao",     label: "Gestão de conteúdo",    href: "gestao.html",    icon: "edit", match: ["gestao.html", "prova.html"], roles: ["admin", "superadmin"] },
       { id: "equipe",     label: "Progresso da equipe",   href: "equipe.html",    icon: "users", match: ["equipe.html"], roles: ["admin", "superadmin"] }
     ] },
