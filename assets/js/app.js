@@ -579,13 +579,18 @@
       setTxt("sideHint", total ? (dn >= total ? "Trilha concluída! 🎉" : "Faltam " + (total - dn) + " aula(s) para 100%") : "Comece sua trilha para evoluir");
       setTxt("kpiAulas", String(dn));
 
-      if (!trilhaLista) return; // Visão geral: só o resumo acima, sem a lista de módulos
-      if (!mods.length) {
-        trilhaLista.innerHTML = '<div class="gestao-empty" style="padding:28px">Sua trilha aparece aqui assim que a gestão publicar os módulos.<div style="margin-top:12px"><a class="btn btn-primary btn-sm" href="gestao.html">Ir para a gestão</a></div></div>';
+      if (!trilhaLista) return; // resumo (nível/%) atualiza em todo lugar; a lista só onde existe #trilhaLista
+      // Na Visão geral mostramos só o "Primeiros Passos" (módulos I–VI).
+      // O treinamento aprofundado (módulos 1–8) fica na página Trilha de treinamento.
+      var preMods = mods.filter(function (m) {
+        return /Primeiros Passos/i.test(m.sub || "") || /^Módulo\s+[IVXLCDM]+\s*[·.\-]/.test(m.titulo || "");
+      });
+      if (!preMods.length) {
+        trilhaLista.innerHTML = '<div class="gestao-empty" style="padding:24px">Comece pela trilha de treinamento. <a href="aula.html">Abrir a trilha</a>.</div>';
         return;
       }
       var html = "";
-      mods.forEach(function (m) {
+      preMods.forEach(function (m) {
         var n = (m.itens || []).length, d2 = 0;
         (m.itens || []).forEach(function (it) { if (isD(it.id)) d2++; });
         var full = n > 0 && d2 >= n;
