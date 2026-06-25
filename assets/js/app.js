@@ -2,6 +2,28 @@
 (function () {
   "use strict";
 
+  // ---- PWA: service worker + botão "Instalar app" (Android/Chrome) ----
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+  }
+  (function () {
+    var deferred = null;
+    function showInstall() {
+      if (document.getElementById("tpInstall") || !document.body) return;
+      var b = document.createElement("button");
+      b.id = "tpInstall"; b.type = "button"; b.textContent = "📲 Instalar app";
+      b.setAttribute("style", "position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:9999;border:0;cursor:pointer;background:#1e3a8c;color:#fff;font:600 14px/1 Inter,system-ui,sans-serif;padding:13px 20px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.28)");
+      b.addEventListener("click", function () {
+        if (!deferred) return;
+        deferred.prompt();
+        deferred.userChoice.then(function () {}).catch(function () {}).then(function () { deferred = null; b.parentNode && b.parentNode.removeChild(b); });
+      });
+      document.body.appendChild(b);
+    }
+    window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferred = e; showInstall(); });
+    window.addEventListener("appinstalled", function () { var b = document.getElementById("tpInstall"); if (b && b.parentNode) b.parentNode.removeChild(b); deferred = null; });
+  })();
+
   // Sessão / logout (via camada de dados TPData — Supabase ou local)
   function logout() {
     var done = function () { try { localStorage.removeItem("tp_sessao"); } catch (e) {} window.location.href = "index.html"; };
