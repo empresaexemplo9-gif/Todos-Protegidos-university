@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Progresso da equipe — Todos Protegidos University</title>
-  <meta name="description" content="Painel do administrador: progresso e conclusão da trilha por consultor.">
+  <title>Rotina do dia — Todos Protegidos University</title>
+  <meta name="description" content="Rotina diária do consultor: follow-up, indicadores, abordagem e treino dos protocolos nos períodos livres.">
   <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
   <meta name="theme-color" content="#2536cf">
   <link rel="manifest" href="manifest.webmanifest">
@@ -22,24 +22,15 @@
 </head>
 <body class="dash">
   <div class="app">
-    <aside id="sidebar-root" class="sidebar" data-active="equipe"><noscript><a href="dashboard.html">Visão geral</a></noscript></aside>
+    <aside id="sidebar-root" class="sidebar" data-active="rotina"><noscript><a href="dashboard.html">Visão geral</a> · <a href="rotina.html">Rotina do dia</a> · <a href="treinamentos.html">Treinamentos</a> · <a href="conta.html">Minha conta</a></noscript></aside>
 
     <div class="main">
-      <header id="topbar-root" class="topbar" data-title="Progresso da equipe" data-sub="Conclusão da trilha por consultor" data-search="Buscar consultor..."></header>
+      <header id="topbar-root" class="topbar" data-title="Rotina do dia" data-sub="Seu roteiro: follow-up, indicadores, abordagem e treino"></header>
 
       <main class="content">
-        <div id="equipeResumo" class="kpis" style="margin-bottom:24px"></div>
-
-        <!-- ROTINA DE HOJE (visível só para administradores) -->
-        <div class="panel" id="rotinaEquipePanel" style="margin-bottom:24px;display:none">
-          <div class="panel-head">
-            <h3>Rotina de hoje — equipe</h3>
-            <a href="rotina.html">Minha rotina</a>
-          </div>
-          <div id="rotinaEquipe"><div class="gestao-empty" style="padding:24px">Carregando rotina da equipe…</div></div>
+        <div id="rotinaApp">
+          <div class="gestao-empty" style="padding:40px">Carregando sua rotina…</div>
         </div>
-
-        <div id="equipeApp"><div class="gestao-empty" style="padding:40px">Carregando equipe…</div></div>
       </main>
     </div>
   </div>
