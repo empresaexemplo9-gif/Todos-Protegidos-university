@@ -25,7 +25,7 @@ Nada no front-end precisa ser reescrito para ativar — basta configurar.
 ### 2. Criar as tabelas e regras
 1. No projeto, abra **SQL Editor**.
 2. Cole **todo** o conteúdo de [`supabase/schema.sql`](supabase/schema.sql) e clique em **Run**.
-   - Cria as tabelas `tenants`, `profiles`, `modulos`, `itens`, as políticas de **isolamento por tenant** (RLS) e o **tenant inicial** (`matriz`).
+   - Cria as tabelas `tenants`, `profiles`, `modulos`, `itens`, as políticas de **isolamento por tenant** (RLS) e o **tenant inicial** (`todosprotegidos`).
    - A **trilha começa vazia** — o admin de cada tenant cria os módulos. Nenhum dado de exemplo é inserido.
    - Se já rodou um schema antigo neste projeto, rode antes o [`supabase/rollback.sql`](supabase/rollback.sql).
 3. Para o **upload de videoaulas**, rode também [`supabase/storage.sql`](supabase/storage.sql).
@@ -43,7 +43,7 @@ Nada no front-end precisa ser reescrito para ativar — basta configurar.
      ```
      *(Mesmo sem rodar esse update, qualquer usuário cujo nome contenha "Ubirani" já aparece como "Presidente da empresa" na interface.)*
 6. **(Opcional) Conteúdo completo da trilha** — rode [`supabase/conteudo.sql`](supabase/conteudo.sql).
-   - Cria **9 módulos** (2 reservados ao Presidente + 7 de vendas) com aulas/roteiros e **10 questões por módulo** (SPIN, Challenger e Sandler aplicados à proteção veicular), no tenant `matriz`.
+   - Cria **9 módulos** (2 reservados ao Presidente + 7 de vendas) com aulas/roteiros e **10 questões por módulo** (SPIN, Challenger e Sandler aplicados à proteção veicular), no tenant `todosprotegidos`.
    - Idempotente: pula módulos que já existem. O admin pode editar tudo depois pela Gestão.
 7. **Painel da equipe (admin)** — rode [`supabase/equipe.sql`](supabase/equipe.sql).
    - Cria a política que permite ao **admin enxergar o progresso dos consultores do seu tenant** (página "Progresso da equipe"). Já incluído no `schema.sql` para instalações novas.
@@ -86,7 +86,7 @@ Faça commit/push — o GitHub Pages publica e o backend fica ativo.
 
 1. No site, abra **Criar meu acesso** e cadastre-se com:
    - E-mail: o mesmo do `ADMIN_EMAIL` (ex.: `admin@todosprotegidos.com.br`)
-   - **Código da empresa/unidade:** `matriz`
+   - **Código da empresa/unidade:** `todosprotegidos`
 2. Promova esse usuário a admin no **SQL Editor**:
    ```sql
    update public.profiles set role = 'admin'

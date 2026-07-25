@@ -257,12 +257,12 @@ create policy "resultados_admin_select" on public.resultados
 -- 9) Tenant inicial (necessário para os primeiros cadastros).
 --    A trilha começa VAZIA — o admin de cada tenant cria os módulos.
 insert into public.tenants (nome, slug)
-select 'Matriz', 'matriz'
+select 'Todos Protegidos', 'todosprotegidos'
 where not exists (select 1 from public.tenants);
 
 -- ============================================================
 -- COMO CRIAR UM ADMIN (por tenant)
--- 1) Cadastre-se pelo site usando o CÓDIGO do tenant (ex.: "matriz").
+-- 1) Cadastre-se pelo site usando o CÓDIGO do tenant (ex.: "todosprotegidos").
 -- 2) Promova o usuário a admin:
 --      update public.profiles set role = 'admin'
 --      where id = (select id from auth.users where email = 'admin@todosprotegidos.com.br');
