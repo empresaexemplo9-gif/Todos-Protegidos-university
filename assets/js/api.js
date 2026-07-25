@@ -115,6 +115,26 @@
     uploadFile: function () {
       return Promise.resolve({ ok: false, error: "O upload de vídeo está disponível no modo nuvem (Supabase). Cole a URL do vídeo." });
     },
+    // ---- Rotina diária (modo local) ----
+    getRotina: function (dia) {
+      var all = lsGet("tp_rotina", {});
+      return Promise.resolve((all[dia] || []).slice());
+    },
+    setRotinaTarefa: function (dia, tarefaId, feito) {
+      var all = lsGet("tp_rotina", {});
+      var arr = all[dia] || [];
+      if (feito) { if (arr.indexOf(tarefaId) < 0) arr.push(tarefaId); }
+      else { arr = arr.filter(function (x) { return x !== tarefaId; }); }
+      all[dia] = arr; lsSet("tp_rotina", all);
+      return Promise.resolve({ ok: true });
+    },
+    listRotinaEquipe: function (dia) {
+      var s = lsGet("tp_sessao", null), all = lsGet("tp_rotina", {});
+      if (!s) return Promise.resolve([]);
+      return Promise.resolve((all[dia] || []).map(function (t) {
+        return { user_id: s.email, nome: s.nome, tarefa_id: t };
+      }));
+    },
     getProgress: function () { return Promise.resolve(lsGet("tp_progresso", [])); },
     setProgress: function (itemId, done) {
       var p = lsGet("tp_progresso", []);
@@ -345,6 +365,34 @@
           return { ok: true, url: pub.data.publicUrl };
         });
     },
+    // ---- Rotina diária (Supabase) ----
+    // RLS garante: consultor enxerga só a própria; admin enxerga a do tenant.
+    getRotina: function (dia) {
+      return sb.auth.getUser().then(function (r) {
+        var u = r.data && r.data.user; if (!u) return [];
+        return sb.from("rotina").select("tarefa_id").eq("user_id", u.id).eq("dia", dia)
+          .then(function (res) { return (res.data || []).map(function (x) { return x.tarefa_id; }); });
+      });
+    },
+    setRotinaTarefa: function (dia, tarefaId, feito) {
+      return sb.auth.getUser().then(function (r) {
+        var u = r.data && r.data.user; if (!u) return { ok: false, error: "Sessão expirada." };
+        if (feito) {
+          return sb.from("rotina").upsert({ user_id: u.id, dia: dia, tarefa_id: tarefaId, feito: true }, { onConflict: "user_id,dia,tarefa_id" })
+            .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+        }
+        return sb.from("rotina").delete().eq("user_id", u.id).eq("dia", dia).eq("tarefa_id", tarefaId)
+          .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+      });
+    },
+    // Painel do admin: rotina de todos os consultores do tenant (RLS filtra).
+    listRotinaEquipe: function (dia) {
+      return sb.from("rotina").select("user_id,tarefa_id").eq("dia", dia)
+        .then(function (res) {
+          if (res.error) return [];
+          return (res.data || []).map(function (x) { return { user_id: x.user_id, tarefa_id: x.tarefa_id }; });
+        });
+    },
     getProgress: function () {
       return sb.auth.getUser().then(function (r) {
         var u = r.data && r.data.user; if (!u) return [];
@@ -564,6 +612,9 @@
     updatePassword: function (nova) { return impl.updatePassword(nova); },
     updateEmail: function (novo) { return impl.updateEmail(novo); },
     uploadFile: function (file) { return impl.uploadFile(file); },
+    getRotina: function (dia) { return impl.getRotina(dia); },
+    setRotinaTarefa: function (dia, id, feito) { return impl.setRotinaTarefa(dia, id, feito); },
+    listRotinaEquipe: function (dia) { return impl.listRotinaEquipe(dia); },
     getProgress: function () { return impl.getProgress(); },
     setProgress: function (id, done) { return impl.setProgress(id, done); },
     listQuestions: function (m) { return impl.listQuestions(m); },

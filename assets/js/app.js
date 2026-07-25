@@ -1083,6 +1083,47 @@
   }
 
   // ---- Painel do admin: progresso da equipe ----
+  // ---- Rotina da equipe (SÓ administradores) ----
+  // O consultor enxerga apenas a própria rotina; o RLS do Supabase garante
+  // isso no banco, e aqui o painel nem aparece para quem não é admin.
+  var rotinaEquipeEl = document.getElementById("rotinaEquipe");
+  if (rotinaEquipeEl && window.TPData && TPData.listRotinaEquipe) {
+    var reEsc = function (s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; };
+    TPData.session().then(function (s) {
+      if (!s || !(s.role === "admin" || s.role === "superadmin")) return; // painel segue oculto
+      var painel = document.getElementById("rotinaEquipePanel");
+      if (painel) painel.style.display = "";
+      var dia = tpHoje();
+      Promise.all([TPData.listTeam(), TPData.listRotinaEquipe(dia)]).then(function (r) {
+        var team = (r[0] || []).filter(function (u) { return u.role === "consultor"; });
+        var rot = r[1] || [];
+        if (!team.length) team = r[0] || [];
+        var porUser = {};
+        rot.forEach(function (x) { (porUser[x.user_id] = porUser[x.user_id] || {})[x.tarefa_id] = 1; });
+        var total = TP_ROTINA.length;
+        if (!team.length) {
+          rotinaEquipeEl.innerHTML = '<div class="gestao-empty" style="padding:24px">Nenhum consultor cadastrado ainda.</div>';
+          return;
+        }
+        rotinaEquipeEl.innerHTML = '<div class="table-wrap"><table class="table"><thead><tr>' +
+          '<th>Consultor</th><th>Concluídas</th><th>Progresso do dia</th><th>Pendências</th></tr></thead><tbody>' +
+          team.map(function (u) {
+            var f = porUser[u.id] || {};
+            var n = TP_ROTINA.filter(function (b) { return f[b.id]; }).length;
+            var pct = Math.round(n / total * 100);
+            var pend = TP_ROTINA.filter(function (b) { return !f[b.id]; }).slice(0, 2)
+              .map(function (b) { return b.h; }).join(", ");
+            return '<tr><td style="font-weight:600">' + reEsc(u.nome) + '</td>' +
+                   '<td>' + n + '/' + total + '</td>' +
+                   '<td style="min-width:160px"><div class="progress"><i style="width:' + pct + '%"></i></div></td>' +
+                   '<td>' + (n >= total ? '<span class="badge">dia completo ✓</span>' : '<span class="muted">' + (pend || "—") + '</span>') + '</td></tr>';
+          }).join("") + '</tbody></table></div>';
+      }, function () {
+        rotinaEquipeEl.innerHTML = '<div class="gestao-empty" style="padding:24px">Rotina indisponível (rode <code>supabase/rotina.sql</code> no Supabase).</div>';
+      });
+    }, function () {});
+  }
+
   var equipeApp = document.getElementById("equipeApp");
   if (equipeApp) {
     var eesc = function (s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; };
@@ -1422,6 +1463,38 @@
   function vIsMonth(dateStr, d) { d = d || new Date(); return !!dateStr && String(dateStr).slice(0, 7) === (d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2)); }
   function vDateBR(s) { if (!s) return "—"; var p = String(s).slice(0, 10).split("-"); return p.length === 3 ? p[2] + "/" + p[1] + "/" + p[0] : s; }
 
+  // ---- ROTINA DIÁRIA do consultor ----
+  // Blocos fixos da manhã + os períodos ociosos preenchidos com treino dos
+  // métodos protocolares da empresa (nada de tempo parado).
+  var TP_ROTINA = [
+    { id: "0900-followup", h: "09:00", dur: 30, tipo: "acao", titulo: "Follow-up com possibilidade de fechamento",
+      desc: "Retome os atendimentos quentes: cotações abertas, vistorias liberadas e propostas sem resposta. Priorize quem já demonstrou interesse.", link: "clientes.html", linkTxt: "Ver meus clientes" },
+    { id: "0930-indicadores", h: "09:30", dur: 30, tipo: "acao", titulo: "Falar com indicadores",
+      desc: "Acione seus indicadores: associados que já são seus clientes e as parcerias. Peça indicação de nome + contato e agende o retorno.", link: "clientes.html", linkTxt: "Abrir carteira" },
+    { id: "1000-decisao", h: "10:00", dur: 0, tipo: "decisao", titulo: "Decisão do dia — duas alternativas",
+      desc: "Se o atendimento interno não gerou venda até aqui, saia para abordagem externa em um ponto da cidade. Se há atendimento interno em andamento, siga com ele até o fechamento.",
+      opcoes: [
+        { id: "1000-interno", titulo: "Atendimento interno", desc: "Há negociação em andamento — siga o protocolo até o fechamento.", link: "protocolos.html", linkTxt: "Protocolos" },
+        { id: "1000-abordagem", titulo: "Abordagem externa", desc: "Sem venda no interno: escolha um ponto da cidade e faça abordagem.", link: "aula-abordagem.html", linkTxt: "Técnicas de abordagem" }
+      ] },
+    { id: "1100-treino-abordagem", h: "11:00", dur: 60, tipo: "treino", titulo: "Treino: abordagem e primeiro contato",
+      desc: "Período sem atendimento? Pratique em voz alta o roteiro de abordagem e a quebra de objeção inicial.", link: "scripts.html", linkTxt: "Biblioteca de scripts" },
+    { id: "1400-followup-tarde", h: "14:00", dur: 60, tipo: "acao", titulo: "Follow-up da tarde",
+      desc: "Segunda rodada de retorno: quem não atendeu de manhã e quem ficou de responder.", link: "clientes.html", linkTxt: "Ver meus clientes" },
+    { id: "1500-treino-protocolo", h: "15:00", dur: 60, tipo: "treino", titulo: "Treino: protocolos da empresa",
+      desc: "Revise o passo a passo de cotação, cadastro, vistoria e contrato até ficar automático.", link: "protocolos.html", linkTxt: "Padrões & protocolos" },
+    { id: "1600-treino-trilha", h: "16:00", dur: 60, tipo: "treino", titulo: "Treino: trilha de treinamento",
+      desc: "Avance uma aula da trilha ou refaça a prova do módulo em que teve mais dificuldade.", link: "treinamentos.html", linkTxt: "Abrir treinamentos" },
+    { id: "1700-fechamento", h: "17:00", dur: 60, tipo: "acao", titulo: "Fechamento do dia",
+      desc: "Registre as vendas do dia, atualize o status dos clientes e deixe a agenda de amanhã pronta.", link: "vendas.html", linkTxt: "Registrar venda" }
+  ];
+  function tpHoje() {
+    var d = new Date();
+    return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+  }
+  function tpMinutosAgora() { var d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+  function tpHoraEmMin(h) { var p = String(h).split(":"); return (+p[0]) * 60 + (+p[1] || 0); }
+
   // ---- Regras de PREMIAÇÃO (não trabalhamos com comissão) ----
   // 5 vendas na semana  -> R$ 100
   // 6 vendas na semana  -> R$ 350 + 1 sábado livre  (vale para 6 ou mais)
@@ -1532,13 +1605,137 @@
     if (window.TPData) { TPData.session().then(function (s) { if (!s) { window.location.href = "login.html"; return; } vReload(); }, function () { vReload(); }); } else { vReload(); }
   }
 
+  // ---- Rotina do dia (consultor) ----
+  var rotinaApp = document.getElementById("rotinaApp");
+  if (rotinaApp && window.TPData && TPData.getRotina) {
+    var rEsc = function (s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; };
+    var rDia = tpHoje();
+    var rFeitas = [];
+    var TIPO_LBL = { acao: "Ação", treino: "Treino", decisao: "Decisão" };
+
+    function rRender() {
+      var agora = tpMinutosAgora();
+      var feito = function (id) { return rFeitas.indexOf(id) >= 0; };
+      // Bloco "atual": o último cujo horário já começou e ainda não terminou
+      var atualId = null;
+      TP_ROTINA.forEach(function (b) {
+        var ini = tpHoraEmMin(b.h), fim = ini + (b.dur || 30);
+        if (agora >= ini && agora < fim) atualId = b.id;
+      });
+
+      var totalAcoes = TP_ROTINA.length;
+      var concluidas = TP_ROTINA.filter(function (b) { return feito(b.id); }).length;
+      var pct = Math.round(concluidas / totalAcoes * 100);
+
+      var h = '<div class="rot-top">' +
+                '<div><strong>' + concluidas + ' de ' + totalAcoes + '</strong> tarefas concluídas hoje' +
+                  '<div class="progress" style="margin-top:8px;max-width:320px"><i style="width:' + pct + '%"></i></div></div>' +
+                '<button type="button" class="btn btn-ghost btn-sm" id="btnNotif">🔔 Ativar lembretes</button>' +
+              '</div>';
+
+      h += '<div class="rot-list">';
+      TP_ROTINA.forEach(function (b) {
+        var ok = feito(b.id);
+        var ini = tpHoraEmMin(b.h);
+        var passou = agora > ini + (b.dur || 30);
+        var cls = "rot" + (ok ? " ok" : "") + (b.id === atualId ? " agora" : "") + (!ok && passou ? " atrasada" : "");
+        h += '<div class="' + cls + '" data-rot="' + b.id + '">';
+        h += '<div class="rot-h">' + b.h + '</div>';
+        h += '<div class="rot-card">';
+        h += '<div class="rot-card-top"><span class="badge tipo-' + b.tipo + '">' + TIPO_LBL[b.tipo] + '</span>' +
+             (b.id === atualId ? '<span class="badge badge-blue">agora</span>' : '') +
+             (!ok && passou ? '<span class="badge badge-amber">pendente</span>' : '') + '</div>';
+        h += '<h4>' + rEsc(b.titulo) + '</h4><p>' + rEsc(b.desc) + '</p>';
+        if (b.opcoes) {
+          h += '<div class="rot-opts">' + b.opcoes.map(function (o) {
+            return '<div class="rot-opt"><strong>' + rEsc(o.titulo) + '</strong><span>' + rEsc(o.desc) + '</span>' +
+                   '<a class="btn btn-ghost btn-sm" href="' + o.link + '">' + rEsc(o.linkTxt) + '</a></div>';
+          }).join("") + '</div>';
+        }
+        h += '<div class="rot-acts">';
+        h += '<button type="button" class="btn ' + (ok ? "btn-ghost" : "btn-primary") + ' btn-sm" data-rok="' + b.id + '">' + (ok ? "✓ Concluída" : "Marcar como feita") + '</button>';
+        if (b.link) h += '<a class="btn btn-ghost btn-sm" href="' + b.link + '">' + rEsc(b.linkTxt) + '</a>';
+        h += '</div></div></div>';
+      });
+      h += '</div>';
+      rotinaApp.innerHTML = h;
+
+      Array.prototype.forEach.call(rotinaApp.querySelectorAll("[data-rok]"), function (btn) {
+        btn.addEventListener("click", function () {
+          var id = btn.getAttribute("data-rok"), novo = !feito(id);
+          btn.disabled = true;
+          TPData.setRotinaTarefa(rDia, id, novo).then(function (res) {
+            if (res && res.ok === false) { btn.disabled = false; alert(res.error || "Não foi possível salvar."); return; }
+            if (novo) { if (rFeitas.indexOf(id) < 0) rFeitas.push(id); }
+            else rFeitas = rFeitas.filter(function (x) { return x !== id; });
+            rRender();
+          }, function () { btn.disabled = false; alert("Erro de conexão ao salvar a tarefa."); });
+        });
+      });
+      var bn = document.getElementById("btnNotif");
+      if (bn) {
+        if (!("Notification" in window)) { bn.style.display = "none"; }
+        else if (Notification.permission === "granted") { bn.textContent = "🔔 Lembretes ativos"; bn.disabled = true; }
+        else bn.addEventListener("click", function () {
+          Notification.requestPermission().then(function (p) {
+            if (p === "granted") { bn.textContent = "🔔 Lembretes ativos"; bn.disabled = true; agendarLembretes(); }
+            else alert("Os lembretes ficam desativados. Você pode ativar depois nas permissões do navegador.");
+          });
+        });
+      }
+    }
+
+    // Lembretes: disparam enquanto a plataforma estiver aberta (não há
+    // servidor de push — com o app fechado o navegador não notifica).
+    var jaAvisou = {};
+    function notificar(b) {
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+      try {
+        new Notification("Todos Protegidos · " + b.h, {
+          body: b.titulo + "\n" + b.desc.slice(0, 110),
+          icon: "assets/img/icon-192.png", tag: "rotina-" + b.id
+        });
+      } catch (e) {}
+    }
+    function checarLembretes() {
+      var agora = tpMinutosAgora();
+      TP_ROTINA.forEach(function (b) {
+        var ini = tpHoraEmMin(b.h);
+        // dispara no minuto do bloco (tolerância de 2 min) e só uma vez por dia
+        if (!jaAvisou[b.id] && agora >= ini && agora < ini + 2 && rFeitas.indexOf(b.id) < 0) {
+          jaAvisou[b.id] = true; notificar(b); rRender();
+        }
+      });
+    }
+    var timerLembrete = null;
+    function agendarLembretes() {
+      if (timerLembrete) return;
+      timerLembrete = setInterval(checarLembretes, 60000);
+      checarLembretes();
+    }
+
+    TPData.getRotina(rDia).then(function (list) {
+      rFeitas = list || [];
+      rRender();
+      if ("Notification" in window && Notification.permission === "granted") agendarLembretes();
+      setInterval(rRender, 60000); // mantém "agora"/"pendente" atualizados
+    }, function () {
+      rFeitas = []; rRender();
+    });
+  }
+
   // ---- Home: desempenho do consultor + premiação ----
   var vendasRecentesEl = document.getElementById("vendasRecentes");
   if (vendasRecentesEl && window.TPData && TPData.listVendas) {
     var dSet = function (id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; };
     var dHtml = function (id, h) { var el = document.getElementById(id); if (el) el.innerHTML = h; };
 
-    TPData.listVendas().then(function (list) {
+    var vClientesDash = [];
+    // A carteira alimenta a taxa de conversão usada na projeção do mês.
+    var pClientes = (TPData.listClientes ? TPData.listClientes() : Promise.resolve([]))
+      .then(function (c) { vClientesDash = c || []; }, function () { vClientesDash = []; });
+
+    pClientes.then(function () { return TPData.listVendas(); }).then(function (list) {
       var vlist = (list || []).filter(tpVendaVale);
       var hoje = new Date();
       var semanaAtual = tpChaveSemana(hoje);
@@ -1633,6 +1830,78 @@
             '<span><i class="ln"></i> 5 vendas · R$ 100</span>' +
             '<span><i class="ln g2"></i> 6 vendas · R$ 350 + sábado livre</span>' +
           '</div>';
+      }
+
+      // ---- Projeção do mês: ritmo desde a 1ª venda + média necessária ----
+      // Base: dias restantes do mês e a meta de 15 vendas.
+      var proj = document.getElementById("projecaoMes");
+      if (proj) {
+        var ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
+        var diaHoje = hoje.getDate();
+        var diasRestantes = Math.max(1, ultimoDia - diaHoje + 1); // inclui hoje
+        var faltam = Math.max(0, TP_META_MES - qtdMes);
+
+        // 1ª venda do mês (referência do ritmo)
+        var datasMes = vlist.filter(function (v) { return vIsMonth(v.data, hoje); })
+                            .map(function (v) { return tpData(v.data); })
+                            .filter(Boolean).sort(function (a, b) { return a - b; });
+        var primeira = datasMes[0] || null;
+        var diasCorridos = primeira ? Math.max(1, Math.round((hoje - primeira) / 86400000) + 1) : 0;
+        var ritmoDia = diasCorridos ? (qtdMes / diasCorridos) : 0;
+        var projetado = Math.round(qtdMes + ritmoDia * (diasRestantes - 1));
+
+        var porDia = faltam / diasRestantes;
+        var porSemana = porDia * 7;
+
+        // Prospecção necessária, calculada com a SUA taxa de conversão real
+        var leads = (vClientesDash || []).length;
+        var conv = leads ? (qtdMes / leads) : 0;
+        var contatos = conv > 0 ? Math.ceil(faltam / conv) : 0;
+
+        var h = "";
+        if (!primeira) {
+          h += '<p class="muted" style="margin:0 0 12px">Assim que você registrar a <strong>primeira venda do mês</strong>, mostramos aqui o seu ritmo e a média necessária para fechar as ' + TP_META_MES + ' vendas.</p>';
+        } else {
+          h += '<div class="proj-grid">' +
+                 '<div><span class="proj-lbl">1ª venda do mês</span><strong>' + vDateBR(datasMes[0].getFullYear() + "-" + ("0" + (datasMes[0].getMonth() + 1)).slice(-2) + "-" + ("0" + datasMes[0].getDate()).slice(-2)) + '</strong></div>' +
+                 '<div><span class="proj-lbl">Seu ritmo</span><strong>' + ritmoDia.toFixed(1).replace(".", ",") + ' venda/dia</strong></div>' +
+                 '<div><span class="proj-lbl">Dias restantes</span><strong>' + diasRestantes + '</strong></div>' +
+                 '<div><span class="proj-lbl">Projeção do mês</span><strong class="' + (projetado >= TP_META_MES ? "proj-ok" : "proj-risco") + '">' + projetado + ' vendas</strong></div>' +
+               '</div>';
+        }
+        if (faltam > 0) {
+          h += '<div class="proj-need"><strong>Para bater a meta:</strong> faltam ' + faltam + (faltam === 1 ? " venda" : " vendas") +
+               ' — cerca de <strong>' + (porDia < 1 ? porDia.toFixed(1).replace(".", ",") : Math.ceil(porDia)) + ' por dia</strong>' +
+               ' (~' + Math.ceil(porSemana) + ' por semana).';
+          if (contatos) h += ' Na sua conversão atual (' + Math.round(conv * 100) + '%), isso pede <strong>~' + contatos + ' contatos</strong> de prospecção.';
+          else h += ' Registre seus clientes para calcularmos quantos contatos isso exige.';
+          h += '</div>';
+        } else {
+          h += '<div class="proj-need ok"><strong>Meta do mês batida! 🎉</strong> Cada venda a mais entra na premiação semanal.</div>';
+        }
+        proj.innerHTML = h;
+
+        // ---- Dica do dia: material da própria empresa (fonte confiável) ----
+        var dicaEl = document.getElementById("dicaDia");
+        if (dicaEl) {
+          var DICAS = [
+            { t: "Follow-up vence a memória", d: "Quem não retorna, perde. Reabra hoje as cotações sem resposta — o protocolo da empresa prevê retorno em até 48h.", l: "protocolos.html", lt: "Ver protocolos" },
+            { t: "Peça indicação a quem já confia", d: "Associados satisfeitos são a fonte mais barata de venda. Ao entregar o contrato, peça 2 nomes com telefone.", l: "scripts.html", lt: "Script de indicação" },
+            { t: "Diagnóstico antes de preço", d: "Pergunte sobre uso do veículo, rotina e receios antes de falar valor. Preço sem contexto vira objeção.", l: "treinamentos.html", lt: "Módulo de diagnóstico" },
+            { t: "Abordagem externa com meta", d: "Ao sair para um ponto da cidade, defina quantos contatos fará. Meta simples: 20 abordagens = 1 cotação.", l: "aula-abordagem.html", lt: "Técnicas de abordagem" },
+            { t: "Objeção é pedido de informação", d: "\"Vou pensar\" quase sempre é dúvida não resolvida. Volte à necessidade que o cliente citou e confirme o entendimento.", l: "scripts.html", lt: "Tratamento de objeções" },
+            { t: "Vistoria rápida fecha mais", d: "Quanto menor o intervalo entre aceite e vistoria, menor a desistência. Agende ainda no mesmo contato.", l: "protocolos.html", lt: "Protocolo de vistoria" }
+          ];
+          // Dica dirigida à situação; no restante, gira pelo dia do mês.
+          var dica;
+          if (!primeira) dica = DICAS[3];
+          else if (projetado < TP_META_MES && ritmoDia < 0.5) dica = DICAS[1];
+          else if (faltam > 0 && porDia >= 1) dica = DICAS[0];
+          else dica = DICAS[diaHoje % DICAS.length];
+          dicaEl.innerHTML = '<h4>' + dica.t + '</h4><p>' + dica.d + '</p>' +
+            '<a class="btn btn-ghost btn-sm" href="' + dica.l + '">' + dica.lt + '</a>' +
+            '<span class="dica-fonte">Fonte: material e protocolos da Todos Protegidos</span>';
+        }
       }
 
       // ---- Histórico de premiações por semana ----

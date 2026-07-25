@@ -250,3 +250,19 @@ body.nav-locked { overflow: hidden; }
   .dchart-x { gap: 6px; }
   .dchart-goal span { font-size: 9px; }
 }
+
+/* ---- Projeção do mês + dica de desenvolvimento ---- */
+.proj-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.proj-grid > div { display: flex; flex-direction: column; gap: 2px; }
+.proj-lbl { font-size: var(--tp-fs-xs); color: var(--tp-muted); }
+.proj-grid strong { font-family: var(--tp-font-sans); font-size: var(--tp-fs-base); color: var(--tp-ink); }
+.proj-ok { color: var(--tp-green-700) !important; }
+.proj-risco { color: #b45309 !important; }
+.proj-need { background: var(--tp-bg); border-left: 3px solid var(--tp-blue-400); border-radius: var(--tp-radius-sm); padding: 12px 14px; font-size: var(--tp-fs-sm); color: var(--tp-slate); line-height: 1.55; }
+.proj-need.ok { border-left-color: var(--tp-green-500); background: var(--tp-green-50); color: var(--tp-green-800); }
+
+.dica-panel h4 { margin: 0 0 6px; font-family: var(--tp-font-sans); font-size: var(--tp-fs-base); color: var(--tp-ink); }
+.dica-panel p { margin: 0 0 12px; color: var(--tp-slate); font-size: var(--tp-fs-sm); line-height: 1.55; }
+.dica-fonte { display: block; margin-top: 10px; font-size: var(--tp-fs-xs); color: var(--tp-muted); }
+
+@media (max-width: 560px) { .proj-grid { grid-template-columns: 1fr; } }
