@@ -53,6 +53,24 @@
     if (s.role === "admin") return "Administrador";
     return "Consultor";
   }
+  // Nível do consultor conforme % da trilha concluída (usado no cabeçalho de perfil,
+  // no card da sidebar e na moldura por nível).
+  function tpNivel(pct) {
+    if (pct >= 80) return { nome: "Pro", slug: "pro", tag: "🏆 Nível Pro" };
+    if (pct >= 50) return { nome: "Avançado", slug: "avancado", tag: "🥇 Nível Avançado" };
+    if (pct >= 25) return { nome: "Intermediário", slug: "intermediario", tag: "🥈 Nível Intermediário" };
+    return { nome: "Novato", slug: "novato", tag: "🏁 Nível Novato" };
+  }
+  window.TPNivel = tpNivel;
+  // Preferência de trilha escolhida no cadastro ("novato" | "aprimorando").
+  function tpExperiencia() {
+    try { return localStorage.getItem("tp_experiencia") || "novato"; } catch (e) { return "novato"; }
+  }
+  // É um módulo do PRÉ-TREINAMENTO (algarismos romanos I–VI / "Primeiros Passos")?
+  function tpEhPreTreino(m) {
+    return /Primeiros Passos/i.test(m.sub || "") || /^M[óo]dulo\s+[IVXLCDM]+\s*[·.\-]/.test(m.titulo || "");
+  }
+  window.TPEhPreTreino = tpEhPreTreino;
   // Liga botões "Sair" estáticos (páginas sem topbar)
   Array.prototype.forEach.call(document.querySelectorAll("[data-logout]"), function (b) { b.addEventListener("click", logout); });
 
@@ -617,17 +635,18 @@
       setTxt("kpiAulas", String(dn));
 
       if (!trilhaLista) return; // resumo (nível/%) atualiza em todo lugar; a lista só onde existe #trilhaLista
-      // Na Visão geral mostramos só o "Primeiros Passos" (módulos I–VI).
-      // O treinamento aprofundado (módulos 1–8) fica na página Trilha de treinamento.
-      var preMods = mods.filter(function (m) {
-        return /Primeiros Passos/i.test(m.sub || "") || /^Módulo\s+[IVXLCDM]+\s*[·.\-]/.test(m.titulo || "");
-      });
-      if (!preMods.length) {
+      // "novato": mostra o pré-treinamento (Módulos I–VI / "Primeiros Passos").
+      // "aprimorando": mostra direto o "Do novato ao Pro" (módulos numerados).
+      var aprimorando = tpExperiencia() === "aprimorando";
+      var preMods = mods.filter(tpEhPreTreino);
+      var proMods = mods.filter(function (m) { return !tpEhPreTreino(m); });
+      var listaMods = aprimorando ? (proMods.length ? proMods : preMods) : (preMods.length ? preMods : proMods);
+      if (!listaMods.length) {
         trilhaLista.innerHTML = '<div class="gestao-empty" style="padding:24px">Comece pela trilha de treinamento. <a href="aula.html">Abrir a trilha</a>.</div>';
         return;
       }
       var html = "";
-      preMods.forEach(function (m) {
+      listaMods.forEach(function (m) {
         var n = (m.itens || []).length, d2 = 0;
         (m.itens || []).forEach(function (it) { if (isD(it.id)) d2++; });
         var full = n > 0 && d2 >= n;
@@ -672,12 +691,22 @@
     function renderPlayer(mods, currentId) {
       var flat = flatten(mods);
       if (!flat.length) { playerApp.innerHTML = '<div class="gestao-empty" style="padding:48px">Nenhuma aula publicada ainda. Assim que a gestão adicionar conteúdo, ele aparece aqui.</div>'; return; }
+      var aprimorando = tpExperiencia() === "aprimorando";
       var sel = null;
       flat.forEach(function (e) { if (e.item.id === currentId) sel = e; });
+      // "Aprimorando": ao entrar sem aula específica, começa direto no "Do novato
+      // ao Pro" (módulos numerados), pulando o pré-treinamento (I–VI).
+      if (!sel && aprimorando) {
+        sel = flat.filter(function (e) { return isPlayable(e.item) && !tpEhPreTreino(e.mod); })[0] || null;
+      }
       if (!sel) sel = flat.filter(function (e) { return isPlayable(e.item); })[0] || flat[0];
       var done = isDone(sel.item.id);
 
-      var html = '<div class="crumb" style="font-size:var(--tp-fs-sm);color:var(--tp-muted);margin-bottom:14px"><a href="dashboard.html" style="color:var(--tp-muted)">Visão geral</a> · ' + esc(sel.mod.titulo) + '</div>';
+      var html = "";
+      if (aprimorando) {
+        html += '<div class="track-note">✨ Você escolheu <strong>Aprimorando habilidades</strong> — começamos pelo <strong>“Do novato ao Pro”</strong>. O pré-treinamento (Módulos I–VI) fica opcional, disponível na lista ao lado.</div>';
+      }
+      html += '<div class="crumb" style="font-size:var(--tp-fs-sm);color:var(--tp-muted);margin-bottom:14px"><a href="dashboard.html" style="color:var(--tp-muted)">Visão geral</a> · ' + esc(sel.mod.titulo) + '</div>';
       html += '<div class="lesson-grid"><div>';
       if (isPlayable(sel.item)) html += embed(sel.item.url);
       else html += '<div class="video"><div class="meta"><span class="badge">' + esc(TYPELBL[sel.item.tipo] || "Conteúdo") + '</span></div></div>';
@@ -987,6 +1016,8 @@
       var telefone = val("telefone"), senha = val("senha"), senha2 = val("senha2");
       var empresa = val("empresa");
       var termos = document.getElementById("termos");
+      var expEl = cadastroForm.querySelector('input[name="experiencia"]:checked');
+      var experiencia = expEl && expEl.value === "aprimorando" ? "aprimorando" : "novato";
 
       if (!nome || nome.split(" ").length < 2) return showMsg("Informe seu nome completo.", false);
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showMsg("Digite um e-mail válido.", false);
@@ -995,16 +1026,21 @@
       if (senha !== senha2) return showMsg("As senhas não conferem.", false);
       if (termos && !termos.checked) return showMsg("É preciso aceitar os termos para continuar.", false);
 
+      // "aprimorando" vai direto ao "Do novato ao Pro" (trilha); "novato" começa
+      // pelo pré-treinamento (Visão geral / Módulos I–VI).
+      var destino = experiencia === "aprimorando" ? "aula.html" : "dashboard.html";
+      try { localStorage.setItem("tp_experiencia", experiencia); } catch (e) {}
+
       var btn = cadastroForm.querySelector('button[type="submit"]');
       btn.disabled = true;
-      TPData.register({ nome: nome, email: email, telefone: telefone, senha: senha, tenant: empresa }).then(function (r) {
+      TPData.register({ nome: nome, email: email, telefone: telefone, senha: senha, tenant: empresa, experiencia: experiencia }).then(function (r) {
         if (!r.ok) { btn.disabled = false; return showMsg(r.error || "Não foi possível criar o acesso.", false); }
         if (r.needsConfirm) {
           showMsg("Acesso criado! Confirme o e-mail enviado e depois faça login.", true);
           return setTimeout(function () { window.location.href = "login.html"; }, 2400);
         }
-        showMsg("Acesso criado com sucesso! Redirecionando para a plataforma…", true);
-        setTimeout(function () { window.location.href = "dashboard.html"; }, 1400);
+        showMsg("Acesso criado com sucesso! Redirecionando…", true);
+        setTimeout(function () { window.location.href = destino; }, 1400);
       }, function () { btn.disabled = false; showMsg("Erro de conexão. Tente novamente.", false); });
     });
   }
@@ -1028,10 +1064,71 @@
       TPData.login(user, pass).then(function (r) {
         if (!r.ok) { btn.disabled = false; return lShow(r.error || "Usuário ou senha inválidos.", false); }
         var nome = (r.session && r.session.nome) || "";
-        lShow((r.session && r.session.role === "admin") ? "Bem-vindo, Administrador! Redirecionando…" : ("Acesso liberado" + (nome ? ", " + nome.split(" ")[0] : "") + "! Redirecionando…"), true);
-        setTimeout(function () { window.location.href = "dashboard.html"; }, 1000);
+        var exp = (r.session && r.session.experiencia) || "novato";
+        try { localStorage.setItem("tp_experiencia", exp); } catch (e) {}
+        var admin = r.session && (r.session.role === "admin" || r.session.role === "superadmin");
+        lShow(admin ? "Bem-vindo, Administrador! Redirecionando…" : ("Acesso liberado" + (nome ? ", " + nome.split(" ")[0] : "") + "! Redirecionando…"), true);
+        // Consultor "aprimorando" cai direto na trilha "Do novato ao Pro".
+        var destino = (!admin && exp === "aprimorando") ? "aula.html" : "dashboard.html";
+        setTimeout(function () { window.location.href = destino; }, 1000);
       }, function () { btn.disabled = false; lShow("Erro de conexão. Tente novamente.", false); });
     });
+  }
+
+  // ---- Cabeçalho de perfil (nome + foto + nível + moldura por nível) ----
+  var perfilHeader = document.getElementById("perfilHeader");
+  if (perfilHeader && window.TPData) {
+    var pesc = function (s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; };
+    Promise.all([TPData.session(), TPData.listModules(), TPData.getProgress()]).then(function (res) {
+      var s = res[0] || {}, mods = res[1] || [], done = res[2] || [];
+      var total = 0, dn = 0;
+      mods.forEach(function (m) { (m.itens || []).forEach(function (it) { total++; if (done.indexOf(it.id) >= 0) dn++; }); });
+      var pct = total ? Math.round(dn / total * 100) : 0;
+      var nv = tpNivel(pct);
+      var nome = s.nome || "Consultor";
+      var papel = papelLabel(s);
+      var fotoKey = "tp_foto_" + (s.email || "");
+      var foto = ""; try { foto = localStorage.getItem(fotoKey) || ""; } catch (e) {}
+      var iniciais = nome.trim().split(/\s+/).map(function (w) { return w.charAt(0) || ""; }).slice(0, 2).join("").toUpperCase() || "C";
+      var inner = foto ? '<img src="' + foto + '" alt="Foto de perfil">' : '<span>' + pesc(iniciais) + '</span>';
+      perfilHeader.innerHTML =
+        '<div class="pf-card">' +
+          '<div class="pf-frame lvl-' + nv.slug + '" title="Nível ' + nv.nome + '">' +
+            '<div class="pf-avatar">' + inner + '</div>' +
+            '<button type="button" class="pf-foto-btn" id="pfFotoBtn" title="Trocar foto de perfil" aria-label="Trocar foto de perfil">📷</button>' +
+            '<input type="file" id="pfFotoInput" accept="image/*" hidden>' +
+          '</div>' +
+          '<div class="pf-info">' +
+            '<div class="pf-nome">' + pesc(nome) + '</div>' +
+            '<div class="pf-papel">' + pesc(papel) + '</div>' +
+            '<div class="pf-nivel"><span class="pf-nivel-tag lvl-' + nv.slug + '">' + nv.tag + '</span><span class="pf-pct">' + pct + '% da trilha</span></div>' +
+            '<div class="progress pf-prog"><i style="width:' + pct + '%"></i></div>' +
+          '</div>' +
+        '</div>';
+      var btn = document.getElementById("pfFotoBtn"), inp = document.getElementById("pfFotoInput");
+      if (btn && inp) {
+        btn.addEventListener("click", function () { inp.click(); });
+        inp.addEventListener("change", function () {
+          var f = inp.files && inp.files[0]; if (!f) return;
+          var rd = new FileReader();
+          rd.onload = function () {
+            var img = new Image();
+            img.onload = function () {
+              var sz = 256, c = document.createElement("canvas"); c.width = sz; c.height = sz;
+              var ctx = c.getContext("2d"); var min = Math.min(img.width, img.height);
+              ctx.drawImage(img, (img.width - min) / 2, (img.height - min) / 2, min, min, 0, 0, sz, sz);
+              var data;
+              try { data = c.toDataURL("image/jpeg", 0.85); } catch (e) { return; }
+              try { localStorage.setItem(fotoKey, data); } catch (e) { alert("Não foi possível salvar a foto (imagem muito grande)."); return; }
+              var av = perfilHeader.querySelector(".pf-avatar");
+              if (av) av.innerHTML = '<img src="' + data + '" alt="Foto de perfil">';
+            };
+            img.src = rd.result;
+          };
+          rd.readAsDataURL(f);
+        });
+      }
+    }, function () {});
   }
 
   // ---- Minha conta (editar dados da conta) ----

@@ -59,9 +59,9 @@
       var consultores = lsGet("tp_consultores", []);
       if (consultores.some(function (c) { return c.email === d.email; }))
         return Promise.resolve({ ok: false, error: "Já existe um acesso com esse e-mail. Tente entrar." });
-      consultores.push({ id: uid(), nome: d.nome, email: d.email, telefone: d.telefone, senha: d.senha, role: "consultor", criadoEm: new Date().toISOString() });
+      consultores.push({ id: uid(), nome: d.nome, email: d.email, telefone: d.telefone, senha: d.senha, role: "consultor", experiencia: d.experiencia || "novato", criadoEm: new Date().toISOString() });
       lsSet("tp_consultores", consultores);
-      var sess = { nome: d.nome, email: d.email, telefone: d.telefone, role: "consultor" };
+      var sess = { nome: d.nome, email: d.email, telefone: d.telefone, role: "consultor", experiencia: d.experiencia || "novato" };
       lsSet("tp_sessao", sess);
       return Promise.resolve({ ok: true, session: sess });
     },
@@ -74,7 +74,7 @@
       }
       var conta = lsGet("tp_consultores", []).filter(function (c) { return c.email === ukey && c.senha === senha; })[0];
       if (conta) {
-        var s = { nome: conta.nome, email: conta.email, telefone: conta.telefone || "", role: "consultor" };
+        var s = { nome: conta.nome, email: conta.email, telefone: conta.telefone || "", role: "consultor", experiencia: conta.experiencia || "novato" };
         lsSet("tp_sessao", s);
         return Promise.resolve({ ok: true, session: s });
       }
@@ -289,7 +289,7 @@
       return sb.rpc("tenant_existe", { p_slug: tenant }).then(function (rc) {
         if (rc.error) return { ok: false, error: "Não foi possível validar o código da empresa." };
         if (!rc.data) return { ok: false, error: "Código da empresa/unidade inválido." };
-        return sb.auth.signUp({ email: d.email, password: d.senha, options: { data: { nome: d.nome, telefone: d.telefone, tenant: tenant } } })
+        return sb.auth.signUp({ email: d.email, password: d.senha, options: { data: { nome: d.nome, telefone: d.telefone, tenant: tenant, experiencia: d.experiencia || "novato" } } })
           .then(function (r) {
             if (r.error) return { ok: false, error: traduzErro(r.error.message) };
             if (!r.data.session) return { ok: true, needsConfirm: true, session: null };
@@ -314,7 +314,8 @@
         return sb.from("profiles").select("nome,telefone,role,titulo").eq("id", user.id).single()
           .then(function (p) {
             var prof = p.data || {};
-            return { nome: prof.nome || user.email, email: user.email, telefone: prof.telefone || "", role: prof.role || "consultor", titulo: prof.titulo || "" };
+            var meta = user.user_metadata || {};
+            return { nome: prof.nome || user.email, email: user.email, telefone: prof.telefone || "", role: prof.role || "consultor", titulo: prof.titulo || "", experiencia: meta.experiencia || "novato" };
           });
       });
     },
