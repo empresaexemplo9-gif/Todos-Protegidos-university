@@ -35,7 +35,7 @@
     { section: null, items: [
       { id: "institucional", label: "Institucional",      href: "institucional.html",    icon: "flag",   match: ["institucional.html"] },
       { id: "dashboard", label: "Visão geral",          href: "dashboard.html",        icon: "grid",   match: ["dashboard.html", ""] },
-      { id: "trilha",    label: "Trilha de treinamento", href: "aula.html",             icon: "book",   match: ["aula.html", "aula-abordagem.html", "quiz.html"] },
+      { id: "treinamentos", label: "Treinamentos",       href: "treinamentos.html",     icon: "book",   match: ["treinamentos.html", "aula.html", "aula-abordagem.html", "quiz.html"] },
       { id: "vendas",    label: "Minhas vendas",         href: "vendas.html",           icon: "dollar", match: ["vendas.html"] },
       { id: "clientes",  label: "Meus clientes",         href: "clientes.html",         icon: "users",  match: ["clientes.html"] }
     ] },

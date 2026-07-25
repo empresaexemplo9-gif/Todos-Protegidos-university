@@ -23,7 +23,7 @@
   <div class="app">
 
     <!-- SIDEBAR -->
-    <aside id="sidebar-root" class="sidebar" data-active="dashboard"><noscript><a href="dashboard.html">Visão geral</a> · <a href="aula.html">Trilha</a> · <a href="protocolos.html">Padrões &amp; protocolos</a> · <a href="scripts.html">Scripts</a> · <a href="conta.html">Minha conta</a></noscript></aside>
+    <aside id="sidebar-root" class="sidebar" data-active="dashboard"><noscript><a href="dashboard.html">Visão geral</a> · <a href="treinamentos.html">Treinamentos</a> · <a href="protocolos.html">Padrões &amp; protocolos</a> · <a href="scripts.html">Scripts</a> · <a href="conta.html">Minha conta</a></noscript></aside>
 
     <!-- MAIN -->
     <div class="main">
@@ -36,41 +36,43 @@
         <!-- CABEÇALHO DE PERFIL (nome + foto + nível com moldura) -->
         <section id="perfilHeader" style="margin-bottom:22px"></section>
 
-        <!-- WELCOME -->
+        <!-- DESEMPENHO DA SEMANA -->
         <section class="welcome">
           <div>
-            <h2>Bem-vindo(a)! Comece sua jornada do novato ao pro 🚀</h2>
-            <p id="welcomeText">Sua trilha está 0% concluída. Comece pelo primeiro módulo e evolua de nível conforme avança.</p>
-            <div style="margin-top:18px"><a href="aula.html" class="btn btn-primary btn-sm">Começar treinamento</a></div>
+            <h2>Seu desempenho nesta semana 🚀</h2>
+            <p id="heroTexto">Carregando seu desempenho…</p>
+            <div style="margin-top:18px"><a href="vendas.html" class="btn btn-primary btn-sm">Registrar venda</a></div>
           </div>
           <div class="lvl">
-            <span class="tag" id="welcomeLevel">🏁 Nível Novato</span>
-            <div id="welcomePct" style="font-family:var(--tp-font-sans);font-weight:800;font-size:var(--tp-fs-3xl);margin-top:10px">0%</div>
-            <div style="color:rgba(255,255,255,.8);font-size:var(--tp-fs-sm)">rumo a Consultor Pro</div>
+            <span class="tag" id="heroPremio">sem premiação ainda</span>
+            <div id="heroVendas" style="font-family:var(--tp-font-sans);font-weight:800;font-size:var(--tp-fs-3xl);margin-top:10px">0</div>
+            <div style="color:rgba(255,255,255,.8);font-size:var(--tp-fs-sm)">vendas nesta semana</div>
           </div>
         </section>
 
-        <!-- KPIs -->
+        <!-- QUADROS -->
         <section class="kpis">
           <div class="kpi">
-            <div class="kpi-top"><div class="kpi-ico green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div></div>
-            <div class="val" id="kpiComissao">R$ 0</div>
-            <div class="lbl">Comissão no mês</div>
+            <div class="kpi-top"><div class="kpi-ico blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 3-3 3 3 5-6"/></svg></div></div>
+            <div class="val" id="kpiSemana">0</div>
+            <div class="lbl">Vendas na semana</div>
+            <div class="lbl" id="kpiSemanaHint" style="color:var(--tp-green-700);font-weight:600;margin-top:2px">—</div>
           </div>
           <div class="kpi">
-            <div class="kpi-top"><div class="kpi-ico blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V5l-8-3Z"/><path d="M9 12l2 2 4-4"/></svg></div></div>
+            <div class="kpi-top"><div class="kpi-ico green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M6 3h12v6a6 6 0 0 1-12 0Z"/><path d="M9 21h6M12 17v4"/></svg></div></div>
+            <div class="val" id="kpiPremio">R$ 0,00</div>
+            <div class="lbl">Premiação da semana</div>
+            <div class="lbl" id="kpiPremioSab" style="display:none;color:var(--tp-green-700);font-weight:600;margin-top:2px">+ 1 sábado livre 🎉</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-top"><div class="kpi-ico amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div></div>
+            <div class="val" id="kpiMes">0/15</div>
+            <div class="lbl">Vendas no mês (meta 15)</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-top"><div class="kpi-ico dark"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V5l-8-3Z"/><path d="M9 12l2 2 4-4"/></svg></div></div>
             <div class="val" id="kpiVeiculos">0</div>
             <div class="lbl">Veículos protegidos</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-top"><div class="kpi-ico amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13.5"/><path d="M9 8h6M9 12h6"/></svg></div></div>
-            <div class="val" id="kpiAulas">0</div>
-            <div class="lbl">Aulas concluídas</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-top"><div class="kpi-ico dark"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg></div></div>
-            <div class="val" id="kpiConv">—</div>
-            <div class="lbl">Taxa de conversão</div>
           </div>
         </section>
 
@@ -80,14 +82,16 @@
           <!-- ESQUERDA -->
           <div class="stack" style="display:flex;flex-direction:column;gap:24px">
 
-            <!-- PRIMEIROS PASSOS -->
-            <div class="panel" id="trilha">
+            <!-- Os treinamentos ficam na seção "Treinamentos" (treinamentos.html) -->
+
+            <!-- DESEMPENHO SEMANAL (gráfico) -->
+            <div class="panel">
               <div class="panel-head">
-                <h3>Primeiros Passos · comece por aqui</h3>
-                <a href="aula.html">Ver toda a trilha</a>
+                <h3>Meu desempenho semanal</h3>
+                <span class="badge">últimas 8 semanas</span>
               </div>
-              <div class="track" id="trilhaLista">
-                <div class="gestao-empty" style="padding:24px">Carregando…</div>
+              <div id="desempenhoChart">
+                <div class="gestao-empty" style="padding:28px">Carregando desempenho…</div>
               </div>
             </div>
 
@@ -99,7 +103,7 @@
               </div>
               <div class="table-wrap">
               <table class="table">
-                <thead><tr><th>Cliente</th><th>Plano</th><th>Veículo</th><th>Comissão</th><th>Status</th></tr></thead>
+                <thead><tr><th>Data</th><th>Cliente</th><th>Plano</th><th>Veículo</th><th>Status</th></tr></thead>
                 <tbody id="vendasRecentes">
                   <tr>
                     <td colspan="5" style="text-align:center;color:var(--tp-muted);padding:28px 12px">Carregando vendas…</td>
@@ -113,22 +117,38 @@
           <!-- DIREITA -->
           <div class="stack" style="display:flex;flex-direction:column;gap:24px">
 
-            <!-- META / CHART -->
+            <!-- PREMIAÇÃO DA SEMANA -->
             <div class="panel">
               <div class="panel-head">
-                <h3>Vendas por semana</h3>
-                <span class="badge">Junho</span>
+                <h3>Premiação da semana</h3>
+                <span class="badge badge-amber">🏆</span>
               </div>
-              <div class="chart" id="vendasChart">
-                <div class="bar-col"><div class="bar" style="height:0%"></div><span class="bar-lbl">S1</span></div>
-                <div class="bar-col"><div class="bar" style="height:0%"></div><span class="bar-lbl">S2</span></div>
-                <div class="bar-col"><div class="bar" style="height:0%"></div><span class="bar-lbl">S3</span></div>
-                <div class="bar-col"><div class="bar" style="height:0%"></div><span class="bar-lbl">S4</span></div>
-                <div class="bar-col"><div class="bar alt" style="height:0%"></div><span class="bar-lbl">S5</span></div>
+              <div id="premioPainel">
+                <div class="gestao-empty" style="padding:22px">Carregando premiação…</div>
               </div>
-              <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:16px;border-top:1px solid var(--tp-line)">
-                <div><div class="lbl muted" style="font-size:var(--tp-fs-xs)">Meta do mês</div><strong id="metaMes" style="font-family:var(--tp-font-sans)">—</strong></div>
-                <div style="text-align:right"><div class="lbl muted" style="font-size:var(--tp-fs-xs)">Realizado</div><strong id="realizadoVendas" style="font-family:var(--tp-font-sans);color:var(--tp-green-700)">0 vendas</strong></div>
+            </div>
+
+            <!-- META DO MÊS -->
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Meta do mês</h3>
+                <span class="badge" id="metaMesPct">0%</span>
+              </div>
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+                <strong id="metaMesVal" style="font-family:var(--tp-font-sans);font-size:var(--tp-fs-2xl)">0 de 15</strong>
+                <span class="muted" style="font-size:var(--tp-fs-sm)">vendas</span>
+              </div>
+              <div class="progress" style="margin-top:12px"><i id="metaMesBar" style="width:0%"></i></div>
+              <div id="metaMesPremio" style="margin-top:12px;font-weight:600;color:var(--tp-green-700);font-size:var(--tp-fs-sm)">Prêmio da meta: R$ 750,00</div>
+            </div>
+
+            <!-- HISTÓRICO DE PREMIAÇÕES -->
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Histórico de premiações</h3>
+              </div>
+              <div id="premioHist">
+                <div class="gestao-empty" style="padding:22px">Carregando histórico…</div>
               </div>
             </div>
 

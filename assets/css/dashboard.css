@@ -206,3 +206,47 @@ body.nav-locked { overflow: hidden; }
 .rank-pos { font-weight: 700; color: var(--tp-green-700); width: 28px; flex: none; }
 .rank-nm { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-val { color: var(--tp-slate); white-space: nowrap; }
+
+/* ============================================================
+   Home de desempenho — gráfico semanal e premiação
+   ============================================================ */
+.dchart { padding-top: 20px; }
+/* Área do gráfico: barras e linhas de meta compartilham a mesma altura/escala */
+.dchart-plot { position: relative; display: flex; align-items: flex-end; gap: 10px; height: 170px; }
+.dcol { position: relative; flex: 1; height: 100%; display: flex; align-items: flex-end; z-index: 1; }
+.dcol .bar { width: 100%; max-width: 34px; margin: 0 auto; background: var(--tp-bg-alt); min-height: 3px; border-radius: 8px 8px 4px 4px; transition: height var(--tp-transition); }
+.dcol .bar.t1 { background: var(--tp-grad-brand); }                /* bateu 5 vendas */
+.dcol .bar.t2 { background: var(--tp-grad-fresh); box-shadow: 0 4px 12px rgba(20,194,173,.35); } /* bateu 6+ */
+.dcol .bar-num { position: absolute; left: 0; right: 0; text-align: center; font-family: var(--tp-font-sans); font-weight: 700; font-size: var(--tp-fs-xs); color: var(--tp-slate); }
+.dcol.atual .bar-num { color: var(--tp-blue-600); }
+/* Eixo com as datas (mesma grade das colunas) */
+.dchart-x { display: flex; gap: 10px; margin-top: 8px; }
+.dchart-x span { flex: 1; text-align: center; font-size: var(--tp-fs-xs); color: var(--tp-muted); }
+.dchart-x span.atual { color: var(--tp-blue-600); font-weight: 700; }
+
+/* Linhas de meta (5 e 6 vendas) */
+.dchart-goal { position: absolute; left: 0; right: 0; border-top: 1.5px dashed var(--tp-blue-300); pointer-events: none; z-index: 0; }
+.dchart-goal.g2 { border-top-color: var(--tp-green-400); }
+
+/* Legenda das metas (fora do gráfico, para não cobrir as barras) */
+.dchart-leg { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--tp-line); font-size: var(--tp-fs-xs); color: var(--tp-slate); }
+.dchart-leg span { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; }
+.dchart-leg .ln { width: 20px; border-top: 1.5px dashed var(--tp-blue-300); display: inline-block; }
+.dchart-leg .ln.g2 { border-top-color: var(--tp-green-400); }
+
+/* Faixas de premiação */
+.prm { padding: 14px 0; border-top: 1px solid var(--tp-line); }
+.prm:first-child { border-top: 0; padding-top: 4px; }
+.prm-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.prm-alvo { font-family: var(--tp-font-sans); font-weight: 700; color: var(--tp-ink); }
+.prm-val { color: var(--tp-green-700); font-weight: 600; font-size: var(--tp-fs-sm); }
+.prm-falta { margin-left: auto; font-size: var(--tp-fs-xs); color: var(--tp-muted); }
+.prm.ok .prm-alvo { color: var(--tp-green-700); }
+.prm.ok .progress > i { background: var(--tp-grad-fresh); }
+.prm .badge { margin-left: auto; }
+
+@media (max-width: 560px) {
+  .dchart-plot { height: 150px; gap: 6px; }
+  .dchart-x { gap: 6px; }
+  .dchart-goal span { font-size: 9px; }
+}

@@ -664,6 +664,77 @@
     }, function () { if (trilhaLista) trilhaLista.innerHTML = '<div class="gestao-empty" style="padding:24px">Não foi possível carregar a trilha.</div>'; });
   }
 
+  // ---- Seção TREINAMENTOS (hub) ----
+  // Os treinamentos existem só aqui. A lista de módulos fica recolhida e só
+  // aparece quando o consultor pede (clica para abrir).
+  var treinamentosApp = document.getElementById("treinamentosApp");
+  if (treinamentosApp && window.TPData) {
+    var tEsc = function (s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; };
+    Promise.all([TPData.listModules(), TPData.getProgress()]).then(function (res) {
+      var mods = res[0] || [], done = res[1] || [];
+      var feito = function (id) { return done.indexOf(id) >= 0; };
+      var pre = mods.filter(tpEhPreTreino), pro = mods.filter(function (m) { return !tpEhPreTreino(m); });
+      var aprimorando = tpExperiencia() === "aprimorando";
+
+      function conta(lista) {
+        var t = 0, d = 0;
+        lista.forEach(function (m) { (m.itens || []).forEach(function (it) { t++; if (feito(it.id)) d++; }); });
+        return { total: t, done: d, pct: t ? Math.round(d / t * 100) : 0 };
+      }
+      function bloco(cfg) {
+        var c = conta(cfg.mods);
+        if (!cfg.mods.length) return "";
+        var aberto = cfg.aberto ? " open" : "";
+        var h = '<details class="trn"' + aberto + ' data-trn="' + cfg.key + '">';
+        h += '<summary class="trn-head">' +
+               '<div class="trn-ico ' + cfg.key + '">' + cfg.ico + '</div>' +
+               '<div class="trn-txt"><h3>' + cfg.titulo + '</h3><p>' + cfg.desc + '</p>' +
+                 '<div class="trn-meta">' + cfg.mods.length + ' módulos · ' + c.done + '/' + c.total + ' aulas concluídas</div>' +
+                 '<div class="progress trn-prog"><i style="width:' + c.pct + '%"></i></div>' +
+               '</div>' +
+               '<span class="trn-pct">' + c.pct + '%</span>' +
+               '<span class="trn-chev" aria-hidden="true">▾</span>' +
+             '</summary>';
+        h += '<div class="trn-body">';
+        cfg.mods.forEach(function (m) {
+          var n = (m.itens || []).length, d2 = 0;
+          (m.itens || []).forEach(function (it) { if (feito(it.id)) d2++; });
+          var full = n > 0 && d2 >= n;
+          var step = full
+            ? '<div class="track-step done"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>'
+            : '<div class="track-step current">' + d2 + '</div>';
+          h += '<div class="track-item">' + step +
+               '<div class="track-body"><div class="t">' + tEsc(m.titulo) + '</div>' +
+               '<div class="d">' + tEsc(m.sub || "") + (m.sub ? " · " : "") + d2 + '/' + n + ' concluídas</div></div>';
+          var prim = (m.itens || []).filter(function (it) { return it.tipo === "aula" || it.tipo === "video"; })[0] || (m.itens || [])[0];
+          if (prim) h += '<a class="btn ' + (full ? "btn-ghost" : "btn-primary") + ' btn-sm" href="aula.html?trilha=' + cfg.key + '&item=' + encodeURIComponent(prim.id) + '">' + (full ? "Revisar" : "Assistir") + '</a>';
+          h += '</div>';
+        });
+        h += '<div class="trn-foot"><a class="btn btn-ghost btn-sm" href="aula.html?trilha=' + cfg.key + '">Abrir ' + cfg.curto + ' completo</a></div>';
+        h += '</div></details>';
+        return h;
+      }
+
+      var html = '<p class="muted" style="margin:-4px 0 18px">Escolha um treinamento para ver os módulos. Toque no card para abrir.</p>';
+      html += bloco({
+        key: "pre", curto: "pré-treinamento", mods: pre, aberto: !aprimorando,
+        titulo: "Pré-treinamento", desc: "Primeiros Passos — Módulos I a VI. A base para quem está começando.",
+        ico: "🏁"
+      });
+      html += bloco({
+        key: "pro", curto: "treinamento", mods: pro, aberto: aprimorando,
+        titulo: "Do novato ao Pro", desc: "Trilha numerada e aprofundada — técnica de vendas, SPIN, Challenger e fechamento.",
+        ico: "🏆"
+      });
+      if (!pre.length && !pro.length) {
+        html = '<div class="gestao-empty" style="padding:40px">Nenhum treinamento publicado ainda. Assim que a gestão adicionar os módulos, eles aparecem aqui.</div>';
+      }
+      treinamentosApp.innerHTML = html;
+    }, function () {
+      treinamentosApp.innerHTML = '<div class="gestao-empty" style="padding:40px">Não foi possível carregar os treinamentos.</div>';
+    });
+  }
+
   // ---- Player da trilha (consultor) ----
   var playerApp = document.getElementById("playerApp");
   if (playerApp) {
@@ -706,7 +777,7 @@
       if (aprimorando) {
         html += '<div class="track-note">✨ Você escolheu <strong>Aprimorando habilidades</strong> — começamos pelo <strong>“Do novato ao Pro”</strong>. O pré-treinamento (Módulos I–VI) fica opcional, disponível na lista ao lado.</div>';
       }
-      html += '<div class="crumb" style="font-size:var(--tp-fs-sm);color:var(--tp-muted);margin-bottom:14px"><a href="dashboard.html" style="color:var(--tp-muted)">Visão geral</a> · ' + esc(sel.mod.titulo) + '</div>';
+      html += '<div class="crumb" style="font-size:var(--tp-fs-sm);color:var(--tp-muted);margin-bottom:14px"><a href="treinamentos.html" style="color:var(--tp-muted)">Treinamentos</a> · ' + esc(sel.mod.titulo) + '</div>';
       html += '<div class="lesson-grid"><div>';
       if (isPlayable(sel.item)) html += embed(sel.item.url);
       else html += '<div class="video"><div class="meta"><span class="badge">' + esc(TYPELBL[sel.item.tipo] || "Conteúdo") + '</span></div></div>';
@@ -808,11 +879,18 @@
       setTimeout(function () { window.print(); }, 60);
     }
 
-    var wantId = new URLSearchParams(location.search).get("item");
+    var qs = new URLSearchParams(location.search);
+    var wantId = qs.get("item");
+    var qTrilha = qs.get("trilha"); // "pre" | "pro" — vem da seção Treinamentos
     TPData.session().then(function (s) {
       if (!s) { window.location.href = "login.html"; return; }
       Promise.all([TPData.listModules(), TPData.getProgress()]).then(function (res) {
-        modulesCache = res[0] || []; doneSet = res[1] || [];
+        var todos = res[0] || []; doneSet = res[1] || [];
+        // Mostra só o treinamento pedido; sem parâmetro, mostra tudo.
+        if (qTrilha === "pre") modulesCache = todos.filter(tpEhPreTreino);
+        else if (qTrilha === "pro") modulesCache = todos.filter(function (m) { return !tpEhPreTreino(m); });
+        else modulesCache = todos;
+        if (!modulesCache.length) modulesCache = todos;
         renderPlayer(modulesCache, wantId);
       }, function () {
         playerApp.innerHTML = '<div class="gestao-empty" style="padding:40px">Não foi possível carregar as aulas. Recarregue a página.</div>';
@@ -1344,6 +1422,38 @@
   function vIsMonth(dateStr, d) { d = d || new Date(); return !!dateStr && String(dateStr).slice(0, 7) === (d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2)); }
   function vDateBR(s) { if (!s) return "—"; var p = String(s).slice(0, 10).split("-"); return p.length === 3 ? p[2] + "/" + p[1] + "/" + p[0] : s; }
 
+  // ---- Regras de PREMIAÇÃO (não trabalhamos com comissão) ----
+  // 5 vendas na semana  -> R$ 100
+  // 6 vendas na semana  -> R$ 350 + 1 sábado livre  (vale para 6 ou mais)
+  var TP_META_MES = 15;                 // meta mensal de vendas
+  var TP_PREMIO_MES = 750;              // premiação por bater a meta do mês
+  var TP_PREMIOS = [
+    { min: 6, valor: 350, sabado: true,  label: "R$ 350 + sábado livre" },
+    { min: 5, valor: 100, sabado: false, label: "R$ 100" }
+  ];
+  function tpPremio(qtd) {
+    for (var i = 0; i < TP_PREMIOS.length; i++) if (qtd >= TP_PREMIOS[i].min) return TP_PREMIOS[i];
+    return { min: 0, valor: 0, sabado: false, label: "—" };
+  }
+  // Data "YYYY-MM-DD" -> Date local (evita o deslocamento de fuso do parse ISO)
+  function tpData(s) {
+    var p = String(s || "").slice(0, 10).split("-");
+    if (p.length !== 3) return null;
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return isNaN(d) ? null : d;
+  }
+  // Segunda-feira da semana da data (semana comercial seg->dom)
+  function tpSegunda(d) {
+    var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+    return x;
+  }
+  function tpChaveSemana(d) {
+    var s = tpSegunda(d);
+    return s.getFullYear() + "-" + ("0" + (s.getMonth() + 1)).slice(-2) + "-" + ("0" + s.getDate()).slice(-2);
+  }
+  function tpVendaVale(v) { return v && v.status !== "cancelada"; }
+
   // ---- Minhas vendas: CRUD (Supabase/local) ----
   var vendasRoot = document.getElementById("vendasRoot");
   if (vendasRoot) {
@@ -1422,37 +1532,133 @@
     if (window.TPData) { TPData.session().then(function (s) { if (!s) { window.location.href = "login.html"; return; } vReload(); }, function () { vReload(); }); } else { vReload(); }
   }
 
-  // ---- Dashboard: KPIs + vendas recentes + gráfico semanal ----
+  // ---- Home: desempenho do consultor + premiação ----
   var vendasRecentesEl = document.getElementById("vendasRecentes");
   if (vendasRecentesEl && window.TPData && TPData.listVendas) {
     var dSet = function (id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; };
+    var dHtml = function (id, h) { var el = document.getElementById(id); if (el) el.innerHTML = h; };
+
     TPData.listVendas().then(function (list) {
-      var vlist = list || [], now = new Date(), comMes = 0, ativos = 0, qtdMes = 0;
+      var vlist = (list || []).filter(tpVendaVale);
+      var hoje = new Date();
+      var semanaAtual = tpChaveSemana(hoje);
+
+      // Vendas por semana (chave = segunda-feira)
+      var porSemana = {};
+      var ativos = 0, qtdMes = 0;
+      (list || []).forEach(function (v) { if (v.status === "ativa") ativos++; });
       vlist.forEach(function (v) {
-        if (v.status === "ativa") ativos++;
-        if (v.status !== "cancelada" && vIsMonth(v.data, now)) { comMes += Number(v.comissao) || 0; qtdMes++; }
+        var d = tpData(v.data); if (!d) return;
+        var k = tpChaveSemana(d);
+        porSemana[k] = (porSemana[k] || 0) + 1;
+        if (vIsMonth(v.data, hoje)) qtdMes++;
       });
-      dSet("kpiComissao", vBRL(comMes));
+
+      var vendasSemana = porSemana[semanaAtual] || 0;
+      var premio = tpPremio(vendasSemana);
+
+      // ---- Quadros do topo ----
+      dSet("kpiSemana", String(vendasSemana));
+      dSet("kpiPremio", premio.valor ? vBRL(premio.valor) : "R$ 0,00");
+      dSet("kpiMes", qtdMes + "/" + TP_META_MES);
       dSet("kpiVeiculos", String(ativos));
-      dSet("realizadoVendas", qtdMes + (qtdMes === 1 ? " venda" : " vendas"));
+
+      var premioSab = document.getElementById("kpiPremioSab");
+      if (premioSab) premioSab.style.display = premio.sabado ? "" : "none";
+
+      // Falta quanto para o próximo prêmio da semana
+      var proximo = vendasSemana >= 6 ? null : (vendasSemana >= 5 ? TP_PREMIOS[0] : TP_PREMIOS[1]);
+      var faltam = proximo ? (proximo.min - vendasSemana) : 0;
+      var fTxt = faltam === 1 ? "falta 1" : "faltam " + faltam;
+      dSet("kpiSemanaHint", proximo ? (fTxt + " para " + proximo.label) : "prêmio máximo da semana atingido 🎉");
+
+      // ---- Hero de desempenho ----
+      dSet("heroVendas", String(vendasSemana));
+      dSet("heroPremio", premio.valor ? premio.label : "sem premiação ainda");
+      dSet("heroTexto", proximo
+        ? ("Você fez " + vendasSemana + (vendasSemana === 1 ? " venda" : " vendas") + " nesta semana. " +
+           (fTxt.charAt(0).toUpperCase() + fTxt.slice(1)) + " para garantir " + proximo.label + ".")
+        : ("Excelente! " + vendasSemana + " vendas nesta semana — você garantiu " + premio.label + "."));
+
+      // ---- Painel de premiação (faixas) ----
+      dHtml("premioPainel", TP_PREMIOS.slice().reverse().map(function (t) {
+        var ok = vendasSemana >= t.min;
+        var pct = Math.min(100, Math.round(vendasSemana / t.min * 100));
+        return '<div class="prm' + (ok ? " ok" : "") + '">' +
+                 '<div class="prm-top"><span class="prm-alvo">' + t.min + ' vendas</span>' +
+                   '<span class="prm-val">' + t.label + '</span>' +
+                   (ok ? '<span class="badge">conquistado ✓</span>' : '<span class="prm-falta">' + ((t.min - vendasSemana) === 1 ? "falta 1" : "faltam " + (t.min - vendasSemana)) + '</span>') +
+                 '</div>' +
+                 '<div class="progress"><i style="width:' + pct + '%"></i></div>' +
+               '</div>';
+      }).join(""));
+
+      // ---- Meta do mês (15 vendas -> R$ 750) ----
+      var pctMes = Math.min(100, Math.round(qtdMes / TP_META_MES * 100));
+      dSet("metaMesVal", qtdMes + " de " + TP_META_MES);
+      dSet("metaMesPremio", qtdMes >= TP_META_MES ? "Meta batida! " + vBRL(TP_PREMIO_MES) : "Prêmio da meta: " + vBRL(TP_PREMIO_MES));
+      var mmBar = document.getElementById("metaMesBar"); if (mmBar) mmBar.style.width = pctMes + "%";
+      dSet("metaMesPct", pctMes + "%");
+
+      // ---- Gráfico: desempenho das últimas 8 semanas ----
+      var chart = document.getElementById("desempenhoChart");
+      if (chart) {
+        var semanas = [], base = tpSegunda(hoje);
+        for (var i = 7; i >= 0; i--) {
+          var s = new Date(base.getFullYear(), base.getMonth(), base.getDate() - i * 7);
+          semanas.push({ k: tpChaveSemana(s), lbl: ("0" + s.getDate()).slice(-2) + "/" + ("0" + (s.getMonth() + 1)).slice(-2), n: porSemana[tpChaveSemana(s)] || 0 });
+        }
+        var topo = Math.max(6, Math.max.apply(null, semanas.map(function (x) { return x.n; })));
+        // As barras e as linhas de meta usam a MESMA área (dchart-plot), senão
+        // a escala não bate: uma barra de 7 apareceria abaixo da linha do 6.
+        chart.innerHTML =
+          '<div class="dchart">' +
+            '<div class="dchart-plot">' +
+              '<div class="dchart-goal" style="bottom:' + (5 / topo * 100) + '%"></div>' +
+              '<div class="dchart-goal g2" style="bottom:' + (6 / topo * 100) + '%"></div>' +
+              semanas.map(function (x) {
+                var cls = x.n >= 6 ? " t2" : (x.n >= 5 ? " t1" : "");
+                var h = x.n / topo * 100;
+                return '<div class="dcol' + (x.k === semanaAtual ? " atual" : "") + '">' +
+                         '<span class="bar-num" style="bottom:calc(' + h + '% + 6px)">' + x.n + '</span>' +
+                         '<div class="bar' + cls + '" style="height:' + h + '%"></div>' +
+                       '</div>';
+              }).join("") +
+            '</div>' +
+            '<div class="dchart-x">' + semanas.map(function (x) {
+              return '<span' + (x.k === semanaAtual ? ' class="atual"' : '') + '>' + x.lbl + '</span>';
+            }).join("") + '</div>' +
+          '</div>' +
+          '<div class="dchart-leg">' +
+            '<span><i class="ln"></i> 5 vendas · R$ 100</span>' +
+            '<span><i class="ln g2"></i> 6 vendas · R$ 350 + sábado livre</span>' +
+          '</div>';
+      }
+
+      // ---- Histórico de premiações por semana ----
+      var hist = document.getElementById("premioHist");
+      if (hist) {
+        var chaves = Object.keys(porSemana).sort().reverse().slice(0, 6);
+        if (!chaves.length) {
+          hist.innerHTML = '<div class="gestao-empty" style="padding:22px">Suas premiações aparecem aqui conforme você registra as vendas.</div>';
+        } else {
+          hist.innerHTML = '<div class="table-wrap"><table class="table"><thead><tr><th>Semana</th><th>Vendas</th><th>Premiação</th></tr></thead><tbody>' +
+            chaves.map(function (k) {
+              var n = porSemana[k], p = tpPremio(n);
+              var d = tpData(k), fim = d ? new Date(d.getFullYear(), d.getMonth(), d.getDate() + 6) : null;
+              var per = d ? (("0" + d.getDate()).slice(-2) + "/" + ("0" + (d.getMonth() + 1)).slice(-2) + " a " + ("0" + fim.getDate()).slice(-2) + "/" + ("0" + (fim.getMonth() + 1)).slice(-2)) : k;
+              return '<tr><td>' + per + (k === semanaAtual ? ' <span class="badge badge-blue">atual</span>' : '') + '</td><td style="font-weight:700">' + n + '</td><td>' +
+                     (p.valor ? '<span class="badge">' + p.label + '</span>' : '<span class="muted">—</span>') + '</td></tr>';
+            }).join("") + '</tbody></table></div>';
+        }
+      }
+
+      // ---- Vendas recentes (sem comissão) ----
       if (!vlist.length) {
         vendasRecentesEl.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--tp-muted);padding:28px 12px">Nenhuma venda registrada ainda. <a href="vendas.html">Registrar venda</a>.</td></tr>';
       } else {
         vendasRecentesEl.innerHTML = vlist.slice(0, 6).map(function (v) {
-          return '<tr><td style="font-weight:600">' + (vEsc(v.cliente_nome) || "—") + '</td><td>' + (vEsc(v.plano) || "—") + '</td><td>' + (vEsc(v.veiculo) || "—") + '</td><td>' + vBRL(v.comissao) + '</td><td><span class="' + vStatusBadge(v.status) + '">' + (V_STATUS[v.status] || "—") + '</span></td></tr>';
-        }).join("");
-      }
-      var chart = document.getElementById("vendasChart");
-      if (chart) {
-        var weeks = [0, 0, 0, 0, 0];
-        vlist.forEach(function (v) {
-          if (v.status === "cancelada" || !vIsMonth(v.data, now)) return;
-          var day = parseInt(String(v.data).slice(8, 10), 10) || 1;
-          weeks[Math.min(4, Math.floor((day - 1) / 7))]++;
-        });
-        var max = Math.max.apply(null, weeks.concat([1]));
-        chart.innerHTML = weeks.map(function (n, i) {
-          return '<div class="bar-col"><div class="bar' + (i === 4 ? " alt" : "") + '" style="height:' + Math.round((n / max) * 100) + '%"></div><span class="bar-lbl">S' + (i + 1) + '</span></div>';
+          return '<tr><td>' + vDateBR(v.data) + '</td><td style="font-weight:600">' + (vEsc(v.cliente_nome) || "—") + '</td><td>' + (vEsc(v.plano) || "—") + '</td><td>' + (vEsc(v.veiculo) || "—") + '</td><td><span class="' + vStatusBadge(v.status) + '">' + (V_STATUS[v.status] || "—") + '</span></td></tr>';
         }).join("");
       }
     }, function () {
@@ -1556,7 +1762,8 @@
       if (!list || !list.length) { dashRankingEl.innerHTML = "O ranking aparece quando houver vendas registradas no seu grupo."; return; }
       dashRankingEl.className = ""; dashRankingEl.removeAttribute("style");
       dashRankingEl.innerHTML = '<div class="rank-mini">' + list.slice(0, 5).map(function (r, i) {
-        return '<div class="rank-row"><span class="rank-pos">' + (i + 1) + 'º</span><span class="rank-nm">' + vEsc(r.nome) + '</span><span class="rank-val">' + vBRL(r.total_comissao || 0) + '</span></div>';
+        var qv = r.total_vendas || 0;
+        return '<div class="rank-row"><span class="rank-pos">' + (i + 1) + 'º</span><span class="rank-nm">' + vEsc(r.nome) + '</span><span class="rank-val">' + qv + (qv === 1 ? " venda" : " vendas") + '</span></div>';
       }).join("") + '</div>';
     }, function () {});
     TPData.getMeta(dMes, dAno).then(function (m) { var el = document.getElementById("metaMes"); if (el && m && m.meta_vendas) el.textContent = m.meta_vendas + " vendas"; });

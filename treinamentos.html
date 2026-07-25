@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meus clientes — Todos Protegidos University</title>
-  <meta name="description" content="Sua carteira de clientes e leads no Todos Protegidos University.">
+  <title>Treinamentos — Todos Protegidos University</title>
+  <meta name="description" content="Seção de treinamentos do consultor: pré-treinamento e a trilha Do novato ao Pro.">
   <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
   <meta name="theme-color" content="#2536cf">
   <link rel="manifest" href="manifest.webmanifest">
@@ -22,29 +22,15 @@
 </head>
 <body class="dash">
   <div class="app">
+    <aside id="sidebar-root" class="sidebar" data-active="treinamentos"><noscript><a href="dashboard.html">Visão geral</a> · <a href="treinamentos.html">Treinamentos</a> · <a href="protocolos.html">Padrões &amp; protocolos</a> · <a href="scripts.html">Scripts</a> · <a href="conta.html">Minha conta</a></noscript></aside>
 
-    <!-- SIDEBAR -->
-    <aside id="sidebar-root" class="sidebar" data-active="clientes"><noscript><a href="dashboard.html">Visão geral</a> · <a href="treinamentos.html">Treinamentos</a> · <a href="protocolos.html">Padrões &amp; protocolos</a> · <a href="scripts.html">Scripts</a> · <a href="conta.html">Minha conta</a></noscript></aside>
-
-    <!-- MAIN -->
     <div class="main">
-      <header id="topbar-root" class="topbar" data-title="Meus clientes" data-sub="Sua carteira de clientes e leads" data-search="Buscar módulo ou aula…"></header>
+      <header id="topbar-root" class="topbar" data-title="Treinamentos" data-sub="Escolha o treinamento para começar"></header>
 
       <main class="content">
-        <div class="page-head">
-          <div>
-            <div class="crumb"><a href="dashboard.html">Visão geral</a> · Meus clientes</div>
-            <h2 style="margin:0">Sua carteira de clientes</h2>
-            <p class="mb-0 muted">Cadastre leads e clientes, acompanhe o status e ligue cada venda a um cliente.</p>
-          </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <button class="btn btn-primary btn-sm" id="addCliente">+ Novo cliente</button>
-          </div>
+        <div id="treinamentosApp">
+          <div class="gestao-empty" style="padding:40px">Carregando treinamentos…</div>
         </div>
-
-        <!-- Lista renderizada por app.js (Supabase quando configurado; senão local) -->
-        <div id="clientesRoot"></div>
-
       </main>
     </div>
   </div>
