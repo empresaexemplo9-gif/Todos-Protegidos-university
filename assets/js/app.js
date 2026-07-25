@@ -717,7 +717,10 @@
       html += '<div class="lesson-actions">';
       html += '<button class="btn ' + (done ? "btn-ghost" : "btn-primary") + '" id="btnDone">' + (done ? "✓ Concluída — desmarcar" : "Marcar como concluída") + '</button>';
       if (sel.item.url && !isPlayable(sel.item)) html += '<a class="btn btn-ghost" href="' + esc(sel.item.url).replace(/"/g, "%22") + '" target="_blank" rel="noopener">Abrir material</a>';
+      html += '<button class="btn btn-ghost" id="btnPdfAula" title="Salvar esta aula em PDF ou imprimir">🖨️ Salvar aula em PDF</button>';
+      if ((sel.mod.itens || []).length > 1) html += '<button class="btn btn-ghost" id="btnPdfModulo" title="Salvar todas as aulas deste módulo">📚 Módulo completo em PDF</button>';
       html += '</div>';
+      html += '<p class="muted" style="font-size:var(--tp-fs-xs);margin-top:-6px">Na janela de impressão, escolha <strong>“Salvar como PDF”</strong> para guardar no aparelho, ou selecione a impressora para imprimir.</p>';
       html += '</div></div>';
 
       html += '<aside class="playlist">';
@@ -746,6 +749,63 @@
           renderPlayer(modulesCache, sel.item.id);
         }, function () { b.disabled = false; alert("Erro de conexão ao salvar o progresso."); });
       });
+
+      var bpA = document.getElementById("btnPdfAula");
+      if (bpA) bpA.addEventListener("click", function () { imprimir(sel.mod, [sel.item]); });
+      var bpM = document.getElementById("btnPdfModulo");
+      if (bpM) bpM.addEventListener("click", function () { imprimir(sel.mod, sel.mod.itens || []); });
+    }
+
+    // ---- Apostila para PDF/impressão ----
+    // Monta um documento limpo (só texto/imagem) e chama a impressão do
+    // navegador — onde o usuário escolhe "Salvar como PDF" ou a impressora.
+    function imprimir(mod, itens) {
+      var doc = document.getElementById("printDoc");
+      if (!doc) { doc = document.createElement("div"); doc.id = "printDoc"; doc.className = "print-doc"; document.body.appendChild(doc); }
+      var hoje = new Date().toLocaleDateString("pt-BR");
+      var umaAula = itens.length === 1;
+      // Cabeçalho na faixa azul da marca, com a logo original (branca/turquesa).
+      var h = '<header class="pd-head">' +
+                '<img class="pd-logo" src="assets/img/logo.svg" alt="Todos Protegidos University">' +
+                '<div class="pd-meta"><strong>' + (umaAula ? "Aula" : "Apostila do módulo") + '</strong>' +
+                  '<span>' + (umaAula ? "" : itens.length + " aulas · ") + 'Emitido em ' + hoje + '</span></div>' +
+              '</header>';
+      h += '<h1 class="pd-title">' + esc(umaAula ? itens[0].titulo : mod.titulo) + '</h1>';
+      h += '<p class="pd-sub">' + esc(umaAula ? mod.titulo : (mod.sub || "Trilha de treinamento")) + '</p>';
+
+      itens.forEach(function (it, i) {
+        h += '<article class="pd-aula">';
+        // Numa aula só, o título já aparece no topo — evita repetir.
+        if (!umaAula) h += '<h2>' + (i + 1) + ". " + esc(it.titulo) + '</h2>';
+        var linha = [TYPELBL[it.tipo] || "Conteúdo"];
+        if (it.meta) linha.push(it.meta);
+        h += '<p class="pd-kind">' + esc(linha.join(" · ")) + '</p>';
+        h += '<div class="pd-texto">' + (it.desc ? esc(it.desc) : "<em>Esta aula não tem material em texto — o conteúdo está no vídeo.</em>") + '</div>';
+        if (it.url) h += '<p class="pd-link"><strong>Link do conteúdo:</strong><br>' + esc(it.url) + '</p>';
+        h += '</article>';
+      });
+      h += '<footer class="pd-foot">Todos Protegidos University · Material de treinamento interno — uso exclusivo do consultor.</footer>';
+
+      doc.innerHTML = h;
+      document.body.classList.add("tp-printing");
+
+      // A formatação só é desfeita QUANDO a impressão termina — nunca por tempo,
+      // senão a interface (menu, player) vazaria para o papel numa prévia demorada.
+      var limpo = false;
+      function limpar() {
+        if (limpo) return; limpo = true;
+        document.body.classList.remove("tp-printing");
+        window.removeEventListener("afterprint", limpar);
+        window.removeEventListener("focus", limpar);
+        if (mm && mm.removeListener) mm.removeListener(onMM);
+      }
+      var mm = window.matchMedia ? window.matchMedia("print") : null;
+      function onMM(e) { if (!e.matches) limpar(); }   // saiu do modo impressão (Safari/iOS)
+      if (mm && mm.addListener) mm.addListener(onMM);
+      window.addEventListener("afterprint", limpar);
+      window.addEventListener("focus", limpar);        // reserva: voltou para a página
+
+      setTimeout(function () { window.print(); }, 60);
     }
 
     var wantId = new URLSearchParams(location.search).get("item");
