@@ -4,6 +4,17 @@ Faz os dados do **Power CRM** (cotação, cadastro de cliente, vistoria liberada
 contrato de adesão) entrarem **automaticamente** na plataforma, numa área nova
 de **Operação (CRM)**.
 
+## ⚠️ Antes de tudo: cada arquivo tem o seu lugar
+
+No Supabase existem duas telas diferentes, e trocá-las gera erro:
+
+| Arquivo | Onde colar | O que acontece se errar |
+|---|---|---|
+| `.sql` (ex.: `crm.sql`) | **SQL Editor** | — |
+| `.ts` (ex.: `functions/powercrm-webhook/index.ts`) | **Edge Functions → Deploy a new function → Via Editor** | O SQL Editor acusa `syntax error at or near "//"` |
+
+O código da função é TypeScript, não SQL: o SQL Editor não sabe lê-lo.
+
 ## Como funciona
 ```
 Power CRM  ──(webhook, com token)──►  Edge Function "powercrm-webhook" (Supabase)
