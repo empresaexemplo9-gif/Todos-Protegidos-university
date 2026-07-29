@@ -296,9 +296,15 @@
     filiais.forEach(function (f) { var u = (f.uf || "").toUpperCase(); if (u && ufs.indexOf(u) < 0) ufs.push(u); });
     ufs.sort();
 
+    var MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho",
+                 "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+    var agora = new Date();
+    var competencia = MESES[agora.getMonth()] + " de " + agora.getFullYear();
+
     var h = '<div class="rg-head">' +
       '<div><h2>Painel do gerente regional</h2>' +
-        '<p>' + filiais.length + ' filial(is)' + (ufs.length ? " · " + ufs.join(" · ") : "") + '</p></div>' +
+        '<p>' + filiais.length + (filiais.length === 1 ? " filial" : " filiais") +
+          (ufs.length ? " · " + ufs.join(" · ") : "") + ' — ' + competencia + '</p></div>' +
       '<div class="rg-ufs">' + ["Todas"].concat(ufs).map(function (u) {
         return '<button type="button" class="rg-uf' + (filtroUf === u ? " on" : "") + '" data-uf="' + u + '">' + (u === "Todas" ? "Todas as filiais" : u) + '</button>';
       }).join("") + '</div></div>';
@@ -324,12 +330,7 @@
         kpi("Crescimento médio", (t.m_crescimento >= 0 ? "+" : "") + t.m_crescimento.toFixed(1).replace(".", ",") + "%", "vs. mês anterior", t.m_crescimento >= 0 ? GREEN : RED) +
         kpi("Filiais na meta", t.naMeta + " / " + t.unidades, "acima de 100% da receita") +
         '</div>';
-      h += '<div class="rg-card"><h3>Receita x meta por filial</h3>' +
-        barras(src, [{ key: "receita", rot: "Receita", cor: NAVY }, { key: "meta_receita", rot: "Meta", cor: "#c7cbea" }], { fmt: "moeda", titulo: "Receita x meta por filial" }) + '</div>';
-      h += '<div class="rg-card"><h3>Veículos protegidos x meta</h3>' +
-        barras(src, [{ key: "veiculos", rot: "Veículos", cor: TURQ }, { key: "meta_veiculos", rot: "Meta", cor: "#c7cbea" }], { fmt: "int", titulo: "Veículos protegidos x meta" }) + '</div>';
-
-      // Evolução mensal da receita (2ª planilha, opcional)
+      // Evolução mensal da receita (2ª planilha)
       var ev = serieHistorico();
       h += '<div class="rg-card"><h3>Evolução da receita por estado</h3>';
       h += ev
@@ -350,13 +351,13 @@
           funil([{ nome: "Contatos", valor: t.contatos, cor: "#c7cbea" },
                  { nome: "Propostas", valor: t.propostas, cor: "#8b7fe0" },
                  { nome: "Vendas", valor: t.vendas, cor: NAVY }]) + '</div>' +
-        '<div class="rg-card"><h3>Conversão contato → venda</h3><div class="rg-conv">' +
+        '<div class="rg-card"><h3>Conversão por filial</h3><div class="rg-conv">' +
           src.slice().sort(function (a, b) { return b.convContatoVenda - a.convContatoVenda; }).map(function (u) {
             return '<div class="rg-conv-l"><span>' + esc(u.cidade || u.nome) + '</span>' +
                    '<div class="rg-conv-bar"><i style="width:' + Math.min(100, u.convContatoVenda * 5) + '%"></i></div>' +
                    '<b>' + pct1(u.convContatoVenda) + '</b></div>';
           }).join("") + '</div></div></div>';
-      h += tabela("Cancelamentos e inadimplência", ["Filial", "Vendas", "Cancelamentos", "Inadimplência"], src.map(function (u) {
+      h += tabela("Cancelamentos e inadimplência por filial", ["Filial", "Vendas", "Cancelamentos", "Inadimplência"], src.map(function (u) {
         return ["<b>" + esc(u.nome) + "</b>", num(u.vendas), '<span style="color:' + (num(u.cancelamentos) > 3 ? RED : "inherit") + '">' + num(u.cancelamentos) + "</span>",
                 badge(pct1(u.inadimplencia), num(u.inadimplencia) < 3 ? "good" : num(u.inadimplencia) < 5 ? "mid" : "bad")];
       }));
@@ -383,7 +384,7 @@
         kpi("Trilha concluída (média)", pct1(t.m_trilha_pct), 'trilha "Do novato ao Pro"', t.m_trilha_pct >= 70 ? GREEN : t.m_trilha_pct >= 50 ? GOLD : RED) +
         kpi("Consultores certificados", pct1(t.m_certificados_pct), "protocolos: cotação, cadastro, vistoria, contrato") +
         kpi("Meta individual (média)", pct1(t.m_meta_individual_pct), "meta de 15 vendas/consultor", t.m_meta_individual_pct >= 100 ? GREEN : NAVY) +
-        kpi("Premiações pagas", t.premiacoes, "no mês, na regional") +
+        kpi("Premiações semanais pagas", t.premiacoes, "no mês, na regional") +
         '</div>';
       if (t.trilhaBaixa.length) {
         h += '<div class="rg-alerta"><strong>' + t.trilhaBaixa.length + ' filial(is)</strong> com menos de 60% da trilha concluída: ' +
@@ -391,7 +392,7 @@
       }
       h += '<div class="rg-card"><h3>Progresso da trilha por filial</h3>' +
         barras(src, [{ key: "trilha_pct", rot: "Trilha concluída", cor: TURQ }, { key: "certificados_pct", rot: "Certificados", cor: "#c7cbea" }], { max: 100, fmt: "pct", titulo: "Progresso da trilha por filial" }) + '</div>';
-      h += tabela("Destaque da semana por filial", ["Filial", "Consultor destaque", "Vendas na semana", "Meta mensal (15)", "Premiações"], src.map(function (u) {
+      h += tabela("Destaque da semana por filial (TP University)", ["Filial", "Consultor destaque", "Vendas na semana", "Meta mensal (15)", "Premiações"], src.map(function (u) {
         return ["<b>" + esc(u.nome) + "</b>", "🏆 " + esc(u.destaque_nome || "—"), num(u.destaque_vendas_semana),
                 badge(pct(u.destaque_meta_pct), tone(num(u.destaque_meta_pct), 100, 70)), num(u.premiacoes)];
       }), "Fonte: TP University — trilha, protocolos, ranking semanal e premiações.");
@@ -415,6 +416,9 @@
         var cmp = col.txt ? String(va || "").localeCompare(String(vb || ""), "pt-BR") : (num(va) - num(vb));
         return ordemDir === "desc" ? -cmp : cmp;
       });
+      h += '<div class="rg-card"><h3>Veículos protegidos vs. meta por filial</h3>' +
+        barras(src, [{ key: "veiculos", rot: "Veículos protegidos", cor: NAVY }, { key: "meta_veiculos", rot: "Meta", cor: "#c7cbea" }],
+               { fmt: "int", titulo: "Veículos protegidos vs. meta" }) + '</div>';
       h += tabelaOrd("Detalhamento por filial", COLS_ORD,
         ordenado.map(function (u) {
           return ["<b>" + esc(u.nome) + "</b>", esc(u.uf), num(u.veiculos).toLocaleString("pt-BR"),
