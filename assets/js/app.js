@@ -580,15 +580,21 @@
     // Monta a URL do webhook a partir do próprio projeto Supabase e permite
     // testar a ligação de verdade, sem depender de esperar um evento real.
     function opConexao() {
-      // Endereço oficial mostrado pelo painel: <projeto>.supabase.co/functions/v1/<nome>
+      // Endereço oficial mostrado pelo painel: <projeto>.supabase.co/functions/v1/<nome>.
+      // A apikey pública vai na própria URL: é assim que a chamada passa pelo
+      // porteiro do Supabase mesmo com "Verify JWT" ligado, sem depender de o
+      // Power CRM saber enviar cabeçalhos. Ela não é segredo (já vai no site);
+      // quem protege o webhook é o ?token=.
       var url = String((window.TP_CONFIG && TP_CONFIG.SUPABASE_URL) || "").replace(/\/+$/, "");
+      var chave = (window.TP_CONFIG && TP_CONFIG.SUPABASE_ANON_KEY) || "";
       var alvo = url ? url + "/functions/v1/powercrm-webhook" : "(configure o Supabase em assets/js/config.js)";
+      var alvoCompleto = url ? alvo + "?apikey=" + chave : alvo;
 
       return '<section class="panel" id="opConexao">' +
         '<div class="panel-head"><h3 style="margin:0">Conexão com o Power CRM</h3><span class="badge" id="opStatus">verificando…</span></div>' +
         '<div style="padding:4px 0 8px">' +
           '<p class="muted" style="margin:0 0 12px;font-size:var(--tp-fs-sm)">Cole esta URL no Power CRM em <strong>Configurações → Webhooks</strong>, um webhook para cada evento (cotação, cadastro, vistoria liberada, contrato).</p>' +
-          '<div class="op-url"><code id="opUrl">' + opEsc(alvo) + '?token=SEU-TOKEN</code>' +
+          '<div class="op-url"><code id="opUrl">' + opEsc(alvoCompleto) + '&token=SEU-TOKEN</code>' +
             '<button type="button" class="btn btn-ghost btn-sm" id="opCopiar">Copiar</button></div>' +
           '<div class="op-teste">' +
             '<label>Token do webhook <span class="op-opc">(opcional para testar)</span>' +
@@ -636,6 +642,7 @@
         var txt = (document.getElementById("opUrl") || {}).textContent || "";
         var tok = (document.getElementById("opToken") || {}).value || "";
         if (tok) txt = txt.replace("SEU-TOKEN", tok);
+        else txt = txt.replace("&token=SEU-TOKEN", "");
         if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () {
           bCopiar.textContent = "Copiado ✓";
           setTimeout(function () { bCopiar.textContent = "Copiar"; }, 1800);
@@ -679,11 +686,16 @@
             "<em>Edge Functions → Secrets</em>, com o nome <code>POWERCRM_WEBHOOK_TOKEN</code>.";
           return;
         }
-        var alvo = ((document.getElementById("opUrl") || {}).textContent || "").split("?")[0];
+        var urlMostrada = (document.getElementById("opUrl") || {}).textContent || "";
+        var alvo = urlMostrada.split("?")[0];
+        var chaveUrl = (urlMostrada.match(/[?&]apikey=([^&]+)/) || [])[1] || "";
         if (!/^https?:/.test(alvo)) { msg.className = "op-msg show err"; msg.textContent = "Configure o Supabase em assets/js/config.js antes de testar."; return; }
         bTestar.disabled = true;
         msg.className = "op-msg show"; msg.textContent = "Testando…";
-        var comToken = alvo + (token ? "?token=" + encodeURIComponent(token) : "");
+        var qs = [];
+        if (chaveUrl) qs.push("apikey=" + chaveUrl);
+        if (token) qs.push("token=" + encodeURIComponent(token));
+        var comToken = alvo + (qs.length ? "?" + qs.join("&") : "");
         fetch(comToken, {
           method: "POST", headers: { "content-type": "application/json" },
           body: JSON.stringify({ teste: true })

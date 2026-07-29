@@ -443,7 +443,11 @@
         if (!jwt) return { ok: false, error: "Sessão expirada. Entre novamente." };
         return fetch(base + "/functions/v1/powercrm-api", {
           method: "POST",
-          headers: { "content-type": "application/json", authorization: "Bearer " + jwt },
+          headers: {
+            "content-type": "application/json",
+            authorization: "Bearer " + jwt,
+            apikey: cfg.SUPABASE_ANON_KEY || ""   // exigido pelo porteiro do Supabase
+          },
           body: JSON.stringify({ caminho: caminho || "", dados: dados || {}, teste: !caminho })
         }).then(function (res) {
           return res.json().catch(function () { return {}; }).then(function (d) {
