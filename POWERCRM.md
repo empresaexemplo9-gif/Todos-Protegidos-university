@@ -65,7 +65,7 @@ supabase secrets set POWERCRM_TENANT_SLUG="todosprotegidos"
 No Power CRM, em **Webhooks**, adicione um webhook para cada evento que quiser capturar
 (cotação criada/aceita, cadastro, vistoria, contrato), apontando para:
 ```
-https://SEU-PROJECT-REF.functions.supabase.co/powercrm-webhook?token=O-MESMO-TOKEN-DO-PASSO-3
+https://SEU-PROJECT-REF.supabase.co/functions/v1/powercrm-webhook?token=O-MESMO-TOKEN-DO-PASSO-3
 ```
 (Se o Power CRM tiver um campo "token" próprio, pode usar esse campo em vez do `?token=` na URL.)
 
