@@ -597,6 +597,12 @@
             '<button type="button" class="btn btn-primary btn-sm" id="opTestar">Testar conexão</button>' +
           '</div>' +
           '<div id="opMsg" class="op-msg"></div>' +
+
+          '<div class="op-sep"></div>' +
+          '<h4 class="op-h4">Envio para o Power CRM (API)</h4>' +
+          '<p class="muted" style="margin:0 0 12px;font-size:var(--tp-fs-sm)">Usada para a plataforma <strong>criar</strong> cotações no Power CRM. O token da API fica no servidor (segredo <code>POWERCRM_API_TOKEN</code>), nunca no navegador.</p>' +
+          '<div class="rg-form-acts"><button type="button" class="btn btn-ghost btn-sm" id="opTestarApi">Testar envio (API)</button></div>' +
+          '<div id="opMsgApi" class="op-msg"></div>' +
         '</div></section>';
     }
 
@@ -615,6 +621,29 @@
         if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () {
           bCopiar.textContent = "Copiado ✓";
           setTimeout(function () { bCopiar.textContent = "Copiar"; }, 1800);
+        });
+      });
+
+      var bApi = document.getElementById("opTestarApi");
+      if (bApi) bApi.addEventListener("click", function () {
+        var m = document.getElementById("opMsgApi");
+        if (!TPData.powercrmApi) { m.className = "op-msg show err"; m.textContent = "Recarregue a página para carregar a integração."; return; }
+        bApi.disabled = true;
+        m.className = "op-msg show"; m.textContent = "Testando o envio…";
+        TPData.powercrmApi().then(function (r) {
+          bApi.disabled = false;
+          if (r && r.ok) {
+            m.className = "op-msg show ok";
+            m.innerHTML = "<strong>Ponte pronta.</strong> Token da API configurado e você tem permissão de administrador." +
+              (r.base ? "<br>Destino: <code>" + opEsc(r.base) + "</code>" : "");
+            return;
+          }
+          m.className = "op-msg show err";
+          m.textContent = (r && r.error) || "Não foi possível testar o envio.";
+        }, function () {
+          bApi.disabled = false;
+          m.className = "op-msg show err";
+          m.textContent = "Falha ao chamar a ponte powercrm-api.";
         });
       });
 
