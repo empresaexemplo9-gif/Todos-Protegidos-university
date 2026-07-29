@@ -46,6 +46,10 @@
     { key: "destaque_meta_pct", rot: "Meta do destaque (%)", alias: ["meta destaque", "destaque meta"] }
   ];
 
+  // Planilha vinculada pelo administrador. Fica pré-preenchida no campo
+  // enquanto nenhuma outra tiver sido salva.
+  var PLANILHA_PADRAO = "https://docs.google.com/spreadsheets/d/1xvJT-eO1rRMMsleKO5VJ854qM9SiVcTR/edit?usp=sharing&rtpof=true&sd=true";
+
   // ---- Utilidades ----
   function esc(s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
   function num(v) { var n = Number(v); return isFinite(n) ? n : 0; }
@@ -491,19 +495,31 @@
 
   // ---- Aba "Planilhas e dados" (só admin chega aqui) ----
   function abaFontes() {
+    var urlAtual = (fonte && fonte.url) || PLANILHA_PADRAO;
+    var info = analisarLink(urlAtual);
+
     var h = '<div class="rg-card"><h3>Planilha do Google Drive</h3>' +
-      '<p class="rg-p">Vincule a planilha que alimenta este painel. No Google Sheets: <strong>Arquivo → Compartilhar → Publicar na web</strong>, escolha a aba, formato <strong>CSV</strong>, e cole o link abaixo.</p>' +
+      '<p class="rg-p">Cole o link da planilha — serve o link de edição, o de compartilhamento ou o CSV publicado. ' +
+      'Para o painel conseguir ler sozinho, a planilha precisa estar em <strong>Arquivo → Compartilhar → Publicar na web</strong>, aba escolhida, formato <strong>CSV</strong>.</p>' +
       '<div class="rg-form">' +
-        '<label>Link CSV publicado<input type="url" id="rgUrl" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?gid=0&single=true&output=csv" value="' + esc(fonte && fonte.url ? fonte.url : "") + '"></label>' +
+        '<label>Link da planilha<input type="url" id="rgUrl" placeholder="https://docs.google.com/spreadsheets/d/.../edit" value="' + esc(urlAtual) + '"></label>' +
         '<div class="rg-form-acts">' +
           '<button type="button" class="btn btn-primary btn-sm" id="rgSalvarUrl">Salvar e importar</button>' +
           '<button type="button" class="btn btn-ghost btn-sm" id="rgSincronizar">Sincronizar agora</button>' +
           '<button type="button" class="btn btn-ghost btn-sm" id="rgModelo">Baixar modelo CSV</button>' +
+          (info.id || info.pubId
+            ? '<a class="btn btn-ghost btn-sm" href="' + esc(urlAtual) + '" target="_blank" rel="noopener">Abrir planilha</a>'
+            : "") +
         '</div>' +
       '</div>';
+    if (info.xlsx) {
+      h += '<div class="rg-alerta" style="margin-top:12px">Essa planilha está no Drive como arquivo <strong>Excel (.xlsx)</strong>. ' +
+           'Abra-a e use <strong>Arquivo → Salvar como Planilhas Google</strong>; depois publique a cópia em CSV e cole aqui o novo link. ' +
+           'Até lá, importe pela colagem logo abaixo — funciona igual.</div>';
+    }
     h += '<div class="rg-form" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--tp-line)">' +
         '<label>Planilha de histórico (opcional) — colunas <code>Mês</code>, <code>UF</code>, <code>Receita</code>' +
-          '<input type="url" id="rgUrlHist" placeholder="Link CSV publicado da aba de histórico" value="' + esc(fonte && fonte.url_historico ? fonte.url_historico : "") + '"></label>' +
+          '<input type="url" id="rgUrlHist" placeholder="Link da aba de histórico (publicada em CSV)" value="' + esc(fonte && fonte.url_historico ? fonte.url_historico : "") + '"></label>' +
         '<div class="rg-form-acts">' +
           '<button type="button" class="btn btn-ghost btn-sm" id="rgSyncHist">Importar histórico</button>' +
           '<button type="button" class="btn btn-ghost btn-sm" id="rgModeloHist">Baixar modelo do histórico</button>' +
@@ -538,6 +554,78 @@
     }
     h += '</div>';
     return h;
+  }
+
+  // ---- Link do Google Drive ----
+  // Aceita qualquer link da planilha: o de edição (…/d/<ID>/edit), o publicado
+  // (…/d/e/<ID>/pub) ou o CSV direto. Devolve os endereços CSV a tentar, em ordem.
+  function analisarLink(url) {
+    var u = String(url || "").trim();
+    if (!u) return { vazio: true, csv: [] };
+    var r = { url: u, xlsx: /[?&]rtpof=true/i.test(u), gid: "" };
+    var mg = u.match(/[?&#]gid=([0-9]+)/);
+    if (mg) r.gid = mg[1];
+
+    // já é um endereço CSV pronto
+    if (/output=csv|format=csv|tqx=out:csv/i.test(u)) { r.tipo = "csv"; r.csv = [u]; return r; }
+
+    // link "Publicar na web" (…/spreadsheets/d/e/2PACX…/pub…)
+    var mp = u.match(/\/spreadsheets\/d\/e\/([^/?#]+)/);
+    if (mp) {
+      r.tipo = "publicado"; r.pubId = mp[1];
+      r.csv = ["https://docs.google.com/spreadsheets/d/e/" + mp[1] + "/pub?single=true&output=csv" +
+               (r.gid ? "&gid=" + r.gid : "")];
+      return r;
+    }
+
+    // link normal do arquivo (…/spreadsheets/d/<ID>/edit… ou …/file/d/<ID>/…)
+    var md = u.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]{20,})/) ||
+             u.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/) ||
+             u.match(/[?&]id=([a-zA-Z0-9_-]{20,})/);
+    if (md) {
+      r.tipo = "arquivo"; r.id = md[1];
+      var g = r.gid || "0";
+      r.csv = [
+        "https://docs.google.com/spreadsheets/d/" + r.id + "/gviz/tq?tqx=out:csv&gid=" + g,
+        "https://docs.google.com/spreadsheets/d/" + r.id + "/export?format=csv&gid=" + g
+      ];
+      return r;
+    }
+    r.tipo = "outro"; r.csv = [u];
+    return r;
+  }
+
+  // Tenta os endereços na ordem e devolve o primeiro que responder CSV de verdade.
+  function buscarCSV(lista) {
+    var i = 0, ultimo = null;
+    function tentar() {
+      if (i >= lista.length) return Promise.reject(ultimo || new Error("sem resposta"));
+      var alvo = lista[i++];
+      return fetch(alvo, { credentials: "omit" })
+        .then(function (resp) {
+          if (!resp.ok) throw new Error("HTTP " + resp.status);
+          return resp.text();
+        })
+        .then(function (t) {
+          // Sem permissão o Google devolve a tela de login em HTML, não o CSV.
+          if (/^\s*</.test(t)) throw new Error("html");
+          return { texto: t, url: alvo };
+        })
+        .catch(function (e) { ultimo = e; return tentar(); });
+    }
+    return tentar();
+  }
+
+  // Explica em português por que a leitura falhou, com o passo a passo da correção.
+  function explicarFalha(info) {
+    if (info && info.xlsx) {
+      return 'Esse link é de um arquivo Excel (.xlsx) enviado ao Drive, não de uma Planilha Google — por isso não dá para ler os dados direto. ' +
+             'Abra o arquivo e use "Arquivo → Salvar como Planilhas Google"; depois, na cópia criada, "Arquivo → Compartilhar → Publicar na web", ' +
+             'escolha a aba, formato CSV, e cole aqui o link gerado. Enquanto isso, dá para colar os dados na caixa de importação abaixo.';
+    }
+    return 'Não consegui ler a planilha por esse link. Duas causas prováveis: (1) ela não está publicada em CSV — faça "Arquivo → Compartilhar → Publicar na web", ' +
+           'escolha a aba e o formato CSV; (2) o compartilhamento não está como "qualquer pessoa com o link". ' +
+           'Se preferir resolver agora, use a importação por colagem logo abaixo.';
   }
 
   // ---- CSV / colagem ----
@@ -671,21 +759,15 @@
     }, function () { msg("Erro ao salvar as filiais.", false); });
   }
 
-  function sincronizarUrl(url) {
-    if (!url) { msg("Informe o link CSV publicado da planilha.", false); return; }
-    msg("Importando da planilha…", true);
-    fetch(url, { credentials: "omit" })
-      .then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.text();
-      })
-      .then(function (txt) {
-        if (/^\s*</.test(txt)) throw new Error("html");
-        importarTexto(txt, url);
-      })
-      .catch(function (e) {
-        msg('Não foi possível ler a planilha pelo link. Confirme que ela está "Publicada na web" em formato CSV — ou use a importação por colagem abaixo.', false);
-      });
+  // qual: "filiais" (padrão) ou "hist"
+  function sincronizarUrl(url, qual) {
+    var info = analisarLink(url);
+    if (info.vazio) { msg("Cole o link da planilha do Google Drive.", false); return; }
+    msg(qual === "hist" ? "Importando o histórico…" : "Importando da planilha…", true);
+    buscarCSV(info.csv).then(function (r) {
+      if (qual === "hist") importarHistorico(r.texto, url);
+      else importarTexto(r.texto, url);
+    }, function () { msg(explicarFalha(info), false); });
   }
 
   function baixarCSV(nomeArquivo, conteudo) {
@@ -738,7 +820,7 @@
     var bUrl = document.getElementById("rgSalvarUrl");
     if (bUrl) bUrl.addEventListener("click", function () {
       var url = (document.getElementById("rgUrl").value || "").trim();
-      if (!url) { msg("Cole o link CSV publicado da planilha.", false); return; }
+      if (!url) { msg("Cole o link da planilha do Google Drive.", false); return; }
       TPData.setFonteFiliais({ nome: "Planilha de filiais", url: url }).then(function () {
         fonte = fonte || {}; fonte.url = url;
         sincronizarUrl(url);
@@ -752,13 +834,7 @@
     if (bMod) bMod.addEventListener("click", modeloCSV);
     var bHist = document.getElementById("rgSyncHist");
     if (bHist) bHist.addEventListener("click", function () {
-      var url = (document.getElementById("rgUrlHist").value || "").trim();
-      if (!url) { msg("Cole o link CSV publicado da planilha de histórico.", false); return; }
-      msg("Importando o histórico…", true);
-      fetch(url, { credentials: "omit" })
-        .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
-        .then(function (txt) { if (/^\s*</.test(txt)) throw new Error("html"); importarHistorico(txt, url); })
-        .catch(function () { msg('Não foi possível ler a planilha de histórico pelo link. Confirme que ela está "Publicada na web" em CSV — ou cole os dados na caixa abaixo.', false); });
+      sincronizarUrl((document.getElementById("rgUrlHist").value || "").trim(), "hist");
     });
     var bModH = document.getElementById("rgModeloHist");
     if (bModH) bModH.addEventListener("click", function () {
