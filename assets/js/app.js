@@ -609,6 +609,15 @@
 
     // Abrir a função numa aba é uma navegação normal: CORS não se aplica,
     // então a resposta aparece crua e mostra qual é o problema de verdade.
+    // Link direto para a tela da função no painel do Supabase.
+    function opLinkPainel() {
+      var url = (window.TP_CONFIG && TP_CONFIG.SUPABASE_URL) || "";
+      var ref = (url.match(/https?:\/\/([^.]+)\.supabase\.co/) || [])[1] || "";
+      if (!ref) return "";
+      var destino = "https://supabase.com/dashboard/project/" + ref + "/functions/powercrm-webhook/details";
+      return ' <a href="' + destino + '" target="_blank" rel="noopener"><strong>Abrir essa tela agora</strong></a>.';
+    }
+
     function opComandoTeste(alvo, token) {
       var href = alvo + "?token=" + encodeURIComponent(token || "SEU-TOKEN");
       var cmd = "curl -i -X POST '" + alvo + "?token=" + (token || "SEU-TOKEN") + "' -H 'content-type: application/json' -d '{\"teste\":true}'";
@@ -690,7 +699,7 @@
             var doPorteiro = (r.d && r.d.code === 401) || /authorization|jwt/i.test(recado);
             msg.className = "op-msg show err";
             msg.innerHTML = doPorteiro
-              ? "<strong>A função está publicada com “Verify JWT” ligado.</strong> Ela precisa aceitar chamadas sem token do Supabase, porque quem autentica é o nosso próprio token. Em <em>Edge Functions → powercrm-webhook → Details</em>, desligue <strong>Verify JWT</strong> (ou publique com <code>--no-verify-jwt</code>)." + opComandoTeste(alvo, token)
+              ? "<strong>A função está publicada com “Verify JWT” ligado.</strong> Ela precisa aceitar chamadas sem token do Supabase, porque quem autentica é o nosso próprio token.<br>Caminho: <em>Supabase → Edge Functions → powercrm-webhook → Details</em>, e desligue <strong>Verify JWT</strong>." + opLinkPainel() + opComandoTeste(alvo, token)
               : "Token recusado. Confira o segredo <code>POWERCRM_WEBHOOK_TOKEN</code> na função." + opComandoTeste(alvo, token);
             return;
           }
@@ -720,7 +729,7 @@
             bTestar.disabled = false;
             msg.className = "op-msg show err";
             msg.innerHTML = "<strong>O servidor respondeu, mas o navegador bloqueou (CORS).</strong> Quase sempre é uma destas duas:" +
-              "<br>1. A função foi publicada com <strong>Verify JWT ligado</strong> — desligue essa opção e publique de novo." +
+              "<br>1. A função foi publicada com <strong>Verify JWT ligado</strong> — desligue em <em>Edge Functions → powercrm-webhook → Details</em>." + opLinkPainel() +
               "<br>2. A versão publicada é <strong>anterior</strong> à que libera CORS — copie o arquivo <code>supabase/functions/powercrm-webhook/index.ts</code> atualizado e publique outra vez." +
               opComandoTeste(alvo, token);
           }, function () {
