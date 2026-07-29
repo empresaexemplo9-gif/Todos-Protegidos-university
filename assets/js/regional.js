@@ -623,9 +623,10 @@
              'Abra o arquivo e use "Arquivo → Salvar como Planilhas Google"; depois, na cópia criada, "Arquivo → Compartilhar → Publicar na web", ' +
              'escolha a aba, formato CSV, e cole aqui o link gerado. Enquanto isso, dá para colar os dados na caixa de importação abaixo.';
     }
-    return 'Não consegui ler a planilha por esse link. Duas causas prováveis: (1) ela não está publicada em CSV — faça "Arquivo → Compartilhar → Publicar na web", ' +
-           'escolha a aba e o formato CSV; (2) o compartilhamento não está como "qualquer pessoa com o link". ' +
-           'Se preferir resolver agora, use a importação por colagem logo abaixo.';
+    return 'Não consegui ler a planilha por esse link. Três causas prováveis: (1) ela não está publicada em CSV — faça "Arquivo → Compartilhar → Publicar na web", ' +
+           'escolha a aba e o formato CSV; (2) o compartilhamento não está como "qualquer pessoa com o link"; ' +
+           '(3) o arquivo está no Drive como Excel (.xlsx) e não como Planilha Google — nesse caso, abra e use "Arquivo → Salvar como Planilhas Google" antes. ' +
+           'Para resolver agora sem mexer em nada disso, use a importação por colagem logo abaixo.';
   }
 
   // ---- CSV / colagem ----
