@@ -580,10 +580,9 @@
     // Monta a URL do webhook a partir do próprio projeto Supabase e permite
     // testar a ligação de verdade, sem depender de esperar um evento real.
     function opConexao() {
-      var url = (window.TP_CONFIG && TP_CONFIG.SUPABASE_URL) || "";
-      var ref = (url.match(/https?:\/\/([^.]+)\.supabase\.co/) || [])[1] || "";
-      var base = ref ? "https://" + ref + ".functions.supabase.co" : "";
-      var alvo = base ? base + "/powercrm-webhook" : "(configure o Supabase em assets/js/config.js)";
+      // Endereço oficial mostrado pelo painel: <projeto>.supabase.co/functions/v1/<nome>
+      var url = String((window.TP_CONFIG && TP_CONFIG.SUPABASE_URL) || "").replace(/\/+$/, "");
+      var alvo = url ? url + "/functions/v1/powercrm-webhook" : "(configure o Supabase em assets/js/config.js)";
 
       return '<section class="panel" id="opConexao">' +
         '<div class="panel-head"><h3 style="margin:0">Conexão com o Power CRM</h3><span class="badge" id="opStatus">verificando…</span></div>' +

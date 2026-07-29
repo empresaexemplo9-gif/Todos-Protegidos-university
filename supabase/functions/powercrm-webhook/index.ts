@@ -14,7 +14,7 @@
 //   supabase secrets set POWERCRM_WEBHOOK_TOKEN="um-token-secreto"
 //   (opcional) supabase secrets set POWERCRM_TENANT_SLUG="todosprotegidos"
 // URL do webhook (configurar no Power CRM):
-//   https://<PROJECT-REF>.functions.supabase.co/powercrm-webhook?token=um-token-secreto
+//   https://<PROJECT-REF>.supabase.co/functions/v1/powercrm-webhook?token=um-token-secreto
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 

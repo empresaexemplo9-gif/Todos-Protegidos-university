@@ -436,12 +436,12 @@
     },
     // Ponte para a API do Power CRM (a função guarda o token no servidor)
     powercrmApi: function (caminho, dados) {
-      var ref = (String(cfg.SUPABASE_URL || "").match(/https?:\/\/([^.]+)\.supabase\.co/) || [])[1];
-      if (!ref) return Promise.resolve({ ok: false, error: "Supabase não configurado em assets/js/config.js." });
+      var base = String(cfg.SUPABASE_URL || "").replace(/\/+$/, "");
+      if (!base) return Promise.resolve({ ok: false, error: "Supabase não configurado em assets/js/config.js." });
       return sb.auth.getSession().then(function (r) {
         var jwt = r.data && r.data.session && r.data.session.access_token;
         if (!jwt) return { ok: false, error: "Sessão expirada. Entre novamente." };
-        return fetch("https://" + ref + ".functions.supabase.co/powercrm-api", {
+        return fetch(base + "/functions/v1/powercrm-api", {
           method: "POST",
           headers: { "content-type": "application/json", authorization: "Bearer " + jwt },
           body: JSON.stringify({ caminho: caminho || "", dados: dados || {}, teste: !caminho })
