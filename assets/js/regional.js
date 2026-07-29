@@ -19,18 +19,18 @@
 
   // ---- Colunas aceitas na planilha (cabeçalho -> campo) ----
   var COLUNAS = [
-    { key: "nome", rot: "Filial", alias: ["filial", "nome", "unidade"], txt: true },
+    { key: "nome", rot: "Filial", alias: ["filial", "nome", "unidade", "cooperativa"], txt: true },
     { key: "cidade", rot: "Cidade", alias: ["cidade"], txt: true },
     { key: "uf", rot: "UF", alias: ["uf", "estado"], txt: true },
-    { key: "veiculos", rot: "Veículos protegidos", alias: ["veiculos", "veículos", "veiculos protegidos"] },
-    { key: "meta_veiculos", rot: "Meta de veículos", alias: ["meta veiculos", "meta de veículos", "meta_veiculos"] },
-    { key: "receita", rot: "Receita do mês (R$)", alias: ["receita", "receita do mes", "receita do mês"] },
+    { key: "veiculos", rot: "Veículos protegidos", alias: ["veiculos", "veículos", "veiculos protegidos", "qias"] },
+    { key: "meta_veiculos", rot: "Meta de veículos", alias: ["meta veiculos", "meta de veículos", "meta_veiculos", "projecao", "projeçao", "projeção"] },
+    { key: "receita", rot: "Receita do mês (R$)", alias: ["receita", "receita do mes", "receita do mês", "valor rec atual", "valor recebido", "valor rec"] },
     { key: "meta_receita", rot: "Meta de receita (R$)", alias: ["meta receita", "meta de receita", "meta_receita"] },
     { key: "crescimento", rot: "Crescimento (%)", alias: ["crescimento", "crescimento %"] },
     { key: "contatos", rot: "Contatos no mês", alias: ["contatos"] },
     { key: "propostas", rot: "Propostas no mês", alias: ["propostas"] },
     { key: "vendas", rot: "Vendas no mês", alias: ["vendas"] },
-    { key: "cancelamentos", rot: "Cancelamentos", alias: ["cancelamentos"] },
+    { key: "cancelamentos", rot: "Cancelamentos", alias: ["cancelamentos", "inativos"] },
     { key: "inadimplencia", rot: "Inadimplência (%)", alias: ["inadimplencia", "inadimplência"] },
     { key: "vendedores_ativos", rot: "Vendedores ativos", alias: ["vendedores ativos", "consultores ativos"] },
     { key: "vendedores_meta", rot: "Quadro ideal", alias: ["quadro ideal", "vendedores meta", "meta vendedores"] },
@@ -271,8 +271,20 @@
       .forEach(function (k) { t[k] = src.reduce(function (s, u) { return s + num(u[k]); }, 0); });
     ["crescimento", "inadimplencia", "retencao", "trilha_pct", "certificados_pct", "meta_individual_pct"]
       .forEach(function (k) { t["m_" + k] = src.length ? src.reduce(function (s, u) { return s + num(u[k]); }, 0) / src.length : 0; });
-    t.naMeta = src.filter(function (u) { return u.receitaPct >= 100; }).length;
-    t.abaixo = src.filter(function (u) { return u.receitaPct < 80; });
+
+    // Crescimento da região, não média simples das filiais: uma unidade
+    // pequena que dobra não pode pesar o mesmo que a maior do grupo. Reconstrói
+    // o mês anterior de cada filial a partir do próprio percentual dela.
+    var antTotal = src.reduce(function (s, u) {
+      var c = num(u.crescimento) / 100;
+      return s + (c > -1 ? num(u.veiculos) / (1 + c) : num(u.veiculos));
+    }, 0);
+    t.m_crescimento = antTotal > 0 ? ((t.veiculos - antTotal) / antTotal) * 100 : t.m_crescimento;
+    // Só entram na conta de meta as filiais que têm meta cadastrada.
+    var comMeta = src.filter(function (u) { return num(u.meta_receita) > 0; });
+    t.comMeta = comMeta.length;
+    t.naMeta = comMeta.filter(function (u) { return u.receitaPct >= 100; }).length;
+    t.abaixo = comMeta.filter(function (u) { return u.receitaPct < 80; });
     t.trilhaBaixa = src.filter(function (u) { return num(u.trilha_pct) < 60; });
     return t;
   }
@@ -461,7 +473,8 @@
           '<tr><td>Produção por vendedor</td><td class="rg-r">' + u.producaoPorVendedor.toFixed(1).replace(".", ",") + ' vendas</td></tr>' +
           '<tr><td>Retenção da equipe</td><td class="rg-r">' + badge(pct1(u.retencao), tone(num(u.retencao), 85, 70)) + '</td></tr>' +
           '</tbody></table></div></div>';
-        if (u.receitaPct < 80) {
+        // Sem meta cadastrada o percentual é 0 e a filial seria acusada à toa.
+        if (num(u.meta_receita) > 0 && u.receitaPct < 80) {
           h += '<div class="rg-alerta">' + esc(u.nome) + ' está abaixo de 80% da meta de receita — recomenda-se plano de ação formal com metas diárias de recuperação.</div>';
         }
       }
@@ -651,7 +664,7 @@
     return String(s || "").trim().toLowerCase()
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .replace(/r\$/g, "").replace(/[()%]/g, "")
-      .replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+      .replace(/[_.-]+/g, " ").replace(/\s+/g, " ").trim();
   }
   // Lê número no formato brasileiro: "R$ 213.000" = 213000 e "2,6" = 2.6.
   // O ponto só é decimal quando NÃO está separando milhares (ex.: "2.6").
@@ -663,23 +676,66 @@
     var n = parseFloat(s);
     return isFinite(n) ? n : 0;
   }
+  // Procura o título de uma coluna nossa dentro do cabeçalho já normalizado.
+  function acharCol(cab, c) {
+    for (var i = 0; i < cab.length; i++) {
+      if (!cab[i]) continue;
+      if (cab[i] === normalizar(c.rot)) return i;
+      for (var j = 0; j < c.alias.length; j++) if (normalizar(c.alias[j]) === cab[i]) return i;
+    }
+    return -1;
+  }
+  // Colunas "QIAS JUNHO", "QIAS JULHO"…: a última é o mês corrente e a
+  // anterior serve de comparação para calcular o crescimento.
+  function acharQias(cab) {
+    var idx = [];
+    cab.forEach(function (h, i) { if (/^qias\b/.test(h)) idx.push(i); });
+    return idx;
+  }
+  // A planilha da operação costuma ter linhas de enfeite antes dos títulos
+  // (o nome do mês, faixas mescladas). Pega a linha que mais parece cabeçalho.
+  function acharCabecalho(linhas) {
+    var melhor = 0, nota = -1;
+    for (var i = 0; i < Math.min(linhas.length, 8); i++) {
+      var cab = linhas[i].map(normalizar), n = 0;
+      COLUNAS.forEach(function (c) { if (acharCol(cab, c) >= 0) n++; });
+      n += acharQias(cab).length;
+      if (n > nota) { nota = n; melhor = i; }
+    }
+    return nota > 0 ? melhor : 0;
+  }
+  // Linhas de soma no meio da planilha ("TOTAL DE QIAS…", "TOTAL GERAL:")
+  // não são filiais — entrariam como uma unidade gigante e dobrariam tudo.
+  function ehTotal(nome) {
+    var n = normalizar(nome);
+    return /^total\b/.test(n) || /^soma\b/.test(n) || /^subtotal\b/.test(n) || n.indexOf("total geral") >= 0;
+  }
+
   function csvParaFiliais(texto) {
     var linhas = parseCSV(texto);
     if (linhas.length < 2) return { erro: "A planilha precisa ter a linha de títulos e ao menos uma filial." };
-    var cab = linhas[0].map(normalizar);
+    var iCab = acharCabecalho(linhas);
+    var cab = linhas[iCab].map(normalizar);
     var mapa = {};
-    COLUNAS.forEach(function (c) {
-      for (var i = 0; i < cab.length; i++) {
-        var h = cab[i];
-        if (h === normalizar(c.rot) || c.alias.some(function (a) { return normalizar(a) === h; })) { mapa[c.key] = i; break; }
-      }
-    });
-    if (mapa.nome === undefined) return { erro: 'Não encontrei a coluna "Filial" (ou "Nome") na primeira linha da planilha.' };
-    var out = [], ignoradas = 0;
-    for (var l = 1; l < linhas.length; l++) {
+    COLUNAS.forEach(function (c) { var i = acharCol(cab, c); if (i >= 0) mapa[c.key] = i; });
+
+    // Vocabulário da planilha de QIAS: contagem do mês, mês anterior e
+    // inadimplentes em quantidade (a nossa coluna é percentual).
+    var qias = acharQias(cab);
+    if (qias.length) mapa.veiculos = qias[qias.length - 1];
+    var iAnterior = qias.length > 1 ? qias[qias.length - 2] : -1;
+    var iInadQtd = -1;
+    cab.forEach(function (h, i) { if (iInadQtd < 0 && /^inadimplent/.test(h)) iInadQtd = i; });
+
+    if (mapa.nome === undefined) {
+      return { erro: 'Não encontrei a coluna com o nome da unidade ("Filial", "Unidade" ou "Cooperativa") na planilha.' };
+    }
+    var out = [], ignoradas = 0, totais = 0, derivou = {};
+    for (var l = iCab + 1; l < linhas.length; l++) {
       var row = linhas[l];
       var nome = String(row[mapa.nome] || "").trim();
       if (!nome) { ignoradas++; continue; }
+      if (ehTotal(nome)) { totais++; continue; }
       var f = { nome: nome, ordem: out.length };
       COLUNAS.forEach(function (c) {
         if (c.key === "nome" || mapa[c.key] === undefined) return;
@@ -688,10 +744,31 @@
       });
       COLUNAS.forEach(function (c) { if (f[c.key] === undefined) f[c.key] = c.txt ? "" : 0; });
       if (f.uf) f.uf = f.uf.toUpperCase().slice(0, 2);
+
+      // ---- valores que a planilha não traz prontos ----
+      var ant = iAnterior >= 0 ? numeroBR(row[iAnterior]) : 0;
+      if (!f.crescimento && ant > 0 && f.veiculos) {
+        f.crescimento = Math.round(((f.veiculos - ant) / ant) * 1000) / 10;
+        derivou.crescimento = true;
+      }
+      var inadQtd = iInadQtd >= 0 ? numeroBR(row[iInadQtd]) : 0;
+      if (!f.inadimplencia && inadQtd > 0 && f.veiculos) {
+        f.inadimplencia = Math.round((inadQtd / f.veiculos) * 1000) / 10;
+        derivou.inadimplencia = true;
+      }
+      // Sem meta de receita não sobra nada para comparar. Quando a planilha
+      // traz a projeção de unidades, a meta em reais sai dela pelo ticket
+      // médio do próprio mês — que é como a operação já faz a conta.
+      if (!f.meta_receita && f.meta_veiculos && f.veiculos && f.receita) {
+        // Em centavos: arredondar para o real inteiro empurrava a meta um
+        // centavo acima da receita e a filial "perdia" a meta que bateu.
+        f.meta_receita = Math.round(f.meta_veiculos * (f.receita / f.veiculos) * 100) / 100;
+        derivou.meta_receita = true;
+      }
       out.push(f);
     }
     if (!out.length) return { erro: "Nenhuma filial encontrada nas linhas da planilha." };
-    return { filiais: out, ignoradas: ignoradas };
+    return { filiais: out, ignoradas: ignoradas, totais: totais, derivou: Object.keys(derivou) };
   }
 
   var msgPendente = null;   // mantida ao redesenhar a aba após importar
@@ -756,7 +833,15 @@
       if (res && res.ok === false) { msg(res.error || "Não foi possível salvar as filiais.", false); return; }
       var d = { nome: "Planilha de filiais", url: (fonte && fonte.url) || origem || "", ultima_sync: new Date().toISOString(), linhas: r.filiais.length };
       TPData.setFonteFiliais(d).then(function () { fonte = d; carregar(true); });
-      msg(r.filiais.length + " filial(is) importada(s) com sucesso." + (r.ignoradas ? " " + r.ignoradas + " linha(s) sem nome foram ignoradas." : ""), true);
+      var rot = { crescimento: "crescimento", inadimplencia: "inadimplência", meta_receita: "meta de receita" };
+      msg(r.filiais.length + " filial(is) importada(s) com sucesso." +
+          (r.totais ? " " + r.totais + " linha(s) de total foram puladas." : "") +
+          (r.ignoradas ? " " + r.ignoradas + " linha(s) sem nome foram ignoradas." : "") +
+          (r.derivou && r.derivou.length
+            ? " Calculado a partir da própria planilha: " +
+              r.derivou.map(function (k) { return rot[k] || k; }).join(", ") +
+              " — para usar os seus próprios números, acrescente essas colunas na planilha."
+            : ""), true);
     }, function () { msg("Erro ao salvar as filiais.", false); });
   }
 
