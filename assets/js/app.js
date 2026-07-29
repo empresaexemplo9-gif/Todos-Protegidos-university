@@ -600,6 +600,12 @@
         '</div></section>';
     }
 
+    // Fora do navegador não existe CORS: este comando dá a resposta crua.
+    function opComandoTeste(alvo, token) {
+      var cmd = "curl -i -X POST '" + alvo + "?token=" + (token || "SEU-TOKEN") + "' -H 'content-type: application/json' -d '{\"teste\":true}'";
+      return '<div class="op-cmd"><span>Para ver a resposta crua, rode no terminal:</span><code>' + opEsc(cmd) + '</code></div>';
+    }
+
     function opLigarConexao() {
       var bCopiar = document.getElementById("opCopiar");
       if (bCopiar) bCopiar.addEventListener("click", function () {
@@ -628,8 +634,22 @@
           return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, d: d }; });
         }).then(function (r) {
           bTestar.disabled = false;
-          if (r.status === 401) { msg.className = "op-msg show err"; msg.textContent = "Token recusado. Confira o segredo POWERCRM_WEBHOOK_TOKEN na função."; return; }
-          if (r.status === 404) { msg.className = "op-msg show err"; msg.textContent = "A função powercrm-webhook ainda não foi publicada no Supabase."; return; }
+          if (r.status === 401) {
+            // Dois 401 bem diferentes: o do porteiro do Supabase (Verify JWT
+            // ligado) e o da nossa função (token do webhook errado).
+            var recado = String((r.d && (r.d.message || r.d.msg)) || "");
+            var doPorteiro = (r.d && r.d.code === 401) || /authorization|jwt/i.test(recado);
+            msg.className = "op-msg show err";
+            msg.innerHTML = doPorteiro
+              ? "<strong>A função está publicada com “Verify JWT” ligado.</strong> Ela precisa aceitar chamadas sem token do Supabase, porque quem autentica é o nosso próprio token. Em <em>Edge Functions → powercrm-webhook → Details</em>, desligue <strong>Verify JWT</strong> (ou publique com <code>--no-verify-jwt</code>)." + opComandoTeste(alvo, token)
+              : "Token recusado. Confira o segredo <code>POWERCRM_WEBHOOK_TOKEN</code> na função." + opComandoTeste(alvo, token);
+            return;
+          }
+          if (r.status === 404) {
+            msg.className = "op-msg show err";
+            msg.innerHTML = "A função <code>powercrm-webhook</code> ainda não foi publicada neste projeto do Supabase." + opComandoTeste(alvo, token);
+            return;
+          }
           if (r.d && r.d.ok) {
             msg.className = "op-msg show " + (r.d.tenant_encontrado ? "ok" : "err");
             msg.textContent = r.d.mensagem || "Conexão certa.";
@@ -640,9 +660,26 @@
           msg.className = "op-msg show err";
           msg.textContent = (r.d && r.d.error) || ("Resposta inesperada (HTTP " + r.status + ").");
         }, function () {
-          bTestar.disabled = false;
-          msg.className = "op-msg show err";
-          msg.textContent = "Não consegui alcançar a função. Verifique se ela foi publicada e se o projeto está no ar.";
+          // O fetch só rejeita por rede ou por CORS — e as causas são bem
+          // diferentes. Uma 2ª chamada em "no-cors" separa os casos: se ela
+          // resolver, o servidor respondeu e quem barrou foi o navegador.
+          fetch(alvo + "?token=" + encodeURIComponent(token), {
+            method: "POST", mode: "no-cors",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ teste: true })
+          }).then(function () {
+            bTestar.disabled = false;
+            msg.className = "op-msg show err";
+            msg.innerHTML = "<strong>O servidor respondeu, mas o navegador bloqueou (CORS).</strong> Quase sempre é uma destas duas:" +
+              "<br>1. A função foi publicada com <strong>Verify JWT ligado</strong> — desligue essa opção e publique de novo." +
+              "<br>2. A versão publicada é <strong>anterior</strong> à que libera CORS — copie o arquivo <code>supabase/functions/powercrm-webhook/index.ts</code> atualizado e publique outra vez." +
+              opComandoTeste(alvo, token);
+          }, function () {
+            bTestar.disabled = false;
+            msg.className = "op-msg show err";
+            msg.innerHTML = "<strong>Não alcancei esse endereço.</strong> Confirme que a função <code>powercrm-webhook</code> existe neste projeto do Supabase (Edge Functions) e que o nome está escrito assim mesmo." +
+              opComandoTeste(alvo, token);
+          });
         });
       });
     }

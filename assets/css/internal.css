@@ -390,3 +390,6 @@
 .op-msg.show { display: block; }
 .op-msg.ok { background: var(--tp-green-50); color: var(--tp-green-800); }
 .op-msg.err { background: #fdecec; color: #8a1f1f; }
+.op-cmd { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,.08); }
+.op-cmd span { display: block; font-size: var(--tp-fs-xs); margin-bottom: 5px; opacity: .85; }
+.op-cmd code { display: block; background: rgba(0,0,0,.06); border-radius: var(--tp-radius-sm); padding: 8px 10px; font-size: var(--tp-fs-xs); word-break: break-all; }
