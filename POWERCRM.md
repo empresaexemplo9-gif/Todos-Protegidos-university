@@ -26,15 +26,21 @@ Power CRM  ──(webhook, com token)──►  Edge Function "powercrm-webhook"
 ### 1. Criar as tabelas
 No **SQL Editor** do Supabase, rode `supabase/crm.sql`.
 
-### 2. Publicar a função (Supabase CLI)
-No computador, com o [Supabase CLI](https://supabase.com/docs/guides/cli) instalado:
+### 2. Publicar a função
+
+**Opção A — pelo navegador (sem instalar nada):**
+1. No Supabase, abra **Edge Functions** → **Deploy a new function** → **Via Editor**.
+2. Nome: `powercrm-webhook`.
+3. Cole o conteúdo de `supabase/functions/powercrm-webhook/index.ts`.
+4. Desmarque **Verify JWT** (o Power CRM não envia token do Supabase; quem autentica é o nosso token).
+5. **Deploy**.
+
+**Opção B — pelo Supabase CLI:**
 ```bash
 supabase login
 supabase link --project-ref SEU-PROJECT-REF
 supabase functions deploy powercrm-webhook --no-verify-jwt
 ```
-> `--no-verify-jwt` é necessário porque o Power CRM não envia token JWT do Supabase —
-> a autenticação é feita pelo nosso próprio token (passo 3).
 
 ### 3. Definir os segredos
 ```bash
@@ -52,7 +58,44 @@ https://SEU-PROJECT-REF.functions.supabase.co/powercrm-webhook?token=O-MESMO-TOK
 ```
 (Se o Power CRM tiver um campo "token" próprio, pode usar esse campo em vez do `?token=` na URL.)
 
-### 5. Refinar o mapeamento (depois do 1º webhook real)
+### 5. Conferir a ligação na própria plataforma
+Entre como administrador em **Operação (CRM)**. No topo há o cartão
+**"Conexão com o Power CRM"**:
+- mostra a **URL do webhook** já montada com o seu projeto (botão **Copiar**);
+- o botão **Testar conexão** faz uma chamada real à função e responde na hora:
+  token recusado, função ainda não publicada, empresa não encontrada, ou
+  **"Conexão certa"**.
+
+O token digitado aí serve só para o teste — não fica salvo em lugar nenhum.
+
+---
+
+## Saída: usar a API do Power CRM (plataforma → CRM)
+
+Para a plataforma **enviar** dados (ex.: `POST /api/quotation/add`), existe uma
+segunda função: `supabase/functions/powercrm-api/index.ts`.
+
+Ela é uma **ponte**: o token da API fica no servidor, nunca no navegador, e ela
+resolve o CORS (a API do Power CRM não libera o nosso domínio). Só passa quem
+está logado **e** é administrador — a checagem é feita no banco.
+
+```bash
+supabase functions deploy powercrm-api          # com Verify JWT LIGADO
+supabase secrets set POWERCRM_API_TOKEN="o-token-da-sua-conta"
+```
+Se a API do Power CRM usar outro formato de autenticação, dá para ajustar sem
+mexer no código:
+```bash
+supabase secrets set POWERCRM_AUTH_HEADER="authorization"   # ex.: "x-api-key"
+supabase secrets set POWERCRM_AUTH_PREFIX="Bearer "         # ex.: "" (vazio)
+supabase secrets set POWERCRM_API_BASE="https://api.powercrm.com.br/api"
+```
+
+Caminhos liberados hoje: `quotation/add`, `quotation/list`, `customer/add`,
+`lead/add` (a lista fica no início do arquivo da função, para a ponte não virar
+um proxy aberto).
+
+### 6. Refinar o mapeamento (depois do 1º webhook real)
 A função guarda **todo** webhook bruto na tabela `crm_eventos` (coluna `payload`).
 Assim que o primeiro evento real chegar:
 1. Veja o conteúdo de `crm_eventos` no Supabase (SQL: `select payload from crm_eventos order by recebido_em desc limit 5;`).

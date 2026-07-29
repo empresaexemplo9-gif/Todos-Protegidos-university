@@ -576,6 +576,77 @@
       return h;
     }
 
+    // ---- Cartão de conexão com o Power CRM (só admin chega aqui) ----
+    // Monta a URL do webhook a partir do próprio projeto Supabase e permite
+    // testar a ligação de verdade, sem depender de esperar um evento real.
+    function opConexao() {
+      var url = (window.TP_CONFIG && TP_CONFIG.SUPABASE_URL) || "";
+      var ref = (url.match(/https?:\/\/([^.]+)\.supabase\.co/) || [])[1] || "";
+      var base = ref ? "https://" + ref + ".functions.supabase.co" : "";
+      var alvo = base ? base + "/powercrm-webhook" : "(configure o Supabase em assets/js/config.js)";
+
+      return '<section class="panel" id="opConexao">' +
+        '<div class="panel-head"><h3 style="margin:0">Conexão com o Power CRM</h3><span class="badge" id="opStatus">verificando…</span></div>' +
+        '<div style="padding:4px 0 8px">' +
+          '<p class="muted" style="margin:0 0 12px;font-size:var(--tp-fs-sm)">Cole esta URL no Power CRM em <strong>Configurações → Webhooks</strong>, um webhook para cada evento (cotação, cadastro, vistoria liberada, contrato).</p>' +
+          '<div class="op-url"><code id="opUrl">' + opEsc(alvo) + '?token=SEU-TOKEN</code>' +
+            '<button type="button" class="btn btn-ghost btn-sm" id="opCopiar">Copiar</button></div>' +
+          '<div class="op-teste">' +
+            '<label>Token do webhook (o mesmo que você definiu em <code>POWERCRM_WEBHOOK_TOKEN</code>)' +
+              '<input type="password" id="opToken" placeholder="cole o token só para testar — não fica salvo" autocomplete="off"></label>' +
+            '<button type="button" class="btn btn-primary btn-sm" id="opTestar">Testar conexão</button>' +
+          '</div>' +
+          '<div id="opMsg" class="op-msg"></div>' +
+        '</div></section>';
+    }
+
+    function opLigarConexao() {
+      var bCopiar = document.getElementById("opCopiar");
+      if (bCopiar) bCopiar.addEventListener("click", function () {
+        var txt = (document.getElementById("opUrl") || {}).textContent || "";
+        var tok = (document.getElementById("opToken") || {}).value || "";
+        if (tok) txt = txt.replace("SEU-TOKEN", tok);
+        if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () {
+          bCopiar.textContent = "Copiado ✓";
+          setTimeout(function () { bCopiar.textContent = "Copiar"; }, 1800);
+        });
+      });
+
+      var bTestar = document.getElementById("opTestar");
+      if (bTestar) bTestar.addEventListener("click", function () {
+        var msg = document.getElementById("opMsg");
+        var token = (document.getElementById("opToken").value || "").trim();
+        if (!token) { msg.className = "op-msg show err"; msg.textContent = "Informe o token do webhook para testar."; return; }
+        var alvo = ((document.getElementById("opUrl") || {}).textContent || "").split("?")[0];
+        if (!/^https?:/.test(alvo)) { msg.className = "op-msg show err"; msg.textContent = "Configure o Supabase em assets/js/config.js antes de testar."; return; }
+        bTestar.disabled = true;
+        msg.className = "op-msg show"; msg.textContent = "Testando…";
+        fetch(alvo + "?token=" + encodeURIComponent(token), {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ teste: true })
+        }).then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, d: d }; });
+        }).then(function (r) {
+          bTestar.disabled = false;
+          if (r.status === 401) { msg.className = "op-msg show err"; msg.textContent = "Token recusado. Confira o segredo POWERCRM_WEBHOOK_TOKEN na função."; return; }
+          if (r.status === 404) { msg.className = "op-msg show err"; msg.textContent = "A função powercrm-webhook ainda não foi publicada no Supabase."; return; }
+          if (r.d && r.d.ok) {
+            msg.className = "op-msg show " + (r.d.tenant_encontrado ? "ok" : "err");
+            msg.textContent = r.d.mensagem || "Conexão certa.";
+            var st = document.getElementById("opStatus");
+            if (st && r.d.tenant_encontrado) { st.textContent = "conectado ✓"; st.className = "badge"; }
+            return;
+          }
+          msg.className = "op-msg show err";
+          msg.textContent = (r.d && r.d.error) || ("Resposta inesperada (HTTP " + r.status + ").");
+        }, function () {
+          bTestar.disabled = false;
+          msg.className = "op-msg show err";
+          msg.textContent = "Não consegui alcançar a função. Verifique se ela foi publicada e se o projeto está no ar.";
+        });
+      });
+    }
+
     operacaoApp.innerHTML = '<div class="gestao-empty" style="padding:32px">Carregando…</div>';
     TPData.session().then(function (s) {
       if (!s) { window.location.href = "login.html"; return; }
@@ -583,14 +654,16 @@
       Promise.all([TPData.listCrmCotacoes(), TPData.listCrmClientes(), TPData.listCrmVistorias(), TPData.listCrmContratos()]).then(function (res) {
         var cot = res[0] || [], cli = res[1] || [], vis = res[2] || [], con = res[3] || [];
         if (!cot.length && !cli.length && !vis.length && !con.length) {
-          operacaoApp.innerHTML = '<div class="gestao-empty" style="padding:44px 32px">' +
+          operacaoApp.innerHTML = opConexao() +
+            '<div class="gestao-empty" style="padding:44px 32px">' +
             '<div style="font-family:var(--tp-font-sans);font-weight:800;font-size:var(--tp-fs-xl);color:var(--tp-ink);margin-bottom:8px">Aguardando dados do Power CRM</div>' +
             '<p style="max-width:54ch;margin:0 auto">Assim que a integração com o Power CRM estiver configurada (webhook apontando para a função <code>powercrm-webhook</code>), as cotações, cadastros, vistorias e contratos aparecem aqui automaticamente.</p>' +
             '<p style="max-width:54ch;margin:10px auto 0;color:var(--tp-muted);font-size:var(--tp-fs-sm)">Passo a passo da configuração: arquivo <code>POWERCRM.md</code> no repositório.</p>' +
             '</div>';
+          opLigarConexao();
           return;
         }
-        var html = '<div class="v-summary">' +
+        var html = opConexao() + '<div class="v-summary">' +
           opKpi(cot.length, "Cotações") + opKpi(cli.length, "Clientes/Leads") +
           opKpi(vis.length, "Vistorias") + opKpi(con.length, "Contratos") + '</div>';
 
@@ -617,6 +690,7 @@
           }).join(""));
 
         operacaoApp.innerHTML = html;
+        opLigarConexao();
       }, function () { operacaoApp.innerHTML = '<div class="gestao-empty" style="padding:40px">Não foi possível carregar os dados. Se as tabelas ainda não existem no Supabase, rode <code>supabase/crm.sql</code>.</div>'; });
     }, function () { window.location.href = "login.html"; });
   }
