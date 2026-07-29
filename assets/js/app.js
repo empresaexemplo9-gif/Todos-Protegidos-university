@@ -643,7 +643,7 @@
       return '<div class="op-cmd">' +
         '<span>Descubra a causa exata: <a href="' + opEsc(href).replace(/"/g, "%22") + '" target="_blank" rel="noopener"><strong>abrir a função numa aba</strong></a> (aqui o navegador não bloqueia). O que aparecer significa:</span>' +
         '<ul class="op-leg">' +
-          '<li><code>"method not allowed"</code> → a função está no ar e certa. O problema era só o CORS da versão publicada: publique de novo o <code>index.ts</code> atualizado.</li>' +
+          '<li><code>"no_ar": true</code> (ou <code>"method not allowed"</code>, nas versões antigas) → <strong>a função está no ar e o porteiro já está desligado</strong>. Abrir no navegador é um GET; os webhooks chegam por POST. Volte aqui e use o botão <em>Testar conexão</em>.</li>' +
           '<li><code>"Missing authorization header"</code> → <strong>Verify JWT ligado</strong>. Desligue em Edge Functions → powercrm-webhook → Details.</li>' +
           '<li><code>404</code> / página de erro → a função não existe nesse projeto: publique com o nome <code>powercrm-webhook</code>.</li>' +
         '</ul>' +

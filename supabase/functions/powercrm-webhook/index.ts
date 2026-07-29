@@ -65,6 +65,19 @@ const numOrNull = (s: string | null) => {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+
+  // Abrir a URL no navegador é um GET — e é justamente o que se faz para
+  // conferir se a função está no ar. Responder "method not allowed" aqui só
+  // assusta. Não devolve nada sigiloso: só diz que o serviço existe.
+  if (req.method === "GET" || req.method === "HEAD") {
+    return json(200, {
+      ok: true,
+      servico: "powercrm-webhook",
+      no_ar: true,
+      mensagem: "Função publicada e respondendo. Os webhooks do Power CRM chegam por POST — " +
+        "esta tela é só a confirmação de que o endereço está certo e o Verify JWT está desligado.",
+    });
+  }
   if (req.method !== "POST") return json(405, { ok: false, error: "method not allowed" });
 
   // ---- validação do token ----
