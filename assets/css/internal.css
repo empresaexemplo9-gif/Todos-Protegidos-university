@@ -395,3 +395,8 @@
 .op-cmd code { display: block; background: rgba(0,0,0,.06); border-radius: var(--tp-radius-sm); padding: 8px 10px; font-size: var(--tp-fs-xs); word-break: break-all; }
 .op-sep { height: 1px; background: var(--tp-line); margin: 20px 0 16px; }
 .op-h4 { margin: 0 0 6px; font-family: var(--tp-font-sans); font-size: var(--tp-fs-base); color: var(--tp-ink); }
+.op-leg { margin: 8px 0 12px; padding-left: 18px; }
+.op-leg li { font-size: var(--tp-fs-xs); line-height: 1.55; margin-bottom: 5px; }
+.op-leg code { background: rgba(0,0,0,.06); border-radius: 4px; padding: 1px 5px; }
+.op-cmd a { color: inherit; text-decoration: underline; }
+.op-ajuda { display: block; font-weight: 400; font-size: var(--tp-fs-xs); color: var(--tp-muted); margin: 4px 0 2px; line-height: 1.5; }

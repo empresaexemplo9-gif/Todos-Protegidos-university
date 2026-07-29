@@ -592,8 +592,9 @@
           '<div class="op-url"><code id="opUrl">' + opEsc(alvo) + '?token=SEU-TOKEN</code>' +
             '<button type="button" class="btn btn-ghost btn-sm" id="opCopiar">Copiar</button></div>' +
           '<div class="op-teste">' +
-            '<label>Token do webhook (o mesmo que você definiu em <code>POWERCRM_WEBHOOK_TOKEN</code>)' +
-              '<input type="password" id="opToken" placeholder="cole o token só para testar — não fica salvo" autocomplete="off"></label>' +
+            '<label>Token do webhook' +
+              '<span class="op-ajuda">Um texto secreto que <strong>você escolhe</strong> (ex.: <code>tp-2026-x9f2</code>) e cadastra no Supabase em <em>Edge Functions → Secrets</em> com o nome <code>POWERCRM_WEBHOOK_TOKEN</code>. É o mesmo texto que entra no fim da URL acima.</span>' +
+              '<input type="password" id="opToken" placeholder="só o token — não cole a URL aqui" autocomplete="off"></label>' +
             '<button type="button" class="btn btn-primary btn-sm" id="opTestar">Testar conexão</button>' +
           '</div>' +
           '<div id="opMsg" class="op-msg"></div>' +
@@ -606,10 +607,19 @@
         '</div></section>';
     }
 
-    // Fora do navegador não existe CORS: este comando dá a resposta crua.
+    // Abrir a função numa aba é uma navegação normal: CORS não se aplica,
+    // então a resposta aparece crua e mostra qual é o problema de verdade.
     function opComandoTeste(alvo, token) {
+      var href = alvo + "?token=" + encodeURIComponent(token || "SEU-TOKEN");
       var cmd = "curl -i -X POST '" + alvo + "?token=" + (token || "SEU-TOKEN") + "' -H 'content-type: application/json' -d '{\"teste\":true}'";
-      return '<div class="op-cmd"><span>Para ver a resposta crua, rode no terminal:</span><code>' + opEsc(cmd) + '</code></div>';
+      return '<div class="op-cmd">' +
+        '<span>Descubra a causa exata: <a href="' + opEsc(href).replace(/"/g, "%22") + '" target="_blank" rel="noopener"><strong>abrir a função numa aba</strong></a> (aqui o navegador não bloqueia). O que aparecer significa:</span>' +
+        '<ul class="op-leg">' +
+          '<li><code>"method not allowed"</code> → a função está no ar e certa. O problema era só o CORS da versão publicada: publique de novo o <code>index.ts</code> atualizado.</li>' +
+          '<li><code>"Missing authorization header"</code> → <strong>Verify JWT ligado</strong>. Desligue em Edge Functions → powercrm-webhook → Details.</li>' +
+          '<li><code>404</code> / página de erro → a função não existe nesse projeto: publique com o nome <code>powercrm-webhook</code>.</li>' +
+        '</ul>' +
+        '<span>Ou, se preferir o terminal:</span><code>' + opEsc(cmd) + '</code></div>';
     }
 
     function opLigarConexao() {
@@ -652,6 +662,13 @@
         var msg = document.getElementById("opMsg");
         var token = (document.getElementById("opToken").value || "").trim();
         if (!token) { msg.className = "op-msg show err"; msg.textContent = "Informe o token do webhook para testar."; return; }
+        if (/^https?:\/\//i.test(token) || token.indexOf("/") >= 0 || token.indexOf("?token=") >= 0) {
+          msg.className = "op-msg show err";
+          msg.innerHTML = "<strong>Isso é a URL do webhook, não o token.</strong> A URL você cola lá no Power CRM (botão Copiar acima). " +
+            "Aqui vai só o <strong>token</strong>: um texto secreto que você mesmo escolhe e cadastra no Supabase em " +
+            "<em>Edge Functions → Secrets</em>, com o nome <code>POWERCRM_WEBHOOK_TOKEN</code>.";
+          return;
+        }
         var alvo = ((document.getElementById("opUrl") || {}).textContent || "").split("?")[0];
         if (!/^https?:/.test(alvo)) { msg.className = "op-msg show err"; msg.textContent = "Configure o Supabase em assets/js/config.js antes de testar."; return; }
         bTestar.disabled = true;
