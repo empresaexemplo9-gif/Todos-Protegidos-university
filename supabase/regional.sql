@@ -57,13 +57,28 @@ create index if not exists filiais_tenant_idx on public.filiais (tenant_id, orde
 
 -- 2) Planilhas vinculadas (Google Drive) — só o admin cadastra
 create table if not exists public.filiais_fontes (
-  id          uuid primary key default gen_random_uuid(),
-  tenant_id   uuid references public.tenants(id) on delete cascade,
-  nome        text not null default 'Planilha de filiais',
-  url         text not null,                 -- link CSV publicado do Google Sheets
-  ultima_sync timestamptz,
-  linhas      integer default 0,
-  criado_em   timestamptz not null default now()
+  id             uuid primary key default gen_random_uuid(),
+  tenant_id      uuid references public.tenants(id) on delete cascade,
+  nome           text not null default 'Planilha de filiais',
+  url            text not null,              -- link CSV publicado do Google Sheets
+  url_historico  text default '',            -- 2ª planilha: evolução mensal
+  ultima_sync    timestamptz,
+  linhas         integer default 0,
+  criado_em      timestamptz not null default now()
+);
+
+-- Para bancos criados antes desta coluna existir
+alter table public.filiais_fontes add column if not exists url_historico text default '';
+
+-- 2b) Histórico mensal de receita (alimenta o gráfico de evolução)
+create table if not exists public.filiais_historico (
+  id         uuid primary key default gen_random_uuid(),
+  tenant_id  uuid references public.tenants(id) on delete cascade,
+  mes        text not null,                  -- ex.: "Fev" ou "2026-02"
+  ordem      integer not null default 0,
+  uf         text not null default '',
+  receita    numeric not null default 0,
+  unique (tenant_id, mes, uf)
 );
 
 -- Preenche o tenant automaticamente
@@ -83,8 +98,13 @@ drop trigger if exists set_tenant_fontes_trg on public.filiais_fontes;
 create trigger set_tenant_fontes_trg before insert on public.filiais_fontes
   for each row execute function public.set_tenant_filiais();
 
+drop trigger if exists set_tenant_hist_trg on public.filiais_historico;
+create trigger set_tenant_hist_trg before insert on public.filiais_historico
+  for each row execute function public.set_tenant_filiais();
+
 alter table public.filiais enable row level security;
 alter table public.filiais_fontes enable row level security;
+alter table public.filiais_historico enable row level security;
 
 -- ============================================================
 -- RLS: APENAS ADMINISTRADOR. Consultor não lê nem escreve.
@@ -97,6 +117,12 @@ create policy "filiais_admin_all" on public.filiais
 
 drop policy if exists "fontes_admin_all" on public.filiais_fontes;
 create policy "fontes_admin_all" on public.filiais_fontes
+  for all
+  using ((public.is_admin() and tenant_id = public.current_tenant_id()) or public.is_superadmin())
+  with check ((public.is_admin() and tenant_id = public.current_tenant_id()) or public.is_superadmin());
+
+drop policy if exists "hist_admin_all" on public.filiais_historico;
+create policy "hist_admin_all" on public.filiais_historico
   for all
   using ((public.is_admin() and tenant_id = public.current_tenant_id()) or public.is_superadmin())
   with check ((public.is_admin() and tenant_id = public.current_tenant_id()) or public.is_superadmin());
