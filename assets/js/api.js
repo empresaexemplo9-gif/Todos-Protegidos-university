@@ -132,6 +132,9 @@
     },
     getFonteFiliais: function () { return Promise.resolve(lsGet("tp_filiais_fonte", null)); },
     setFonteFiliais: function (d) { lsSet("tp_filiais_fonte", d); return Promise.resolve({ ok: true }); },
+    powercrmApi: function () {
+      return Promise.resolve({ ok: false, error: "A integração com o Power CRM funciona só no modo nuvem (Supabase configurado)." });
+    },
     listHistorico: function () { return Promise.resolve(lsGet("tp_filiais_hist", [])); },
     saveHistorico: function (l) { lsSet("tp_filiais_hist", l || []); return Promise.resolve({ ok: true }); },
 
@@ -431,6 +434,28 @@
       return sb.from("filiais_fontes").select("*").order("criado_em", { ascending: false }).limit(1)
         .then(function (res) { return (res.error || !res.data || !res.data.length) ? null : res.data[0]; });
     },
+    // Ponte para a API do Power CRM (a função guarda o token no servidor)
+    powercrmApi: function (caminho, dados) {
+      var ref = (String(cfg.SUPABASE_URL || "").match(/https?:\/\/([^.]+)\.supabase\.co/) || [])[1];
+      if (!ref) return Promise.resolve({ ok: false, error: "Supabase não configurado em assets/js/config.js." });
+      return sb.auth.getSession().then(function (r) {
+        var jwt = r.data && r.data.session && r.data.session.access_token;
+        if (!jwt) return { ok: false, error: "Sessão expirada. Entre novamente." };
+        return fetch("https://" + ref + ".functions.supabase.co/powercrm-api", {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: "Bearer " + jwt },
+          body: JSON.stringify({ caminho: caminho || "", dados: dados || {}, teste: !caminho })
+        }).then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (d) {
+            if (res.status === 404) return { ok: false, error: "A função powercrm-api ainda não foi publicada no Supabase." };
+            if (!d || (d.ok === undefined && !d.error)) return { ok: false, error: "Resposta inesperada da ponte (HTTP " + res.status + ")." };
+            return d;
+          });
+        }, function () {
+          return { ok: false, error: "Não alcancei a função powercrm-api. Confirme que ela foi publicada neste projeto." };
+        });
+      });
+    },
     // Histórico mensal (gráfico de evolução por estado)
     listHistorico: function () {
       return sb.from("filiais_historico").select("*").order("ordem", { ascending: true })
@@ -709,6 +734,7 @@
     saveFiliais: function (l) { return impl.saveFiliais(l); },
     deleteFilial: function (id) { return impl.deleteFilial(id); },
     getFonteFiliais: function () { return impl.getFonteFiliais(); },
+    powercrmApi: function (caminho, dados) { return impl.powercrmApi(caminho, dados); },
     listHistorico: function () { return impl.listHistorico(); },
     saveHistorico: function (l) { return impl.saveHistorico(l); },
     setFonteFiliais: function (d) { return impl.setFonteFiliais(d); },
