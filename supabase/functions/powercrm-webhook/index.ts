@@ -84,14 +84,28 @@ Deno.serve(async (req) => {
   const tenant_id = tenant?.id || null;
 
   // ---- teste de conexão (botão "Testar conexão" no painel) ----
-  // Confirma token e tenant sem sujar as tabelas de operação.
+  // Confirma token, tenant e as tabelas de destino sem sujar nada. Conferir as
+  // tabelas aqui importa: sem elas o 1º webhook real seria gravado no vazio.
   if (body["teste"] === true || body["ping"] === true) {
+    const tabelas = ["crm_eventos", "crm_clientes", "crm_cotacoes", "crm_vistorias", "crm_contratos"];
+    const faltando: string[] = [];
+    for (const t of tabelas) {
+      const { error } = await sb.from(t).select("id", { count: "exact", head: true });
+      if (error) faltando.push(t);
+    }
+    const pronto = !!tenant_id && faltando.length === 0;
+    let mensagem: string;
+    if (!tenant_id) {
+      mensagem = 'Token válido, mas não achei a empresa "' + TENANT_SLUG + '". Ajuste o segredo POWERCRM_TENANT_SLUG.';
+    } else if (faltando.length) {
+      mensagem = "Token válido e empresa encontrada, mas faltam tabelas no banco: " +
+        faltando.join(", ") + ". Rode supabase/crm.sql no SQL Editor do Supabase.";
+    } else {
+      mensagem = "Conexão certa: token válido, empresa encontrada e tabelas prontas.";
+    }
     return json(200, {
       ok: true, teste: true, tenant: TENANT_SLUG,
-      tenant_encontrado: !!tenant_id,
-      mensagem: tenant_id
-        ? "Conexão certa: token válido e empresa encontrada."
-        : 'Token válido, mas não achei a empresa "' + TENANT_SLUG + '". Ajuste o segredo POWERCRM_TENANT_SLUG.',
+      tenant_encontrado: !!tenant_id, tabelas_faltando: faltando, pronto, mensagem,
     });
   }
 
