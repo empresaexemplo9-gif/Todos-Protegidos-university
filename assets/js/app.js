@@ -592,9 +592,9 @@
           '<div class="op-url"><code id="opUrl">' + opEsc(alvo) + '?token=SEU-TOKEN</code>' +
             '<button type="button" class="btn btn-ghost btn-sm" id="opCopiar">Copiar</button></div>' +
           '<div class="op-teste">' +
-            '<label>Token do webhook' +
+            '<label>Token do webhook <span class="op-opc">(opcional para testar)</span>' +
               '<span class="op-ajuda">Um texto secreto que <strong>você escolhe</strong> (ex.: <code>tp-2026-x9f2</code>) e cadastra no Supabase em <em>Edge Functions → Secrets</em> com o nome <code>POWERCRM_WEBHOOK_TOKEN</code>. É o mesmo texto que entra no fim da URL acima.</span>' +
-              '<input type="password" id="opToken" placeholder="só o token — não cole a URL aqui" autocomplete="off"></label>' +
+              '<input type="password" id="opToken" placeholder="deixe vazio se ainda não criou o segredo" autocomplete="off"></label>' +
             '<button type="button" class="btn btn-primary btn-sm" id="opTestar">Testar conexão</button>' +
           '</div>' +
           '<div id="opMsg" class="op-msg"></div>' +
@@ -661,7 +661,9 @@
       if (bTestar) bTestar.addEventListener("click", function () {
         var msg = document.getElementById("opMsg");
         var token = (document.getElementById("opToken").value || "").trim();
-        if (!token) { msg.className = "op-msg show err"; msg.textContent = "Informe o token do webhook para testar."; return; }
+        // Token é opcional aqui: se o segredo POWERCRM_WEBHOOK_TOKEN ainda não
+        // foi criado, a função aceita qualquer chamada — e o teste já serve
+        // para saber se ela está publicada e respondendo.
         if (/^https?:\/\//i.test(token) || token.indexOf("/") >= 0 || token.indexOf("?token=") >= 0) {
           msg.className = "op-msg show err";
           msg.innerHTML = "<strong>Isso é a URL do webhook, não o token.</strong> A URL você cola lá no Power CRM (botão Copiar acima). " +
@@ -673,7 +675,8 @@
         if (!/^https?:/.test(alvo)) { msg.className = "op-msg show err"; msg.textContent = "Configure o Supabase em assets/js/config.js antes de testar."; return; }
         bTestar.disabled = true;
         msg.className = "op-msg show"; msg.textContent = "Testando…";
-        fetch(alvo + "?token=" + encodeURIComponent(token), {
+        var comToken = alvo + (token ? "?token=" + encodeURIComponent(token) : "");
+        fetch(comToken, {
           method: "POST", headers: { "content-type": "application/json" },
           body: JSON.stringify({ teste: true })
         }).then(function (r) {
@@ -709,7 +712,7 @@
           // O fetch só rejeita por rede ou por CORS — e as causas são bem
           // diferentes. Uma 2ª chamada em "no-cors" separa os casos: se ela
           // resolver, o servidor respondeu e quem barrou foi o navegador.
-          fetch(alvo + "?token=" + encodeURIComponent(token), {
+          fetch(comToken, {
             method: "POST", mode: "no-cors",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ teste: true })
