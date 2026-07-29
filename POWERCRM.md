@@ -52,6 +52,16 @@ supabase login
 supabase link --project-ref SEU-PROJECT-REF
 supabase functions deploy powercrm-webhook --no-verify-jwt
 ```
+O `--no-verify-jwt` já está gravado em `supabase/config.toml`, então
+`supabase functions deploy powercrm-webhook` sozinho também publica certo.
+
+**Se o Verify JWT já foi publicado ligado**, o porteiro recusa a chamada antes
+de ela chegar no código, com `{"code":"UNAUTHORIZED_NO_AUTH_HEADER"}`. Para
+desligar sem CLI: *Edge Functions → **powercrm-webhook** → aba **Details** →
+**Verify JWT** → desligue → **Save***. Se essa tela não tiver o botão (o painel
+mudou de lugar algumas vezes), publique a função de novo por **Deploy a new
+function → Via Editor**, com o mesmo nome `powercrm-webhook` e a caixa
+**Verify JWT** desmarcada — republicar por cima substitui a versão anterior.
 
 ### 3. Definir os segredos
 ```bash

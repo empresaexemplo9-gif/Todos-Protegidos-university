@@ -626,6 +626,17 @@
       return ' <a href="' + destino + '" target="_blank" rel="noopener"><strong>Abrir essa tela agora</strong></a>.';
     }
 
+    // Passo a passo de desligar o porteiro. O painel do Supabase já mudou esse
+    // botão de lugar mais de uma vez, então vai também o caminho que sempre
+    // funciona: republicar a função por cima, com a caixa desmarcada.
+    function opComoDesligarJWT() {
+      return '<ol class="op-leg" style="margin:8px 0 0">' +
+        '<li>Supabase → <em>Edge Functions</em> → <strong>powercrm-webhook</strong> → aba <strong>Details</strong> → desligue <strong>Verify JWT</strong> → <em>Save</em>.' + opLinkPainel() + '</li>' +
+        '<li>Não achou o botão nessa tela? Publique a função de novo em <em>Deploy a new function → Via Editor</em>, com o mesmo nome <code>powercrm-webhook</code> e a caixa <strong>Verify JWT</strong> desmarcada. Republicar por cima substitui a versão de agora.</li>' +
+        '<li>Pelo terminal: <code>supabase functions deploy powercrm-webhook --no-verify-jwt</code></li>' +
+        '</ol>';
+    }
+
     function opComandoTeste(alvo, token) {
       var href = alvo + "?token=" + encodeURIComponent(token || "SEU-TOKEN");
       var cmd = "curl -i -X POST '" + alvo + "?token=" + (token || "SEU-TOKEN") + "' -H 'content-type: application/json' -d '{\"teste\":true}'";
@@ -720,7 +731,7 @@
             var doPorteiro = (r.d && r.d.code === 401) || /authorization|jwt/i.test(recado);
             msg.className = "op-msg show err";
             msg.innerHTML = doPorteiro
-              ? "<strong>A função está publicada com “Verify JWT” ligado.</strong> Ela precisa aceitar chamadas sem token do Supabase, porque quem autentica é o nosso próprio token.<br>Caminho: <em>Supabase → Edge Functions → powercrm-webhook → Details</em>, e desligue <strong>Verify JWT</strong>." + opLinkPainel() + opComandoTeste(alvo, token)
+              ? "<strong>A função está publicada com “Verify JWT” ligado.</strong> Ela precisa aceitar chamadas sem token do Supabase, porque quem autentica é o nosso próprio <code>?token=</code>." + opComoDesligarJWT() + opComandoTeste(alvo, token)
               : "Token recusado. Confira o segredo <code>POWERCRM_WEBHOOK_TOKEN</code> na função." + opComandoTeste(alvo, token);
             return;
           }
@@ -750,8 +761,8 @@
             bTestar.disabled = false;
             msg.className = "op-msg show err";
             msg.innerHTML = "<strong>O servidor respondeu, mas o navegador bloqueou (CORS).</strong> Quase sempre é uma destas duas:" +
-              "<br>1. A função foi publicada com <strong>Verify JWT ligado</strong> — desligue em <em>Edge Functions → powercrm-webhook → Details</em>." + opLinkPainel() +
-              "<br>2. A versão publicada é <strong>anterior</strong> à que libera CORS — copie o arquivo <code>supabase/functions/powercrm-webhook/index.ts</code> atualizado e publique outra vez." +
+              "<br>1. A função foi publicada com <strong>Verify JWT ligado</strong>:" + opComoDesligarJWT() +
+              "2. Ou a versão publicada é <strong>anterior</strong> à que libera CORS — copie o arquivo <code>supabase/functions/powercrm-webhook/index.ts</code> atualizado e publique outra vez." +
               opComandoTeste(alvo, token);
           }, function () {
             bTestar.disabled = false;
