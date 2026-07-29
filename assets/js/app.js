@@ -741,10 +741,13 @@
             return;
           }
           if (r.d && r.d.ok) {
-            msg.className = "op-msg show " + (r.d.tenant_encontrado ? "ok" : "err");
+            // "pronto" só existe nas versões novas da função; nas antigas
+            // vale o que dava para saber na época (empresa encontrada).
+            var ok = r.d.pronto !== undefined ? r.d.pronto : r.d.tenant_encontrado;
+            msg.className = "op-msg show " + (ok ? "ok" : "err");
             msg.textContent = r.d.mensagem || "Conexão certa.";
             var st = document.getElementById("opStatus");
-            if (st && r.d.tenant_encontrado) { st.textContent = "conectado ✓"; st.className = "badge"; }
+            if (st && ok) { st.textContent = "conectado ✓"; st.className = "badge"; }
             return;
           }
           msg.className = "op-msg show err";
