@@ -2,6 +2,15 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <!-- A home do ADMINISTRADOR é o Painel regional. Este desvio roda antes de
+       qualquer pintura da tela, então o admin nunca vê a home do consultor.
+       (A checagem definitiva continua no app.js, pela sessão real.) -->
+  <script>
+    try {
+      var tpPapel = localStorage.getItem("tp_papel");
+      if (tpPapel === "admin" || tpPapel === "superadmin") location.replace("regional.html");
+    } catch (e) {}
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard do Consultor — Todos Protegidos University</title>
   <meta name="description" content="Área do consultor Todos Protegidos University: treinamento do novato ao pro, vendas, comissões e ranking.">

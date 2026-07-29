@@ -40,8 +40,15 @@
   })();
 
   // Sessão / logout (via camada de dados TPData — Supabase ou local)
+  // Papel guardado no navegador só para decidir a home instantaneamente.
+  // Não dá acesso a nada: quem manda é a sessão e o RLS do banco.
+  function lembrarPapel(role) {
+    try { if (role) localStorage.setItem("tp_papel", role); else localStorage.removeItem("tp_papel"); } catch (e) {}
+  }
+  window.TPLembrarPapel = lembrarPapel;
+
   function logout() {
-    var done = function () { try { localStorage.removeItem("tp_sessao"); } catch (e) {} window.location.href = "index.html"; };
+    var done = function () { try { localStorage.removeItem("tp_sessao"); } catch (e) {} lembrarPapel(null); window.location.href = "index.html"; };
     if (window.TPData) { TPData.logout().then(done, done); } else { done(); }
   }
   // Rótulo de cargo/perfil exibido na interface
@@ -82,7 +89,8 @@
     var ehHomeConsultor = arquivoAtual === "dashboard.html";
     var sessionGuard = function () {
       TPData.session().then(function (s) {
-        if (!s) { window.location.replace("login.html"); return; }
+        if (!s) { lembrarPapel(null); window.location.replace("login.html"); return; }
+        lembrarPapel(s.role || "consultor");
         if (ehHomeConsultor && (s.role === "admin" || s.role === "superadmin")) {
           window.location.replace("regional.html");
         }
@@ -1217,6 +1225,7 @@
       // pelo pré-treinamento (Visão geral / Módulos I–VI).
       var destino = experiencia === "aprimorando" ? "aula.html" : "dashboard.html";
       try { localStorage.setItem("tp_experiencia", experiencia); } catch (e) {}
+      lembrarPapel("consultor");   // limpa um papel de admin que tenha ficado neste navegador
 
       var btn = cadastroForm.querySelector('button[type="submit"]');
       btn.disabled = true;
@@ -1254,6 +1263,7 @@
         var exp = (r.session && r.session.experiencia) || "novato";
         try { localStorage.setItem("tp_experiencia", exp); } catch (e) {}
         var admin = r.session && (r.session.role === "admin" || r.session.role === "superadmin");
+        lembrarPapel((r.session && r.session.role) || "consultor");
         lShow(admin ? "Bem-vindo, Administrador! Redirecionando…" : ("Acesso liberado" + (nome ? ", " + nome.split(" ")[0] : "") + "! Redirecionando…"), true);
         // Admin cai no Painel regional (a home dele);
         // consultor "aprimorando" vai direto para a trilha "Do novato ao Pro".
