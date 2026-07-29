@@ -223,8 +223,32 @@
   var filiais = [], historico = [], fonte = null, aba = "geral", filtroUf = "Todas", filialSel = null, ehSuper = false;
   var ordemCol = "receitaPct", ordemDir = "desc";   // ordenação da tabela de filiais
 
+  // O histórico costuma ir só até o mês fechado; as filiais são o mês
+  // corrente. Sem juntar os dois, o gráfico termina antes do número que
+  // aparece no KPI ao lado — a leitura fica contraditória.
+  function historicoComMesAtual() {
+    var lista = historico.slice();
+    if (!lista.length || !filiais.length) return lista;
+    var agora = new Date();
+    var rot = agora.toLocaleDateString("pt-BR", { month: "long" });
+    rot = rot.charAt(0).toUpperCase() + rot.slice(1);
+    var chave = normalizar(rot);
+    if (lista.some(function (h) { return normalizar(h.mes) === chave; })) return lista;
+    var ordem = lista.reduce(function (m, h) { return Math.max(m, num(h.ordem)); }, 0) + 1;
+    var porUf = {};
+    filiais.forEach(function (f) {
+      var uf = String(f.uf || "").toUpperCase().trim();
+      porUf[uf] = num(porUf[uf]) + num(f.receita);
+    });
+    Object.keys(porUf).forEach(function (uf) {
+      lista.push({ mes: rot, uf: uf, receita: porUf[uf], ordem: ordem });
+    });
+    return lista;
+  }
+
   // Histórico -> séries por UF para o gráfico de evolução
   function serieHistorico() {
+    var historico = historicoComMesAtual();
     if (!historico.length) return null;
     var meses = [], porMes = {}, ufs = [];
     historico.forEach(function (h) {
@@ -772,10 +796,61 @@
   }
 
   var msgPendente = null;   // mantida ao redesenhar a aba após importar
+
+  var MESES_RE = /(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/;
+  function nomeMes(h) { var m = String(h || "").match(MESES_RE); return m ? m[1] : ""; }
+
+  // Histórico em formato "largo": uma coluna de QIAS por mês, cada uma
+  // seguida do valor arrecadado — que é como a aba MÊS A MÊS é montada.
+  // Some por mês, pulando as linhas de total, e devolve uma linha por mês.
+  function historicoLargo(linhas) {
+    var iCab = -1, cab = null;
+    for (var i = 0; i < linhas.length; i++) {
+      var c = linhas[i].map(normalizar);
+      var n = c.filter(function (h) { return /^qias?\b/.test(h) && nomeMes(h); }).length;
+      if (n >= 2) { iCab = i; cab = c; break; }
+    }
+    if (iCab < 0) return null;
+
+    var iNome = -1;
+    for (var k = 0; k < cab.length; k++) {
+      if (/^(cooperativa|filial|unidade|nome)$/.test(cab[k])) { iNome = k; break; }
+    }
+    if (iNome < 0) return null;
+
+    // Para cada coluna de mês, o valor está na primeira coluna à direita que
+    // fale de dinheiro (a do meio é o ticket médio e não entra).
+    var meses = [], vistos = {};
+    cab.forEach(function (h, i) {
+      var mes = nomeMes(h);
+      if (!(/^qias?\b/.test(h) && mes) || vistos[mes]) return;
+      for (var j = i + 1; j < Math.min(cab.length, i + 4); j++) {
+        if (/valor|receita|arrecad/.test(cab[j])) { vistos[mes] = true; meses.push({ mes: mes, col: j }); return; }
+      }
+    });
+    // Com um mês só isso quase sempre é a planilha de filiais, não o histórico.
+    if (meses.length < 2) return null;
+
+    var out = [];
+    meses.forEach(function (m, ordem) {
+      var soma = 0, achou = false;
+      for (var l = iCab + 1; l < linhas.length; l++) {
+        var nome = String(linhas[l][iNome] || "").trim();
+        if (!nome || ehTotal(nome)) continue;
+        var v = numeroBR(linhas[l][m.col]);
+        if (v) { soma += v; achou = true; }
+      }
+      if (achou) out.push({ mes: m.mes.charAt(0).toUpperCase() + m.mes.slice(1), uf: "", receita: soma, ordem: ordem });
+    });
+    return out.length ? out : null;
+  }
+
   // Histórico: Mês | UF | Receita
   function csvParaHistorico(texto) {
     var linhas = parseCSV(texto);
     if (linhas.length < 2) return { erro: "A planilha de histórico precisa do cabeçalho e de ao menos uma linha." };
+    var largo = historicoLargo(linhas);
+    if (largo) return { historico: largo, formato: "largo" };
     var cab = linhas[0].map(normalizar);
     var iMes = -1, iUf = -1, iRec = -1;
     cab.forEach(function (c, i) {
@@ -931,9 +1006,13 @@
     if (bTxt) bTxt.addEventListener("click", function () {
       var t = (document.getElementById("rgColar").value || "").trim();
       if (!t) { msg("Cole os dados da planilha na caixa acima.", false); return; }
-      // Detecta pelo cabeçalho se é a planilha de filiais ou a de histórico
-      var cab0 = (parseCSV(t)[0] || []).map(normalizar);
-      var ehHist = cab0.indexOf("receita") >= 0 && (cab0.indexOf("mes") >= 0 || cab0.indexOf("mês") >= 0) && cab0.indexOf("filial") < 0;
+      // Descobre sozinho se o que foi colado é a planilha de filiais ou a de
+      // histórico: primeiro o formato largo (uma coluna de QIAS por mês),
+      // depois o formato simples de colunas Mês/Receita.
+      var linhas0 = parseCSV(t);
+      var cab0 = (linhas0[0] || []).map(normalizar);
+      var ehHist = !!historicoLargo(linhas0) ||
+        (cab0.indexOf("receita") >= 0 && (cab0.indexOf("mes") >= 0 || cab0.indexOf("mês") >= 0) && cab0.indexOf("filial") < 0);
       if (ehHist) importarHistorico(t); else importarTexto(t, "");
     });
     var bArq = document.getElementById("rgArquivo");
