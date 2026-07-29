@@ -48,7 +48,7 @@
 
   // Planilha vinculada pelo administrador. Fica pré-preenchida no campo
   // enquanto nenhuma outra tiver sido salva.
-  var PLANILHA_PADRAO = "https://docs.google.com/spreadsheets/d/1xvJT-eO1rRMMsleKO5VJ854qM9SiVcTR/edit?usp=sharing&rtpof=true&sd=true";
+  var PLANILHA_PADRAO = "https://docs.google.com/spreadsheets/d/1clLjKgACE7YuMOupDEaVj4dFhWU87N5Tghc-sT8D-aE/edit?gid=427645420#gid=427645420";
 
   // ---- Utilidades ----
   function esc(s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
