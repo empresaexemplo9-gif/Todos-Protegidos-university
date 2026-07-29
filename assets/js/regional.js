@@ -797,9 +797,13 @@
   TPData.session().then(function (s) {
     if (!s) { window.location.href = "login.html"; return; }
     if (!(s.role === "admin" || s.role === "superadmin")) {
-      root.innerHTML = '<div class="gestao-empty" style="padding:48px">Acesso restrito ao administrador.</div>';
+      // Consultor não tem nada aqui: corrige o papel guardado e devolve à home dele.
+      if (window.TPLembrarPapel) TPLembrarPapel(s.role || "consultor");
+      root.innerHTML = '<div class="gestao-empty" style="padding:48px">Acesso restrito ao administrador. Redirecionando…</div>';
+      setTimeout(function () { window.location.replace("dashboard.html"); }, 900);
       return;
     }
+    if (window.TPLembrarPapel) TPLembrarPapel(s.role);
     ehSuper = s.role === "superadmin";
     carregar();
   }, function () { window.location.href = "login.html"; });
