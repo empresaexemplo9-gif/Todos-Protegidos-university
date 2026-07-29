@@ -375,3 +375,18 @@
   .rot-h { padding-top: 14px; font-size: var(--tp-fs-sm); }
   .rot-opts { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   Conexão com o Power CRM (Operação/CRM)
+   ============================================================ */
+.op-url { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--tp-bg); border: 1px solid var(--tp-line); border-radius: var(--tp-radius-sm); padding: 10px 12px; margin-bottom: 14px; }
+.op-url code { flex: 1; min-width: 220px; font-size: var(--tp-fs-xs); color: var(--tp-ink); word-break: break-all; }
+.op-teste { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.op-teste label { flex: 1; min-width: 260px; font-size: var(--tp-fs-sm); font-weight: 600; color: var(--tp-ink); }
+.op-teste input { width: 100%; margin-top: 6px; padding: 10px 12px; border: 1.5px solid var(--tp-line); border-radius: var(--tp-radius-sm); font: inherit; font-size: var(--tp-fs-sm); background: #fff; color: var(--tp-ink); }
+.op-teste input:focus { outline: none; border-color: var(--tp-green-400); box-shadow: var(--tp-ring); }
+.op-teste code { background: var(--tp-bg-alt); border-radius: 4px; padding: 1px 5px; font-size: var(--tp-fs-xs); font-weight: 400; }
+.op-msg { display: none; margin-top: 12px; padding: 11px 14px; border-radius: var(--tp-radius-sm); font-size: var(--tp-fs-sm); background: var(--tp-bg); color: var(--tp-slate); }
+.op-msg.show { display: block; }
+.op-msg.ok { background: var(--tp-green-50); color: var(--tp-green-800); }
+.op-msg.err { background: #fdecec; color: #8a1f1f; }

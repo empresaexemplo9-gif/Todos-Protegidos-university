@@ -25,8 +25,19 @@ const TENANT_SLUG = Deno.env.get("POWERCRM_TENANT_SLUG") || "todosprotegidos";
 
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
 
+// CORS liberado para o painel conseguir testar a conexão pelo navegador.
+// Não expõe nada: sem o token correto a função responde 401.
+const CORS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-headers": "content-type, x-webhook-token, authorization",
+  "access-control-allow-methods": "POST, OPTIONS",
+};
+
 const json = (status: number, body: unknown) =>
-  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json", ...CORS },
+  });
 
 // pega o primeiro valor definido entre vários nomes de campo (procura no topo
 // e em alguns containers aninhados comuns), case-insensitive.
@@ -53,6 +64,7 @@ const numOrNull = (s: string | null) => {
 };
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return json(405, { ok: false, error: "method not allowed" });
 
   // ---- validação do token ----
@@ -70,6 +82,18 @@ Deno.serve(async (req) => {
   // ---- tenant ----
   const { data: tenant } = await sb.from("tenants").select("id").eq("slug", TENANT_SLUG).maybeSingle();
   const tenant_id = tenant?.id || null;
+
+  // ---- teste de conexão (botão "Testar conexão" no painel) ----
+  // Confirma token e tenant sem sujar as tabelas de operação.
+  if (body["teste"] === true || body["ping"] === true) {
+    return json(200, {
+      ok: true, teste: true, tenant: TENANT_SLUG,
+      tenant_encontrado: !!tenant_id,
+      mensagem: tenant_id
+        ? "Conexão certa: token válido e empresa encontrada."
+        : 'Token válido, mas não achei a empresa "' + TENANT_SLUG + '". Ajuste o segredo POWERCRM_TENANT_SLUG.',
+    });
+  }
 
   // ---- tipo do evento (best-effort) ----
   const evtRaw = (field(body, ["evento", "event", "tipo", "type", "acao", "action", "status"]) || "").toLowerCase();
