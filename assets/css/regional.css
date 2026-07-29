@@ -42,11 +42,17 @@
 .rg-badge.mid { background: var(--tp-blue-50); color: var(--tp-blue-600); }
 .rg-badge.bad { background: #fdecec; color: #8a1f1f; }
 
-/* Gráfico de barras (SVG) */
+/* Gráficos (SVG com eixos) */
 .rg-chart { width: 100%; }
-.rg-svg { width: 100%; height: 190px; display: block; }
-.rg-x { display: flex; margin-top: 6px; }
-.rg-x span { flex: 1; text-align: center; font-size: var(--tp-fs-xs); color: var(--tp-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+.rg-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.rg-svg-funil { max-width: 620px; margin: 0 auto; }
+/* Textos dentro do SVG */
+.rg-tick { font-family: var(--tp-font-body, Inter), sans-serif; font-size: 12px; fill: var(--tp-muted); }
+.rg-xlbl { font-family: var(--tp-font-body, Inter), sans-serif; font-size: 12.5px; fill: var(--tp-slate); }
+.rg-vlbl { font-family: var(--tp-font-sans); font-size: 12px; font-weight: 700; fill: var(--tp-ink); }
+.rg-flbl { font-family: var(--tp-font-sans); font-size: 15px; font-weight: 700; fill: #fff; }
+.rg-fname { font-family: var(--tp-font-sans); font-size: 13px; font-weight: 600; fill: var(--tp-ink); }
+.rg-fconv { font-family: var(--tp-font-body, Inter), sans-serif; font-size: 11.5px; fill: var(--tp-muted); }
 .rg-leg { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--tp-line); font-size: var(--tp-fs-xs); color: var(--tp-slate); }
 .rg-leg span { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
 .rg-leg i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
@@ -111,3 +117,13 @@
   .rg-x span { font-size: 9px; }
   .rg-conv-l span { width: 92px; }
 }
+
+/* Tabela ordenável (cabeçalho clicável) */
+.rg-tbl-ord th { cursor: pointer; user-select: none; white-space: nowrap; }
+.rg-tbl-ord th:hover { color: var(--tp-blue-700); }
+.rg-tbl-ord th.on { color: var(--tp-blue-700); }
+.rg-seta { margin-left: 5px; opacity: .5; font-size: 10px; }
+.rg-tbl-ord th.on .rg-seta { opacity: 1; }
+
+/* Campos da 2ª planilha */
+.rg-form code { background: var(--tp-bg-alt); border-radius: 4px; padding: 1px 5px; font-size: var(--tp-fs-xs); }

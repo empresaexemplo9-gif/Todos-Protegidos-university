@@ -72,56 +72,177 @@
       '</svg>';
   }
 
-  // Barras agrupadas (1 ou 2 séries)
-  function barras(dados, series, opt) {
-    opt = opt || {};
-    var W = 100, H = 42, padL = 3, padB = 9, padT = 3;   // viewBox responsivo
-    var max = 0;
-    dados.forEach(function (d) { series.forEach(function (s) { max = Math.max(max, num(d[s.key])); }); });
-    max = max || 1;
-    if (opt.max) max = Math.max(max, opt.max);
-    var n = dados.length || 1;
-    var slot = (W - padL) / n, bw = Math.min(7, (slot - 1.5) / series.length);
-    var svg = '<svg class="rg-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img">';
-    [0, 0.5, 1].forEach(function (f) {
-      var y = padT + (H - padT - padB) * (1 - f);
-      svg += '<line x1="' + padL + '" y1="' + y + '" x2="' + W + '" y2="' + y + '" stroke="' + GRID + '" stroke-width="0.3"/>';
-    });
-    dados.forEach(function (d, i) {
-      series.forEach(function (s, j) {
-        var v = num(d[s.key]);
-        var h = (H - padT - padB) * (v / max);
-        var x = padL + i * slot + (slot - bw * series.length) / 2 + j * bw;
-        var y = H - padB - h;
-        svg += '<rect x="' + x + '" y="' + y + '" width="' + (bw - 0.6) + '" height="' + Math.max(0.4, h) + '" rx="0.8" fill="' + s.cor + '"><title>' + esc(d.cidade || d.nome) + ' · ' + esc(s.rot) + ': ' + v + '</title></rect>';
-      });
-    });
-    svg += "</svg>";
-    // eixo x em HTML (fonte legível, sem distorção do viewBox)
-    var eixo = '<div class="rg-x">' + dados.map(function (d) {
-      return '<span>' + esc(d.cidade || d.nome) + '</span>';
-    }).join("") + '</div>';
-    var leg = '<div class="rg-leg">' + series.map(function (s) {
+  // ---- Motor de gráficos ----
+  // Caixa fixa em viewBox + preserveAspectRatio: nada é esticado, então
+  // texto e cantos arredondados saem sempre nítidos.
+  var CW = 820, CH = 330, M = { t: 22, r: 16, b: 54, l: 68 };
+  var PW = CW - M.l - M.r, PH = CH - M.t - M.b;
+
+  function abrevia(v) {
+    var n = Math.abs(num(v));
+    if (n >= 1000000) return (num(v) / 1000000).toFixed(n >= 10000000 ? 0 : 1).replace(".", ",") + "M";
+    if (n >= 1000) return (num(v) / 1000).toFixed(n >= 10000 ? 0 : 1).replace(".", ",") + "k";
+    return String(Math.round(num(v)));
+  }
+  var FMT = {
+    int: function (v) { return Math.round(num(v)).toLocaleString("pt-BR"); },
+    curto: abrevia,
+    moeda: function (v) { return "R$ " + abrevia(v); },
+    pct: function (v) { return Math.round(num(v)) + "%"; }
+  };
+  // Escala "bonita": topo arredondado para 1/2/5 x 10^n
+  function escala(max) {
+    if (max <= 0) return { topo: 1, passo: 0.25 };
+    var bruto = max / 4, exp = Math.pow(10, Math.floor(Math.log(bruto) / Math.LN10));
+    var n = bruto / exp;
+    var passo = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * exp;
+    return { topo: Math.ceil(max / passo) * passo, passo: passo };
+  }
+  function eixoY(topo, passo, fmt) {
+    var g = "";
+    for (var v = 0; v <= topo + passo / 1000; v += passo) {
+      var y = M.t + PH - (v / topo) * PH;
+      g += '<line x1="' + M.l + '" y1="' + y + '" x2="' + (M.l + PW) + '" y2="' + y + '" stroke="' + GRID + '" stroke-width="1"' + (v === 0 ? '' : ' stroke-dasharray="4 4"') + '/>' +
+           '<text x="' + (M.l - 10) + '" y="' + (y + 4) + '" text-anchor="end" class="rg-tick">' + esc(fmt(v)) + '</text>';
+    }
+    return g;
+  }
+  function rotuloX(dados, girar) {
+    var passo = PW / dados.length;
+    return dados.map(function (d, i) {
+      var x = M.l + passo * i + passo / 2, t = String(d.rot || d.cidade || d.nome || "");
+      if (t.length > 16) t = t.slice(0, 15) + "…";
+      return girar
+        ? '<text x="' + x + '" y="' + (M.t + PH + 16) + '" text-anchor="end" class="rg-xlbl" transform="rotate(-28 ' + x + ' ' + (M.t + PH + 16) + ')">' + esc(t) + '</text>'
+        : '<text x="' + x + '" y="' + (M.t + PH + 20) + '" text-anchor="middle" class="rg-xlbl">' + esc(t) + '</text>';
+    }).join("");
+  }
+  function legenda(series) {
+    return '<div class="rg-leg">' + series.map(function (s) {
       return '<span><i style="background:' + s.cor + '"></i>' + esc(s.rot) + '</span>';
     }).join("") + '</div>';
-    return '<div class="rg-chart">' + svg + eixo + leg + '</div>';
   }
 
-  // Funil (contatos -> propostas -> vendas)
+  // Barras agrupadas, com eixo de valores e rótulo em cada barra
+  function barras(dados, series, opt) {
+    opt = opt || {};
+    var fmt = FMT[opt.fmt || "curto"], fmtRot = FMT[opt.fmtRotulo || opt.fmt || "curto"];
+    var max = 0;
+    dados.forEach(function (d) { series.forEach(function (s) { max = Math.max(max, num(d[s.key])); }); });
+    if (opt.max) max = Math.max(max, opt.max);
+    var e = escala(max || 1), topo = e.topo;
+    var passo = PW / (dados.length || 1);
+    var larg = Math.min(46, (passo * 0.68) / series.length);
+    var girar = dados.length > 5 || dados.some(function (d) { return String(d.cidade || d.nome || "").length > 12; });
+
+    var svg = '<svg class="rg-svg" viewBox="0 0 ' + CW + ' ' + CH + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' + esc(opt.titulo || "gráfico de barras") + '">';
+    svg += eixoY(topo, e.passo, fmt);
+    dados.forEach(function (d, i) {
+      var base = M.l + passo * i + passo / 2 - (larg * series.length) / 2;
+      series.forEach(function (s, j) {
+        var v = num(d[s.key]);
+        var h = (v / topo) * PH;
+        var x = base + j * larg, y = M.t + PH - h;
+        svg += '<rect x="' + x + '" y="' + y + '" width="' + (larg - 5) + '" height="' + Math.max(1, h) + '" rx="4" fill="' + s.cor + '">' +
+               '<title>' + esc(d.cidade || d.nome) + " · " + esc(s.rot) + ": " + esc(fmtRot(v)) + '</title></rect>';
+        // Só rotula quando há espaço; acima disso o valor fica no eixo e na dica
+        if (larg >= 26 && dados.length <= 5) {
+          svg += '<text x="' + (x + (larg - 5) / 2) + '" y="' + (y - 6) + '" text-anchor="middle" class="rg-vlbl">' + esc(fmtRot(v)) + '</text>';
+        }
+      });
+    });
+    svg += rotuloX(dados, girar) + '</svg>';
+    return '<div class="rg-chart">' + svg + legenda(series) + '</div>';
+  }
+
+  // Linhas (evolução por estado/mês)
+  function linhas(dados, series, opt) {
+    opt = opt || {};
+    var fmt = FMT[opt.fmt || "moeda"];
+    var max = 0;
+    dados.forEach(function (d) { series.forEach(function (s) { max = Math.max(max, num(d[s.key])); }); });
+    var e = escala(max || 1), topo = e.topo;
+    var passo = dados.length > 1 ? PW / (dados.length - 1) : 0;
+    var px = function (i) { return dados.length > 1 ? M.l + passo * i : M.l + PW / 2; };
+    var py = function (v) { return M.t + PH - (num(v) / topo) * PH; };
+
+    var svg = '<svg class="rg-svg" viewBox="0 0 ' + CW + ' ' + CH + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' + esc(opt.titulo || "evolução") + '">';
+    svg += eixoY(topo, e.passo, fmt);
+    series.forEach(function (s) {
+      var pts = dados.map(function (d, i) { return px(i) + "," + py(d[s.key]); }).join(" ");
+      svg += '<polyline points="' + pts + '" fill="none" stroke="' + s.cor + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+      dados.forEach(function (d, i) {
+        svg += '<circle cx="' + px(i) + '" cy="' + py(d[s.key]) + '" r="4" fill="#fff" stroke="' + s.cor + '" stroke-width="2.5">' +
+               '<title>' + esc(s.rot) + " · " + esc(d.rot || d.mes) + ": " + esc(fmt(d[s.key])) + '</title></circle>';
+      });
+    });
+    svg += dados.map(function (d, i) {
+      return '<text x="' + px(i) + '" y="' + (M.t + PH + 20) + '" text-anchor="middle" class="rg-xlbl">' + esc(d.rot || d.mes) + '</text>';
+    }).join("") + '</svg>';
+    return '<div class="rg-chart">' + svg + legenda(series) + '</div>';
+  }
+
+  // Funil em trapézio (contatos -> propostas -> vendas)
   function funil(etapas) {
+    var FW = 600, FH = 260, pad = 16;
+    var alt = (FH - pad * 2) / etapas.length;
     var max = Math.max.apply(null, etapas.map(function (e) { return num(e.valor); }).concat([1]));
-    return '<div class="rg-funil">' + etapas.map(function (e) {
-      var w = Math.max(6, safeDiv(e.valor, max) * 100);
-      return '<div class="rg-funil-l">' +
-               '<span class="rg-funil-n">' + esc(e.nome) + '</span>' +
-               '<div class="rg-funil-bar"><i style="width:' + w + '%;background:' + e.cor + '"></i></div>' +
-               '<span class="rg-funil-v">' + num(e.valor).toLocaleString("pt-BR") + '</span>' +
-             '</div>';
-    }).join("") + '</div>';
+    var eixoX = 190, maxW = 300, minW = 70;          // forma à esquerda, textos à direita
+    var w = etapas.map(function (e) { return Math.max(minW, safeDiv(e.valor, max) * maxW); });
+    var textoX = eixoX + maxW / 2 + 26;
+
+    var svg = '<svg class="rg-svg rg-svg-funil" viewBox="0 0 ' + FW + ' ' + FH + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="funil comercial">';
+    etapas.forEach(function (e, i) {
+      var y = pad + alt * i;
+      var w1 = w[i], w2 = w[i + 1] !== undefined ? w[i + 1] : w1 * 0.8;
+      var x1 = eixoX - w1 / 2, x2 = eixoX - w2 / 2;
+      var h = alt - 10;
+      svg += '<path d="M' + x1 + ' ' + y + ' H' + (x1 + w1) + ' L' + (x2 + w2) + ' ' + (y + h) + ' H' + x2 + ' Z" fill="' + e.cor + '">' +
+             '<title>' + esc(e.nome) + ": " + num(e.valor).toLocaleString("pt-BR") + '</title></path>';
+      // valor dentro da forma só quando cabe; senão vai junto do nome
+      var cabe = Math.min(w1, w2) >= 86;
+      if (cabe) {
+        svg += '<text x="' + eixoX + '" y="' + (y + h / 2 + 5) + '" text-anchor="middle" class="rg-flbl">' + num(e.valor).toLocaleString("pt-BR") + '</text>';
+      }
+      svg += '<text x="' + textoX + '" y="' + (y + h / 2 - 3) + '" class="rg-fname">' + esc(e.nome) +
+             (cabe ? "" : " · " + num(e.valor).toLocaleString("pt-BR")) + '</text>';
+      if (i > 0) {
+        var conv = safeDiv(e.valor, etapas[i - 1].valor) * 100;
+        svg += '<text x="' + textoX + '" y="' + (y + h / 2 + 15) + '" class="rg-fconv">' + esc(pct1(conv)) + " do anterior" + '</text>';
+      }
+    });
+    svg += '</svg>';
+    return '<div class="rg-chart">' + svg + '</div>';
   }
 
   // ---- Estado ----
-  var filiais = [], fonte = null, aba = "geral", filtroUf = "Todas", filialSel = null, ehSuper = false;
+  var filiais = [], historico = [], fonte = null, aba = "geral", filtroUf = "Todas", filialSel = null, ehSuper = false;
+  var ordemCol = "receitaPct", ordemDir = "desc";   // ordenação da tabela de filiais
+
+  // Histórico -> séries por UF para o gráfico de evolução
+  function serieHistorico() {
+    if (!historico.length) return null;
+    var meses = [], porMes = {}, ufs = [];
+    historico.forEach(function (h) {
+      var m = String(h.mes || "").trim(); if (!m) return;
+      var uf = String(h.uf || "").toUpperCase().trim() || "TOTAL";
+      if (!porMes[m]) { porMes[m] = { rot: m, ordem: num(h.ordem) }; meses.push(m); }
+      porMes[m][uf] = num(porMes[m][uf]) + num(h.receita);
+      if (ufs.indexOf(uf) < 0) ufs.push(uf);
+    });
+    var dados = meses.map(function (m) { return porMes[m]; })
+                     .sort(function (a, b) { return a.ordem - b.ordem; });
+    dados.forEach(function (d) { ufs.forEach(function (u) { if (d[u] === undefined) d[u] = 0; }); });
+    var paleta = [NAVY, "#6b46c1", GREEN, GOLD, TURQ, RED];
+    var series = ufs.sort().map(function (u, i) {
+      return { key: u, rot: u === "TOTAL" ? "Receita total" : u, cor: UF_COLOR[u] || paleta[i % paleta.length] };
+    });
+    if (filtroUf !== "Todas") {
+      var so = series.filter(function (x) { return x.key === filtroUf; });
+      if (so.length) series = so;
+    }
+    return { dados: dados, series: series };
+  }
 
   function enriquecer(f) {
     var e = {};
@@ -204,9 +325,17 @@
         kpi("Filiais na meta", t.naMeta + " / " + t.unidades, "acima de 100% da receita") +
         '</div>';
       h += '<div class="rg-card"><h3>Receita x meta por filial</h3>' +
-        barras(src, [{ key: "receita", rot: "Receita", cor: NAVY }, { key: "meta_receita", rot: "Meta", cor: "#c7cbea" }]) + '</div>';
+        barras(src, [{ key: "receita", rot: "Receita", cor: NAVY }, { key: "meta_receita", rot: "Meta", cor: "#c7cbea" }], { fmt: "moeda", titulo: "Receita x meta por filial" }) + '</div>';
       h += '<div class="rg-card"><h3>Veículos protegidos x meta</h3>' +
-        barras(src, [{ key: "veiculos", rot: "Veículos", cor: TURQ }, { key: "meta_veiculos", rot: "Meta", cor: "#c7cbea" }]) + '</div>';
+        barras(src, [{ key: "veiculos", rot: "Veículos", cor: TURQ }, { key: "meta_veiculos", rot: "Meta", cor: "#c7cbea" }], { fmt: "int", titulo: "Veículos protegidos x meta" }) + '</div>';
+
+      // Evolução mensal da receita (2ª planilha, opcional)
+      var ev = serieHistorico();
+      h += '<div class="rg-card"><h3>Evolução da receita por estado</h3>';
+      h += ev
+        ? linhas(ev.dados, ev.series, { fmt: "moeda", titulo: "Evolução da receita" })
+        : '<div class="gestao-empty" style="padding:26px">Vincule a <strong>planilha de histórico</strong> em “Planilhas e dados” para ver a evolução mês a mês (colunas: <code>Mês</code>, <code>UF</code>, <code>Receita</code>).</div>';
+      h += '</div>';
     }
 
     if (aba === "funil") {
@@ -241,7 +370,7 @@
         kpi("Retenção média", pct1(t.m_retencao), "", t.m_retencao >= 80 ? GREEN : RED) +
         '</div>';
       h += '<div class="rg-card"><h3>Produção por vendedor e ocupação do quadro</h3>' +
-        barras(src, [{ key: "vendedores_ativos", rot: "Ativos", cor: NAVY }, { key: "vendedores_meta", rot: "Quadro ideal", cor: "#c7cbea" }]) + '</div>';
+        barras(src, [{ key: "vendedores_ativos", rot: "Ativos", cor: NAVY }, { key: "vendedores_meta", rot: "Quadro ideal", cor: "#c7cbea" }], { fmt: "int", titulo: "Vendedores por filial" }) + '</div>';
       h += tabela("Recrutamento e retenção por filial", ["Filial", "Vendedores", "Produção/vendedor", "Entrevistas", "Contratações", "Retenção"], src.map(function (u) {
         return ["<b>" + esc(u.nome) + "</b>", num(u.vendedores_ativos) + "/" + num(u.vendedores_meta),
                 u.producaoPorVendedor.toFixed(1).replace(".", ","), num(u.entrevistas), num(u.contratacoes),
@@ -261,7 +390,7 @@
              esc(t.trilhaBaixa.map(function (u) { return u.cidade || u.nome; }).join(", ")) + '. Priorize o treinamento diário nessas unidades.</div>';
       }
       h += '<div class="rg-card"><h3>Progresso da trilha por filial</h3>' +
-        barras(src, [{ key: "trilha_pct", rot: "Trilha concluída", cor: TURQ }, { key: "certificados_pct", rot: "Certificados", cor: "#c7cbea" }], { max: 100 }) + '</div>';
+        barras(src, [{ key: "trilha_pct", rot: "Trilha concluída", cor: TURQ }, { key: "certificados_pct", rot: "Certificados", cor: "#c7cbea" }], { max: 100, fmt: "pct", titulo: "Progresso da trilha por filial" }) + '</div>';
       h += tabela("Destaque da semana por filial", ["Filial", "Consultor destaque", "Vendas na semana", "Meta mensal (15)", "Premiações"], src.map(function (u) {
         return ["<b>" + esc(u.nome) + "</b>", "🏆 " + esc(u.destaque_nome || "—"), num(u.destaque_vendas_semana),
                 badge(pct(u.destaque_meta_pct), tone(num(u.destaque_meta_pct), 100, 70)), num(u.premiacoes)];
@@ -274,8 +403,20 @@
           return '<div class="rg-escudo">' + (i === 0 ? '<span class="rg-coroa">🏆</span>' : "") + escudo(u.receitaPct) +
                  '<span class="rg-escudo-n">' + esc(u.cidade || u.nome) + '</span><span class="rg-escudo-uf">' + esc(u.uf) + '</span></div>';
         }).join("") + '</div></div>';
-      h += tabela("Detalhamento por filial", ["Filial", "UF", "Veículos", "% meta veículos", "Receita", "% meta receita", "Crescimento"],
-        src.slice().sort(function (a, b) { return b.receitaPct - a.receitaPct; }).map(function (u) {
+      var COLS_ORD = [
+        { rot: "Filial", key: "nome", txt: true }, { rot: "UF", key: "uf", txt: true },
+        { rot: "Veículos", key: "veiculos" }, { rot: "% meta veículos", key: "veiculosPct" },
+        { rot: "Receita", key: "receita" }, { rot: "% meta receita", key: "receitaPct" },
+        { rot: "Crescimento", key: "crescimento" }
+      ];
+      var ordenado = src.slice().sort(function (a, b) {
+        var col = COLS_ORD.filter(function (c) { return c.key === ordemCol; })[0] || COLS_ORD[5];
+        var va = a[col.key], vb = b[col.key];
+        var cmp = col.txt ? String(va || "").localeCompare(String(vb || ""), "pt-BR") : (num(va) - num(vb));
+        return ordemDir === "desc" ? -cmp : cmp;
+      });
+      h += tabelaOrd("Detalhamento por filial", COLS_ORD,
+        ordenado.map(function (u) {
           return ["<b>" + esc(u.nome) + "</b>", esc(u.uf), num(u.veiculos).toLocaleString("pt-BR"),
                   badge(pct(u.veiculosPct), tone(u.veiculosPct, 100, 80)), brl(u.receita),
                   badge(pct(u.receitaPct), tone(u.receitaPct, 100, 80)),
@@ -325,6 +466,18 @@
     ligar();
   }
 
+  // Tabela com cabeçalho clicável para ordenar
+  function tabelaOrd(titulo, cols, linhas) {
+    return '<div class="rg-card"><h3>' + esc(titulo) + '</h3><div class="table-wrap"><table class="table rg-tbl-ord"><thead><tr>' +
+      cols.map(function (c) {
+        var ativo = c.key === ordemCol;
+        return '<th data-ord="' + c.key + '" class="' + (ativo ? "on" : "") + '">' + esc(c.rot) +
+               '<span class="rg-seta">' + (ativo ? (ordemDir === "desc" ? "▾" : "▴") : "⇅") + '</span></th>';
+      }).join("") + '</tr></thead><tbody>' +
+      linhas.map(function (l) { return "<tr>" + l.map(function (c) { return "<td>" + c + "</td>"; }).join("") + "</tr>"; }).join("") +
+      '</tbody></table></div></div>';
+  }
+
   function tabela(titulo, cols, linhas, rodape) {
     return '<div class="rg-card"><h3>' + esc(titulo) + '</h3><div class="table-wrap"><table class="table"><thead><tr>' +
       cols.map(function (c) { return "<th>" + esc(c) + "</th>"; }).join("") + '</tr></thead><tbody>' +
@@ -344,6 +497,14 @@
           '<button type="button" class="btn btn-ghost btn-sm" id="rgModelo">Baixar modelo CSV</button>' +
         '</div>' +
       '</div>';
+    h += '<div class="rg-form" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--tp-line)">' +
+        '<label>Planilha de histórico (opcional) — colunas <code>Mês</code>, <code>UF</code>, <code>Receita</code>' +
+          '<input type="url" id="rgUrlHist" placeholder="Link CSV publicado da aba de histórico" value="' + esc(fonte && fonte.url_historico ? fonte.url_historico : "") + '"></label>' +
+        '<div class="rg-form-acts">' +
+          '<button type="button" class="btn btn-ghost btn-sm" id="rgSyncHist">Importar histórico</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" id="rgModeloHist">Baixar modelo do histórico</button>' +
+          '<span class="rg-sync" style="margin:0;align-self:center">' + (historico.length ? historico.length + ' linha(s) importada(s)' : 'alimenta o gráfico de evolução') + '</span>' +
+        '</div></div>';
     if (fonte && fonte.ultima_sync) {
       h += '<p class="rg-sync">Última importação: ' + esc(new Date(fonte.ultima_sync).toLocaleString("pt-BR")) + ' · ' + num(fonte.linhas) + ' filial(is).</p>';
     }
@@ -441,6 +602,52 @@
   }
 
   var msgPendente = null;   // mantida ao redesenhar a aba após importar
+  // Histórico: Mês | UF | Receita
+  function csvParaHistorico(texto) {
+    var linhas = parseCSV(texto);
+    if (linhas.length < 2) return { erro: "A planilha de histórico precisa do cabeçalho e de ao menos uma linha." };
+    var cab = linhas[0].map(normalizar);
+    var iMes = -1, iUf = -1, iRec = -1;
+    cab.forEach(function (c, i) {
+      if (iMes < 0 && (c === "mes" || c === "mês" || c === "periodo" || c === "período" || c === "competencia")) iMes = i;
+      if (iUf < 0 && (c === "uf" || c === "estado")) iUf = i;
+      if (iRec < 0 && (c === "receita" || c === "valor" || c === "faturamento")) iRec = i;
+    });
+    if (iMes < 0 || iRec < 0) return { erro: 'A planilha de histórico precisa das colunas "Mês" e "Receita" (a coluna "UF" é opcional).' };
+    var out = [];
+    for (var l = 1; l < linhas.length; l++) {
+      var mes = String(linhas[l][iMes] || "").trim();
+      if (!mes) continue;
+      out.push({
+        mes: mes, ordem: out.length,
+        uf: iUf >= 0 ? String(linhas[l][iUf] || "").trim().toUpperCase().slice(0, 2) : "",
+        receita: numeroBR(linhas[l][iRec])
+      });
+    }
+    if (!out.length) return { erro: "Nenhuma linha de histórico encontrada." };
+    // A ordem dos meses segue a ordem da planilha (primeira ocorrência)
+    var vistos = {}, seq = 0;
+    out.forEach(function (x) { if (vistos[x.mes] === undefined) vistos[x.mes] = seq++; x.ordem = vistos[x.mes]; });
+    return { historico: out };
+  }
+
+  function importarHistorico(texto, url) {
+    var r = csvParaHistorico(texto);
+    if (r.erro) { msg(r.erro, false); return; }
+    TPData.saveHistorico(r.historico).then(function (res) {
+      if (res && res.ok === false) { msg(res.error || "Não foi possível salvar o histórico.", false); return; }
+      if (url !== undefined) {
+        var d = {
+          nome: "Planilha de filiais", url: (fonte && fonte.url) || "",
+          url_historico: url, ultima_sync: (fonte && fonte.ultima_sync) || null, linhas: (fonte && fonte.linhas) || 0
+        };
+        TPData.setFonteFiliais(d).then(function () { fonte = d; });
+      }
+      msg(r.historico.length + " linha(s) de histórico importada(s). O gráfico de evolução já está na Visão geral.", true);
+      carregar(true);
+    }, function () { msg("Erro ao salvar o histórico.", false); });
+  }
+
   function msg(txt, ok) {
     msgPendente = txt ? { txt: txt, ok: ok } : null;
     var el = document.getElementById("rgMsg");
@@ -477,21 +684,23 @@
       });
   }
 
+  function baixarCSV(nomeArquivo, conteudo) {
+    var blob = new Blob(["\ufeff" + conteudo], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = nomeArquivo;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
   function modeloCSV() {
     var cab = COLUNAS.map(function (c) { return c.rot; }).join(",");
     var ex = COLUNAS.map(function (c) {
-      if (c.key === "nome") return "Goiânia";
-      if (c.key === "cidade") return "Goiânia";
+      if (c.key === "nome" || c.key === "cidade") return "Goiânia";
       if (c.key === "uf") return "GO";
       if (c.key === "destaque_nome") return "Marcos Silva";
       return "0";
     }).join(",");
-    var blob = new Blob(["﻿" + cab + "\n" + ex + "\n"], { type: "text/csv;charset=utf-8" });
-    var a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "modelo-filiais-todos-protegidos.csv";
-    document.body.appendChild(a); a.click();
-    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    baixarCSV("modelo-filiais-todos-protegidos.csv", cab + "\n" + ex + "\n");
   }
 
   // ---- Eventos ----
@@ -501,6 +710,14 @@
     });
     Array.prototype.forEach.call(root.querySelectorAll("[data-uf]"), function (b) {
       b.addEventListener("click", function () { filtroUf = b.getAttribute("data-uf"); render(); });
+    });
+    Array.prototype.forEach.call(root.querySelectorAll("th[data-ord]"), function (th) {
+      th.addEventListener("click", function () {
+        var k = th.getAttribute("data-ord");
+        if (ordemCol === k) ordemDir = ordemDir === "desc" ? "asc" : "desc";
+        else { ordemCol = k; ordemDir = "desc"; }
+        render();
+      });
     });
     Array.prototype.forEach.call(root.querySelectorAll("[data-filial]"), function (b) {
       b.addEventListener("click", function () { filialSel = b.getAttribute("data-filial"); render(); });
@@ -529,11 +746,29 @@
     });
     var bMod = document.getElementById("rgModelo");
     if (bMod) bMod.addEventListener("click", modeloCSV);
+    var bHist = document.getElementById("rgSyncHist");
+    if (bHist) bHist.addEventListener("click", function () {
+      var url = (document.getElementById("rgUrlHist").value || "").trim();
+      if (!url) { msg("Cole o link CSV publicado da planilha de histórico.", false); return; }
+      msg("Importando o histórico…", true);
+      fetch(url, { credentials: "omit" })
+        .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
+        .then(function (txt) { if (/^\s*</.test(txt)) throw new Error("html"); importarHistorico(txt, url); })
+        .catch(function () { msg('Não foi possível ler a planilha de histórico pelo link. Confirme que ela está "Publicada na web" em CSV — ou cole os dados na caixa abaixo.', false); });
+    });
+    var bModH = document.getElementById("rgModeloHist");
+    if (bModH) bModH.addEventListener("click", function () {
+      baixarCSV("modelo-historico-todos-protegidos.csv",
+        "Mês,UF,Receita\nFev,GO,380000\nFev,SP,130000\nMar,GO,398000\nMar,SP,138000\n");
+    });
     var bTxt = document.getElementById("rgImportarTexto");
     if (bTxt) bTxt.addEventListener("click", function () {
       var t = (document.getElementById("rgColar").value || "").trim();
       if (!t) { msg("Cole os dados da planilha na caixa acima.", false); return; }
-      importarTexto(t, "");
+      // Detecta pelo cabeçalho se é a planilha de filiais ou a de histórico
+      var cab0 = (parseCSV(t)[0] || []).map(normalizar);
+      var ehHist = cab0.indexOf("receita") >= 0 && (cab0.indexOf("mes") >= 0 || cab0.indexOf("mês") >= 0) && cab0.indexOf("filial") < 0;
+      if (ehHist) importarHistorico(t); else importarTexto(t, "");
     });
     var bArq = document.getElementById("rgArquivo");
     if (bArq) bArq.addEventListener("change", function () {
@@ -546,9 +781,11 @@
 
   // ---- Carga ----
   function carregar(manterAba) {
-    return Promise.all([TPData.listFiliais(), TPData.getFonteFiliais()]).then(function (r) {
+    var pHist = TPData.listHistorico ? TPData.listHistorico() : Promise.resolve([]);
+    return Promise.all([TPData.listFiliais(), TPData.getFonteFiliais(), pHist]).then(function (r) {
       filiais = (r[0] || []).map(function (f, i) { f.id = f.id || String(i); return f; });
       fonte = r[1] || fonte;
+      historico = r[2] || [];
       if (!manterAba && !filiais.length) aba = "fontes";
       render();
     }, function () {

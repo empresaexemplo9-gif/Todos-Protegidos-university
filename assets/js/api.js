@@ -132,6 +132,8 @@
     },
     getFonteFiliais: function () { return Promise.resolve(lsGet("tp_filiais_fonte", null)); },
     setFonteFiliais: function (d) { lsSet("tp_filiais_fonte", d); return Promise.resolve({ ok: true }); },
+    listHistorico: function () { return Promise.resolve(lsGet("tp_filiais_hist", [])); },
+    saveHistorico: function (l) { lsSet("tp_filiais_hist", l || []); return Promise.resolve({ ok: true }); },
 
     // ---- Rotina diária (modo local) ----
     getRotina: function (dia) {
@@ -429,9 +431,23 @@
       return sb.from("filiais_fontes").select("*").order("criado_em", { ascending: false }).limit(1)
         .then(function (res) { return (res.error || !res.data || !res.data.length) ? null : res.data[0]; });
     },
+    // Histórico mensal (gráfico de evolução por estado)
+    listHistorico: function () {
+      return sb.from("filiais_historico").select("*").order("ordem", { ascending: true })
+        .then(function (res) { return res.error ? [] : (res.data || []); });
+    },
+    saveHistorico: function (lista) {
+      var rows = (lista || []).map(function (x, i) {
+        return { mes: x.mes, ordem: x.ordem != null ? x.ordem : i, uf: (x.uf || "").toUpperCase(), receita: Number(x.receita) || 0 };
+      });
+      if (!rows.length) return Promise.resolve({ ok: true });
+      return sb.from("filiais_historico").upsert(rows, { onConflict: "tenant_id,mes,uf" })
+        .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+    },
     setFonteFiliais: function (d) {
       return sb.from("filiais_fontes").select("id").limit(1).then(function (r) {
         var row = { nome: d.nome || "Planilha de filiais", url: d.url, ultima_sync: d.ultima_sync || null, linhas: d.linhas || 0 };
+        if (d.url_historico !== undefined) row.url_historico = d.url_historico || "";
         if (r.data && r.data.length) {
           return sb.from("filiais_fontes").update(row).eq("id", r.data[0].id)
             .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
@@ -693,6 +709,8 @@
     saveFiliais: function (l) { return impl.saveFiliais(l); },
     deleteFilial: function (id) { return impl.deleteFilial(id); },
     getFonteFiliais: function () { return impl.getFonteFiliais(); },
+    listHistorico: function () { return impl.listHistorico(); },
+    saveHistorico: function (l) { return impl.saveHistorico(l); },
     setFonteFiliais: function (d) { return impl.setFonteFiliais(d); },
     getRotina: function (dia) { return impl.getRotina(dia); },
     setRotinaTarefa: function (dia, id, feito) { return impl.setRotinaTarefa(dia, id, feito); },
