@@ -588,14 +588,17 @@
       var url = String((window.TP_CONFIG && TP_CONFIG.SUPABASE_URL) || "").replace(/\/+$/, "");
       var chave = (window.TP_CONFIG && TP_CONFIG.SUPABASE_ANON_KEY) || "";
       var alvo = url ? url + "/functions/v1/powercrm-webhook" : "(configure o Supabase em assets/js/config.js)";
-      var alvoCompleto = url ? alvo + "?apikey=" + chave : alvo;
 
       return '<section class="panel" id="opConexao">' +
         '<div class="panel-head"><h3 style="margin:0">Conexão com o Power CRM</h3><span class="badge" id="opStatus">verificando…</span></div>' +
         '<div style="padding:4px 0 8px">' +
           '<p class="muted" style="margin:0 0 12px;font-size:var(--tp-fs-sm)">Cole esta URL no Power CRM em <strong>Configurações → Webhooks</strong>, um webhook para cada evento (cotação, cadastro, vistoria liberada, contrato).</p>' +
-          '<div class="op-url"><code id="opUrl">' + opEsc(alvoCompleto) + '&token=SEU-TOKEN</code>' +
+          '<div class="op-url"><code id="opUrl">' + opEsc(alvo) + '?token=SEU-TOKEN</code>' +
             '<button type="button" class="btn btn-ghost btn-sm" id="opCopiar">Copiar</button></div>' +
+          '<p class="muted" style="margin:0 0 8px;font-size:var(--tp-fs-sm)">O Supabase também exige este <strong>cabeçalho</strong> na chamada. Se o Power CRM tiver campo de <em>headers</em>, cadastre assim:</p>' +
+          '<div class="op-url"><code id="opHeader">Authorization: Bearer ' + opEsc(chave) + '</code>' +
+            '<button type="button" class="btn btn-ghost btn-sm" id="opCopiarH">Copiar</button></div>' +
+          '<p class="muted" style="margin:-6px 0 14px;font-size:var(--tp-fs-xs)">Essa chave é a pública do projeto (já vai no site) e sozinha não abre nada — quem protege o webhook é o <code>?token=</code>. Se o Power CRM não aceitar cabeçalhos, desligue o <strong>Verify JWT</strong> na função.' + opLinkPainel() + '</p>' +
           '<div class="op-teste">' +
             '<label>Token do webhook <span class="op-opc">(opcional para testar)</span>' +
               '<span class="op-ajuda">Um texto secreto que <strong>você escolhe</strong> (ex.: <code>tp-2026-x9f2</code>) e cadastra no Supabase em <em>Edge Functions → Secrets</em> com o nome <code>POWERCRM_WEBHOOK_TOKEN</code>. É o mesmo texto que entra no fim da URL acima.</span>' +
@@ -642,7 +645,6 @@
         var txt = (document.getElementById("opUrl") || {}).textContent || "";
         var tok = (document.getElementById("opToken") || {}).value || "";
         if (tok) txt = txt.replace("SEU-TOKEN", tok);
-        else txt = txt.replace("&token=SEU-TOKEN", "");
         if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () {
           bCopiar.textContent = "Copiado ✓";
           setTimeout(function () { bCopiar.textContent = "Copiar"; }, 1800);
@@ -672,6 +674,15 @@
         });
       });
 
+      var bCopiarH = document.getElementById("opCopiarH");
+      if (bCopiarH) bCopiarH.addEventListener("click", function () {
+        var txt = (document.getElementById("opHeader") || {}).textContent || "";
+        if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () {
+          bCopiarH.textContent = "Copiado ✓";
+          setTimeout(function () { bCopiarH.textContent = "Copiar"; }, 1800);
+        });
+      });
+
       var bTestar = document.getElementById("opTestar");
       if (bTestar) bTestar.addEventListener("click", function () {
         var msg = document.getElementById("opMsg");
@@ -686,18 +697,17 @@
             "<em>Edge Functions → Secrets</em>, com o nome <code>POWERCRM_WEBHOOK_TOKEN</code>.";
           return;
         }
-        var urlMostrada = (document.getElementById("opUrl") || {}).textContent || "";
-        var alvo = urlMostrada.split("?")[0];
-        var chaveUrl = (urlMostrada.match(/[?&]apikey=([^&]+)/) || [])[1] || "";
+        var alvo = ((document.getElementById("opUrl") || {}).textContent || "").split("?")[0];
         if (!/^https?:/.test(alvo)) { msg.className = "op-msg show err"; msg.textContent = "Configure o Supabase em assets/js/config.js antes de testar."; return; }
         bTestar.disabled = true;
         msg.className = "op-msg show"; msg.textContent = "Testando…";
-        var qs = [];
-        if (chaveUrl) qs.push("apikey=" + chaveUrl);
-        if (token) qs.push("token=" + encodeURIComponent(token));
-        var comToken = alvo + (qs.length ? "?" + qs.join("&") : "");
+        var comToken = alvo + (token ? "?token=" + encodeURIComponent(token) : "");
+        var anon = (window.TP_CONFIG && TP_CONFIG.SUPABASE_ANON_KEY) || "";
+        // O porteiro do Supabase exige o cabeçalho mesmo com Verify JWT ligado.
+        var cabecalhos = { "content-type": "application/json" };
+        if (anon) { cabecalhos.authorization = "Bearer " + anon; cabecalhos.apikey = anon; }
         fetch(comToken, {
-          method: "POST", headers: { "content-type": "application/json" },
+          method: "POST", headers: cabecalhos,
           body: JSON.stringify({ teste: true })
         }).then(function (r) {
           return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, d: d }; });
