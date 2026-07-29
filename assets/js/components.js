@@ -224,6 +224,17 @@
         var roles = (a.getAttribute("data-roles") || "").split(",");
         if (role && roles.indexOf(role) !== -1) a.classList.remove("role-hidden");
       });
+      // A home do administrador é o Painel regional: os atalhos de "início"
+      // apontam direto para lá, sem passar pela Visão geral do consultor.
+      if (role === "admin" || role === "superadmin") {
+        // "Visão geral" é a home do consultor — para o admin ela sai do menu,
+        // senão ficariam dois itens levando ao mesmo lugar.
+        var inicio = document.querySelector('.side-link[data-nav="dashboard"]');
+        if (inicio) inicio.classList.add("role-hidden");
+        Array.prototype.forEach.call(document.querySelectorAll('.sidebar-brand a[href="dashboard.html"], .topbar a[href="dashboard.html"]'), function (a) {
+          a.setAttribute("href", "regional.html");
+        });
+      }
     }, function () {});
   }
 
