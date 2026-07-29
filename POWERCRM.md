@@ -65,17 +65,23 @@ supabase secrets set POWERCRM_TENANT_SLUG="todosprotegidos"
 No Power CRM, em **Webhooks**, adicione um webhook para cada evento que quiser capturar
 (cotação criada/aceita, cadastro, vistoria, contrato), apontando para:
 ```
-https://SEU-PROJECT-REF.supabase.co/functions/v1/powercrm-webhook?apikey=SUA-ANON-KEY&token=O-MESMO-TOKEN-DO-PASSO-3
+https://SEU-PROJECT-REF.supabase.co/functions/v1/powercrm-webhook?token=O-MESMO-TOKEN-DO-PASSO-3
 ```
 (Se o Power CRM tiver um campo "token" próprio, pode usar esse campo em vez do `?token=` na URL.)
 
-> **Por que a `apikey` vai na URL:** com "Verify JWT" ligado — o padrão do
-> Supabase — o porteiro recusa a chamada antes de chegar na função, com
-> `UNAUTHORIZED_NO_AUTH_HEADER`. A chave **anon** na URL satisfaz o porteiro sem
-> precisar mexer nessa configuração e sem o Power CRM ter de enviar cabeçalhos.
-> Ela é pública (já vai no site) e não dá acesso a nada: quem protege o webhook
-> é o `?token=`, conferido dentro da função. O painel já monta a URL completa
-> para você em **Operação (CRM) → Conexão com o Power CRM → Copiar**.
+> **Atenção ao "Verify JWT":** ligado (o padrão do Supabase), o porteiro recusa
+> a chamada antes de chegar na função, com `UNAUTHORIZED_NO_AUTH_HEADER`. A
+> chave na URL (`?apikey=`) **não resolve** — o porteiro exige o cabeçalho.
+> Há dois caminhos:
+>
+> 1. **Cadastrar o cabeçalho no Power CRM** (se a tela de webhooks permitir):
+>    `Authorization: Bearer SUA-ANON-KEY`. A chave é pública (já vai no site) e
+>    sozinha não abre nada — quem protege é o `?token=`.
+> 2. **Desligar o Verify JWT** na função: *Edge Functions → powercrm-webhook →
+>    Details*, ou publicando pelo CLI com `--no-verify-jwt`.
+>
+> O painel mostra a URL e o cabeçalho prontos para copiar em
+> **Operação (CRM) → Conexão com o Power CRM**.
 
 ### 5. Conferir a ligação na própria plataforma
 Entre como administrador em **Operação (CRM)**. No topo há o cartão
