@@ -12,7 +12,7 @@
 //   supabase functions deploy powercrm-webhook --no-verify-jwt
 // Secrets:
 //   supabase secrets set POWERCRM_WEBHOOK_TOKEN="um-token-secreto"
-//   (opcional) supabase secrets set POWERCRM_TENANT_SLUG="matriz"
+//   (opcional) supabase secrets set POWERCRM_TENANT_SLUG="todosprotegidos"
 // URL do webhook (configurar no Power CRM):
 //   https://<PROJECT-REF>.functions.supabase.co/powercrm-webhook?token=um-token-secreto
 // ============================================================
@@ -21,7 +21,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const WEBHOOK_TOKEN = Deno.env.get("POWERCRM_WEBHOOK_TOKEN") || "";
-const TENANT_SLUG = Deno.env.get("POWERCRM_TENANT_SLUG") || "matriz";
+const TENANT_SLUG = Deno.env.get("POWERCRM_TENANT_SLUG") || "todosprotegidos";
 
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
 

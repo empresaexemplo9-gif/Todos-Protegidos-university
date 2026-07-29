@@ -46,7 +46,8 @@
       { id: "manual",     label: "Manual do consultor",   href: "manual.html",    icon: "life", match: ["manual.html"] },
       { id: "operacao",   label: "Operação (CRM)",        href: "operacao.html",  icon: "bolt", match: ["operacao.html"], roles: ["admin", "superadmin"] },
       { id: "gestao",     label: "Gestão de conteúdo",    href: "gestao.html",    icon: "edit", match: ["gestao.html", "prova.html"], roles: ["admin", "superadmin"] },
-      { id: "equipe",     label: "Progresso da equipe",   href: "equipe.html",    icon: "users", match: ["equipe.html"], roles: ["admin", "superadmin"] }
+      { id: "equipe",     label: "Progresso da equipe",   href: "equipe.html",    icon: "users", match: ["equipe.html"], roles: ["admin", "superadmin"] },
+      { id: "regional",   label: "Painel regional",       href: "regional.html",  icon: "trophy", match: ["regional.html"], roles: ["admin", "superadmin"] }
     ] },
     { section: "Carreira", items: [
       { id: "ranking", label: "Ranking & metas", href: "ranking.html",            icon: "trophy", match: ["ranking.html"] },

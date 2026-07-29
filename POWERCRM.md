@@ -39,8 +39,8 @@ supabase functions deploy powercrm-webhook --no-verify-jwt
 ### 3. Definir os segredos
 ```bash
 supabase secrets set POWERCRM_WEBHOOK_TOKEN="escolha-um-token-secreto-forte"
-# opcional (padrão já é "matriz"):
-supabase secrets set POWERCRM_TENANT_SLUG="matriz"
+# opcional (padrão já é "todosprotegidos" — o código da empresa):
+supabase secrets set POWERCRM_TENANT_SLUG="todosprotegidos"
 ```
 `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` já são injetados automaticamente nas funções.
 

@@ -115,6 +115,24 @@
     uploadFile: function () {
       return Promise.resolve({ ok: false, error: "O upload de vídeo está disponível no modo nuvem (Supabase). Cole a URL do vídeo." });
     },
+    // ---- Painel regional / filiais (modo local) ----
+    listFiliais: function () { return Promise.resolve(lsGet("tp_filiais", [])); },
+    saveFiliais: function (lista) { lsSet("tp_filiais", lista || []); return Promise.resolve({ ok: true }); },
+    saveFilial: function (f) {
+      var all = lsGet("tp_filiais", []);
+      var i = -1;
+      all.forEach(function (x, k) { if (x.id === f.id) i = k; });
+      if (i >= 0) all[i] = f; else { f.id = f.id || uid(); all.push(f); }
+      lsSet("tp_filiais", all);
+      return Promise.resolve({ ok: true, filial: f });
+    },
+    deleteFilial: function (id) {
+      lsSet("tp_filiais", lsGet("tp_filiais", []).filter(function (x) { return x.id !== id; }));
+      return Promise.resolve({ ok: true });
+    },
+    getFonteFiliais: function () { return Promise.resolve(lsGet("tp_filiais_fonte", null)); },
+    setFonteFiliais: function (d) { lsSet("tp_filiais_fonte", d); return Promise.resolve({ ok: true }); },
+
     // ---- Rotina diária (modo local) ----
     getRotina: function (dia) {
       var all = lsGet("tp_rotina", {});
@@ -365,6 +383,64 @@
           return { ok: true, url: pub.data.publicUrl };
         });
     },
+    // ---- Painel regional / filiais (Supabase) ----
+    // O RLS de public.filiais só libera admin/superadmin — o consultor
+    // recebe lista vazia mesmo que force a URL da página.
+    listFiliais: function () {
+      return sb.from("filiais").select("*").order("ordem", { ascending: true })
+        .then(function (res) { return res.error ? [] : (res.data || []); });
+    },
+    saveFilial: function (f) {
+      var row = {
+        nome: f.nome, cidade: f.cidade || "", uf: f.uf || "", ordem: f.ordem || 0,
+        veiculos: f.veiculos, meta_veiculos: f.meta_veiculos, receita: f.receita, meta_receita: f.meta_receita,
+        crescimento: f.crescimento, contatos: f.contatos, propostas: f.propostas, vendas: f.vendas,
+        cancelamentos: f.cancelamentos, inadimplencia: f.inadimplencia,
+        vendedores_ativos: f.vendedores_ativos, vendedores_meta: f.vendedores_meta,
+        entrevistas: f.entrevistas, contratacoes: f.contratacoes, retencao: f.retencao,
+        trilha_pct: f.trilha_pct, certificados_pct: f.certificados_pct, premiacoes: f.premiacoes,
+        meta_individual_pct: f.meta_individual_pct, destaque_nome: f.destaque_nome || "",
+        destaque_vendas_semana: f.destaque_vendas_semana, destaque_meta_pct: f.destaque_meta_pct,
+        atualizado_em: new Date().toISOString()
+      };
+      if (f.id) {
+        return sb.from("filiais").update(row).eq("id", f.id).select().single()
+          .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true, filial: res.data }; });
+      }
+      return sb.from("filiais").insert(row).select().single()
+        .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true, filial: res.data }; });
+    },
+    // Importação da planilha: grava tudo de uma vez (casando pelo nome da filial)
+    saveFiliais: function (lista) {
+      var rows = (lista || []).map(function (f, i) {
+        var r = {}; for (var k in f) if (f.hasOwnProperty(k) && k !== "id") r[k] = f[k];
+        r.ordem = f.ordem || i; r.atualizado_em = new Date().toISOString();
+        return r;
+      });
+      if (!rows.length) return Promise.resolve({ ok: true });
+      return sb.from("filiais").upsert(rows, { onConflict: "tenant_id,nome" })
+        .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+    },
+    deleteFilial: function (id) {
+      return sb.from("filiais").delete().eq("id", id)
+        .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+    },
+    getFonteFiliais: function () {
+      return sb.from("filiais_fontes").select("*").order("criado_em", { ascending: false }).limit(1)
+        .then(function (res) { return (res.error || !res.data || !res.data.length) ? null : res.data[0]; });
+    },
+    setFonteFiliais: function (d) {
+      return sb.from("filiais_fontes").select("id").limit(1).then(function (r) {
+        var row = { nome: d.nome || "Planilha de filiais", url: d.url, ultima_sync: d.ultima_sync || null, linhas: d.linhas || 0 };
+        if (r.data && r.data.length) {
+          return sb.from("filiais_fontes").update(row).eq("id", r.data[0].id)
+            .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+        }
+        return sb.from("filiais_fontes").insert(row)
+          .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+      });
+    },
+
     // ---- Rotina diária (Supabase) ----
     // RLS garante: consultor enxerga só a própria; admin enxerga a do tenant.
     getRotina: function (dia) {
@@ -612,6 +688,12 @@
     updatePassword: function (nova) { return impl.updatePassword(nova); },
     updateEmail: function (novo) { return impl.updateEmail(novo); },
     uploadFile: function (file) { return impl.uploadFile(file); },
+    listFiliais: function () { return impl.listFiliais(); },
+    saveFilial: function (f) { return impl.saveFilial(f); },
+    saveFiliais: function (l) { return impl.saveFiliais(l); },
+    deleteFilial: function (id) { return impl.deleteFilial(id); },
+    getFonteFiliais: function () { return impl.getFonteFiliais(); },
+    setFonteFiliais: function (d) { return impl.setFonteFiliais(d); },
     getRotina: function (dia) { return impl.getRotina(dia); },
     setRotinaTarefa: function (dia, id, feito) { return impl.setRotinaTarefa(dia, id, feito); },
     listRotinaEquipe: function (dia) { return impl.listRotinaEquipe(dia); },
