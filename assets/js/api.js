@@ -138,6 +138,12 @@
     listHistorico: function () { return Promise.resolve(lsGet("tp_filiais_hist", [])); },
     saveHistorico: function (l) { lsSet("tp_filiais_hist", l || []); return Promise.resolve({ ok: true }); },
 
+    // ---- Financeiro / livro caixa (modo local) ----
+    listLancamentos: function () { return Promise.resolve(lsGet("tp_lancamentos", [])); },
+    saveLancamentos: function (l) { lsSet("tp_lancamentos", l || []); return Promise.resolve({ ok: true }); },
+    getFonteFinanceiro: function () { return Promise.resolve(lsGet("tp_financeiro_fonte", null)); },
+    setFonteFinanceiro: function (d) { lsSet("tp_financeiro_fonte", d); return Promise.resolve({ ok: true }); },
+
     // ---- Rotina diária (modo local) ----
     getRotina: function (dia) {
       var all = lsGet("tp_rotina", {});
@@ -486,6 +492,47 @@
       });
     },
 
+    // ---- Financeiro / livro caixa (Supabase) ----
+    // RLS: tabelas só de administrador, igual às filiais.
+    listLancamentos: function () {
+      return sb.from("financeiro_lancamentos").select("*").order("data", { ascending: false })
+        .then(function (res) { return res.error ? [] : (res.data || []); });
+    },
+    // A importação troca o período inteiro: apaga o que havia e regrava, para
+    // não duplicar quando a mesma planilha é colada duas vezes.
+    saveLancamentos: function (lista) {
+      var rows = (lista || []).map(function (x) {
+        return {
+          data: x.data || null, descricao: x.descricao || "", tipo: x.tipo || "despesa",
+          valor: Number(x.valor) || 0, categoria: x.categoria || "", subcategoria: x.subcategoria || "",
+          responsavel: x.responsavel || "", centro_custo: x.centro_custo || "",
+          contraparte: x.contraparte || "", status: x.status || "", pago_em: x.pago_em || null,
+          observacoes: x.observacoes || ""
+        };
+      });
+      return sb.from("financeiro_lancamentos").delete().not("id", "is", null).then(function (del) {
+        if (del.error) return { ok: false, error: traduzErro(del.error.message) };
+        if (!rows.length) return { ok: true };
+        return sb.from("financeiro_lancamentos").insert(rows)
+          .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+      });
+    },
+    getFonteFinanceiro: function () {
+      return sb.from("financeiro_fontes").select("*").order("criado_em", { ascending: false }).limit(1)
+        .then(function (res) { return (res.error || !res.data || !res.data.length) ? null : res.data[0]; });
+    },
+    setFonteFinanceiro: function (d) {
+      return sb.from("financeiro_fontes").select("id").limit(1).then(function (r) {
+        var row = { nome: d.nome || "Livro caixa", url: d.url || "", ultima_sync: d.ultima_sync || null, linhas: d.linhas || 0 };
+        if (r.data && r.data.length) {
+          return sb.from("financeiro_fontes").update(row).eq("id", r.data[0].id)
+            .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+        }
+        return sb.from("financeiro_fontes").insert(row)
+          .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+      });
+    },
+
     // ---- Rotina diária (Supabase) ----
     // RLS garante: consultor enxerga só a própria; admin enxerga a do tenant.
     getRotina: function (dia) {
@@ -742,6 +789,11 @@
     listHistorico: function () { return impl.listHistorico(); },
     saveHistorico: function (l) { return impl.saveHistorico(l); },
     setFonteFiliais: function (d) { return impl.setFonteFiliais(d); },
+
+    listLancamentos: function () { return impl.listLancamentos(); },
+    saveLancamentos: function (l) { return impl.saveLancamentos(l); },
+    getFonteFinanceiro: function () { return impl.getFonteFinanceiro(); },
+    setFonteFinanceiro: function (d) { return impl.setFonteFinanceiro(d); },
     getRotina: function (dia) { return impl.getRotina(dia); },
     setRotinaTarefa: function (dia, id, feito) { return impl.setRotinaTarefa(dia, id, feito); },
     listRotinaEquipe: function (dia) { return impl.listRotinaEquipe(dia); },

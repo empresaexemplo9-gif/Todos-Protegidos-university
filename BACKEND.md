@@ -64,6 +64,12 @@ Nada no front-end precisa ser reescrito para ativar — basta configurar.
 16. **Pré-treinamento "Primeiros Passos"** — rode [`supabase/primeiros-passos.sql`](supabase/primeiros-passos.sql).
     - Cria os módulos **I a VI** (algarismos romanos) **acima** dos módulos aprofundados: boas-vindas/mercado, produto, ferramentas (**SGA, Power CRM, Visto** passo a passo), técnicas de vendas, abordagem externa e vendas pelo WhatsApp. Idempotente.
 17. **Operação / CRM (Power CRM)** — veja [`POWERCRM.md`](POWERCRM.md): rode `supabase/crm.sql`, publique a função `powercrm-webhook` e configure o webhook.
+18. **Rotina do dia** — rode [`supabase/rotina.sql`](supabase/rotina.sql).
+    - Cria a tabela `rotina`. RLS: o consultor enxerga só a própria rotina; o administrador enxerga a da equipe inteira.
+19. **Painel regional (filiais)** — rode [`supabase/regional.sql`](supabase/regional.sql).
+    - Cria `filiais`, `filiais_fontes` e `filiais_historico`, que alimentam a home do administrador. **RLS só de admin.**
+20. **Financeiro (livro caixa)** — rode [`supabase/financeiro.sql`](supabase/financeiro.sql).
+    - Cria `financeiro_lancamentos` e `financeiro_fontes`. **RLS só de admin** — consultor não lê nem escreve.
 
 ### 3. Pegar as chaves de API
 1. **Project Settings → API**.
