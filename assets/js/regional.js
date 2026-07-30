@@ -22,8 +22,8 @@
     { key: "nome", rot: "Filial", alias: ["filial", "nome", "unidade", "cooperativa"], txt: true },
     { key: "cidade", rot: "Cidade", alias: ["cidade"], txt: true },
     { key: "uf", rot: "UF", alias: ["uf", "estado"], txt: true },
-    { key: "veiculos", rot: "Veículos protegidos", alias: ["veiculos", "veículos", "veiculos protegidos", "qias"] },
-    { key: "meta_veiculos", rot: "Meta de veículos", alias: ["meta veiculos", "meta de veículos", "meta_veiculos", "projecao", "projeçao", "projeção"] },
+    { key: "veiculos", rot: "QIAS", alias: ["qias", "veiculos", "veículos", "veiculos protegidos"] },
+    { key: "meta_veiculos", rot: "Meta de QIAS", alias: ["meta qias", "meta de qias", "meta veiculos", "meta de veículos", "meta_veiculos", "projecao", "projeçao", "projeção"] },
     { key: "receita", rot: "Receita do mês (R$)", alias: ["receita", "receita do mes", "receita do mês", "valor rec atual", "valor recebido", "valor rec"] },
     { key: "meta_receita", rot: "Meta de receita (R$)", alias: ["meta receita", "meta de receita", "meta_receita"] },
     { key: "crescimento", rot: "Crescimento (%)", alias: ["crescimento", "crescimento %"] },
@@ -261,7 +261,7 @@
     if (aba === "geral") {
       h += '<div class="rg-kpis">' +
         kpi("Receita do mês", brl(t.receita), pct(safeDiv(t.receita, t.meta_receita) * 100) + " da meta de " + brl(t.meta_receita), t.receita >= t.meta_receita ? GREEN : NAVY) +
-        kpi("Veículos protegidos", num(t.veiculos).toLocaleString("pt-BR"), "meta: " + num(t.meta_veiculos).toLocaleString("pt-BR")) +
+        kpi("QIAS", num(t.veiculos).toLocaleString("pt-BR"), "meta: " + num(t.meta_veiculos).toLocaleString("pt-BR")) +
         kpi("Crescimento médio", (t.m_crescimento >= 0 ? "+" : "") + t.m_crescimento.toFixed(1).replace(".", ",") + "%", "vs. mês anterior", t.m_crescimento >= 0 ? GREEN : RED) +
         kpi("Filiais na meta", t.naMeta + " / " + t.unidades, "acima de 100% da receita") +
         '</div>';
@@ -341,7 +341,7 @@
         }).join("") + '</div></div>';
       var COLS_ORD = [
         { rot: "Filial", key: "nome", txt: true }, { rot: "UF", key: "uf", txt: true },
-        { rot: "Veículos", key: "veiculos" }, { rot: "% meta veículos", key: "veiculosPct" },
+        { rot: "QIAS", key: "veiculos" }, { rot: "% meta QIAS", key: "veiculosPct" },
         { rot: "Receita", key: "receita" }, { rot: "% meta receita", key: "receitaPct" },
         { rot: "Crescimento", key: "crescimento" }
       ];
@@ -351,9 +351,9 @@
         var cmp = col.txt ? String(va || "").localeCompare(String(vb || ""), "pt-BR") : (num(va) - num(vb));
         return ordemDir === "desc" ? -cmp : cmp;
       });
-      h += '<div class="rg-card"><h3>Veículos protegidos vs. meta por filial</h3>' +
-        barras(src, [{ key: "veiculos", rot: "Veículos protegidos", cor: NAVY }, { key: "meta_veiculos", rot: "Meta", cor: "#c7cbea" }],
-               { fmt: "int", titulo: "Veículos protegidos vs. meta" }) + '</div>';
+      h += '<div class="rg-card"><h3>QIAS vs. meta por filial</h3>' +
+        barras(src, [{ key: "veiculos", rot: "QIAS", cor: NAVY }, { key: "meta_veiculos", rot: "Meta", cor: "#c7cbea" }],
+               { fmt: "int", titulo: "QIAS vs. meta" }) + '</div>';
       h += tabelaOrd("Detalhamento por filial", COLS_ORD,
         ordenado.map(function (u) {
           return ["<b>" + esc(u.nome) + "</b>", esc(u.uf), num(u.veiculos).toLocaleString("pt-BR"),
@@ -375,7 +375,7 @@
              '<strong>' + esc(u.nome) + '</strong><span>' + esc(u.uf) + ' · meta de receita</span></div>' +
              '<div class="rg-kpis rg-kpis-3">' +
                kpi("Receita do mês", brl(u.receita), "meta " + brl(u.meta_receita), u.receitaPct >= 100 ? GREEN : NAVY) +
-               kpi("Veículos protegidos", num(u.veiculos).toLocaleString("pt-BR"), "meta " + num(u.meta_veiculos).toLocaleString("pt-BR")) +
+               kpi("QIAS", num(u.veiculos).toLocaleString("pt-BR"), "meta " + num(u.meta_veiculos).toLocaleString("pt-BR")) +
                kpi("Crescimento", (num(u.crescimento) >= 0 ? "+" : "") + num(u.crescimento).toFixed(1).replace(".", ",") + "%", "", num(u.crescimento) >= 0 ? GREEN : RED) +
                kpi("Vendedores ativos", num(u.vendedores_ativos) + " / " + num(u.vendedores_meta), pct1(u.ocupacaoPct) + " do quadro") +
                kpi("Conversão contato-venda", pct1(u.convContatoVenda), num(u.vendas) + " vendas / " + num(u.contatos) + " contatos") +
