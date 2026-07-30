@@ -11,7 +11,9 @@
   "use strict";
 
   var GRID = "#e3e8f2";
-  var CW = 820, CH = 330, M = { t: 22, r: 16, b: 54, l: 68 };
+  // A caixa tem a mesma largura do teto de .rg-svg no CSS: assim o desenho
+  // nunca é esticado para além de 1:1 e o texto sai no tamanho real.
+  var CW = 1160, CH = 400, M = { t: 26, r: 20, b: 52, l: 78 };
   var PW = CW - M.l - M.r, PH = CH - M.t - M.b;
 
   function esc(s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
@@ -30,13 +32,20 @@
     pct: function (v) { return Math.round(num(v)) + "%"; }
   };
 
-  // Escala "bonita": topo arredondado para 1/2/5 x 10^n
+  // Escala "bonita": entre os passos redondos possíveis, fica com o menor topo
+  // que ainda dê de 3 a 6 faixas. A versão anterior olhava só max/4 e por isso
+  // sobrava espaço vazio (1097 virava topo 1500 — 27% do gráfico em branco).
   function escala(max) {
     if (max <= 0) return { topo: 1, passo: 0.25 };
-    var bruto = max / 4, exp = Math.pow(10, Math.floor(Math.log(bruto) / Math.LN10));
-    var n = bruto / exp;
-    var passo = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * exp;
-    return { topo: Math.ceil(max / passo) * passo, passo: passo };
+    var exp = Math.pow(10, Math.floor(Math.log(max) / Math.LN10) - 1);
+    var melhor = null;
+    [1, 2, 2.5, 5, 10, 20, 25, 50, 100].forEach(function (m) {
+      var passo = m * exp, faixas = Math.ceil(max / passo);
+      if (faixas < 3 || faixas > 6) return;
+      var topo = faixas * passo;
+      if (!melhor || topo < melhor.topo) melhor = { topo: topo, passo: passo };
+    });
+    return melhor || { topo: max, passo: max / 4 };
   }
   function eixoY(topo, passo, fmt) {
     var g = "";
@@ -47,13 +56,21 @@
     }
     return g;
   }
+  // Inclinar rótulo é feio e come altura: só faz quando o nome não cabe mesmo.
+  function precisaGirar(dados) {
+    var passo = PW / (dados.length || 1);
+    var maior = dados.reduce(function (m, d) {
+      return Math.max(m, String(d.rot || d.cidade || d.nome || "").length);
+    }, 0);
+    return maior * 7.3 > passo - 12;
+  }
   function rotuloX(dados, girar) {
     var passo = PW / dados.length;
     return dados.map(function (d, i) {
       var x = M.l + passo * i + passo / 2, t = String(d.rot || d.cidade || d.nome || "");
-      if (t.length > 16) t = t.slice(0, 15) + "…";
+      if (t.length > 18) t = t.slice(0, 17) + "…";
       return girar
-        ? '<text x="' + x + '" y="' + (M.t + PH + 16) + '" text-anchor="end" class="rg-xlbl" transform="rotate(-28 ' + x + ' ' + (M.t + PH + 16) + ')">' + esc(t) + '</text>'
+        ? '<text x="' + x + '" y="' + (M.t + PH + 15) + '" text-anchor="end" class="rg-xlbl" transform="rotate(-22 ' + x + ' ' + (M.t + PH + 15) + ')">' + esc(t) + '</text>'
         : '<text x="' + x + '" y="' + (M.t + PH + 20) + '" text-anchor="middle" class="rg-xlbl">' + esc(t) + '</text>';
     }).join("");
   }
@@ -72,8 +89,8 @@
     if (opt.max) max = Math.max(max, opt.max);
     var e = escala(max || 1), topo = e.topo;
     var passo = PW / (dados.length || 1);
-    var larg = Math.min(46, (passo * 0.68) / series.length);
-    var girar = dados.length > 5 || dados.some(function (d) { return String(d.cidade || d.nome || "").length > 12; });
+    var larg = Math.min(54, (passo * 0.74) / series.length);
+    var girar = precisaGirar(dados);
 
     var svg = '<svg class="rg-svg" viewBox="0 0 ' + CW + ' ' + CH + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' + esc(opt.titulo || "gráfico de barras") + '">';
     svg += eixoY(topo, e.passo, fmt);
@@ -86,7 +103,7 @@
         svg += '<rect x="' + x + '" y="' + y + '" width="' + (larg - 5) + '" height="' + Math.max(1, h) + '" rx="4" fill="' + s.cor + '">' +
                '<title>' + esc(d.rot || d.cidade || d.nome) + " · " + esc(s.rot) + ": " + esc(fmtRot(v)) + '</title></rect>';
         // Só rotula quando há espaço; acima disso o valor fica no eixo e na dica
-        if (larg >= 26 && dados.length <= 5) {
+        if (larg >= 30 && dados.length <= 8) {
           svg += '<text x="' + (x + (larg - 5) / 2) + '" y="' + (y - 6) + '" text-anchor="middle" class="rg-vlbl">' + esc(fmtRot(v)) + '</text>';
         }
       });
@@ -102,14 +119,29 @@
     var max = 0;
     dados.forEach(function (d) { series.forEach(function (s) { max = Math.max(max, num(d[s.key])); }); });
     var e = escala(max || 1), topo = e.topo;
-    var passo = dados.length > 1 ? PW / (dados.length - 1) : 0;
-    var px = function (i) { return dados.length > 1 ? M.l + passo * i : M.l + PW / 2; };
+    // Recuo nas pontas: sem ele o primeiro ponto cola no eixo e o rótulo do
+    // último passa da borda do cartão.
+    var recuo = 26;
+    var util = PW - recuo * 2;
+    var passo = dados.length > 1 ? util / (dados.length - 1) : 0;
+    var px = function (i) { return dados.length > 1 ? M.l + recuo + passo * i : M.l + PW / 2; };
     var py = function (v) { return M.t + PH - (num(v) / topo) * PH; };
 
     var svg = '<svg class="rg-svg" viewBox="0 0 ' + CW + ' ' + CH + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' + esc(opt.titulo || "evolução") + '">';
     svg += eixoY(topo, e.passo, fmt);
     series.forEach(function (s) {
       var pts = dados.map(function (d, i) { return px(i) + "," + py(d[s.key]); }).join(" ");
+      // Área sob a linha só quando há uma série; com várias, os preenchimentos
+      // se sobrepõem e a leitura piora.
+      if (series.length === 1 && dados.length > 1) {
+        var base = M.t + PH;
+        var gid = "ga" + Math.random().toString(36).slice(2, 8);
+        svg += '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">' +
+               '<stop offset="0%" stop-color="' + s.cor + '" stop-opacity="0.20"/>' +
+               '<stop offset="100%" stop-color="' + s.cor + '" stop-opacity="0"/>' +
+               '</linearGradient></defs>';
+        svg += '<polygon points="' + px(0) + ',' + base + ' ' + pts + ' ' + px(dados.length - 1) + ',' + base + '" fill="url(#' + gid + ')"/>';
+      }
       svg += '<polyline points="' + pts + '" fill="none" stroke="' + s.cor + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
       dados.forEach(function (d, i) {
         svg += '<circle cx="' + px(i) + '" cy="' + py(d[s.key]) + '" r="4" fill="#fff" stroke="' + s.cor + '" stroke-width="2.5">' +
@@ -127,10 +159,10 @@
     opt = opt || {};
     var fmt = FMT[opt.fmt || "moeda"];
     var n = itens.length || 1;
-    var W = 820, alt = 30, pad = 10, LW = 190;
+    var W = 1160, alt = 32, pad = 12, LW = 230;
     var H = pad * 2 + n * alt;
     var max = itens.reduce(function (m, it) { return Math.max(m, num(it.valor)); }, 0) || 1;
-    var maxW = W - LW - 130;
+    var maxW = W - LW - 170;
 
     var svg = '<svg class="rg-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' + esc(opt.titulo || "categorias") + '">';
     itens.forEach(function (it, i) {

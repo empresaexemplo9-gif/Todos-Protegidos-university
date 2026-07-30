@@ -19,14 +19,16 @@
 .rg-tab.on { color: var(--tp-blue-700); border-bottom-color: var(--tp-blue-700); }
 
 /* Cartões e KPIs */
-.rg-card { background: #fff; border: 1px solid var(--tp-line); border-radius: var(--tp-radius-lg); box-shadow: var(--tp-shadow-sm); padding: 20px; margin-bottom: 18px; }
-.rg-card h3 { margin: 0 0 14px; font-family: var(--tp-font-sans); font-size: var(--tp-fs-base); color: var(--tp-ink); }
+.rg-card { background: #fff; border: 1px solid var(--tp-line); border-radius: var(--tp-radius-lg); box-shadow: var(--tp-shadow-sm); padding: 22px 24px; margin-bottom: 20px; }
+.rg-card h3 { margin: 0 0 18px; padding-bottom: 12px; border-bottom: 1px solid var(--tp-line);
+  font-family: var(--tp-font-sans); font-size: var(--tp-fs-base); font-weight: var(--tp-fw-bold);
+  color: var(--tp-ink); letter-spacing: -0.01em; }
 .rg-p { color: var(--tp-slate); font-size: var(--tp-fs-sm); line-height: 1.55; margin: 0 0 14px; }
 
 .rg-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 18px; }
 .rg-kpis-3 { grid-template-columns: repeat(3, 1fr); margin-bottom: 0; }
-.rg-kpi { background: #fff; border: 1px solid var(--tp-line); border-radius: var(--tp-radius-lg); box-shadow: var(--tp-shadow-sm); padding: 16px 18px; }
-.rg-kpi-l { font-size: var(--tp-fs-xs); color: var(--tp-muted); font-weight: 500; }
+.rg-kpi { background: #fff; border: 1px solid var(--tp-line); border-radius: var(--tp-radius-lg); box-shadow: var(--tp-shadow-sm); padding: 18px 20px; }
+.rg-kpi-l { font-size: 11px; color: var(--tp-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
 .rg-kpi-v { font-family: var(--tp-font-sans); font-weight: var(--tp-fw-bold); font-size: var(--tp-fs-xl); color: var(--tp-blue-700); margin-top: 6px; line-height: 1.2; word-break: break-word; }
 .rg-kpi-s { font-size: var(--tp-fs-xs); color: var(--tp-muted); margin-top: 4px; }
 
@@ -44,11 +46,11 @@
 
 /* Gráficos (SVG com eixos) */
 .rg-chart { width: 100%; }
-.rg-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.rg-svg { width: 100%; max-width: 1160px; height: auto; display: block; margin: 0 auto; overflow: visible; }
 .rg-svg-funil { max-width: 620px; margin: 0 auto; }
 /* Textos dentro do SVG */
-.rg-tick { font-family: var(--tp-font-body, Inter), sans-serif; font-size: 12px; fill: var(--tp-muted); }
-.rg-xlbl { font-family: var(--tp-font-body, Inter), sans-serif; font-size: 12.5px; fill: var(--tp-slate); }
+.rg-tick { font-family: var(--tp-font-body, Inter), sans-serif; font-size: 11.5px; fill: var(--tp-muted); }
+.rg-xlbl { font-family: var(--tp-font-body, Inter), sans-serif; font-size: 12px; font-weight: 500; fill: var(--tp-slate); }
 .rg-vlbl { font-family: var(--tp-font-sans); font-size: 12px; font-weight: 700; fill: var(--tp-ink); }
 .rg-flbl { font-family: var(--tp-font-sans); font-size: 15px; font-weight: 700; fill: #fff; }
 .rg-fname { font-family: var(--tp-font-sans); font-size: 13px; font-weight: 600; fill: var(--tp-ink); }
@@ -74,9 +76,9 @@
 .rg-conv-l b { width: 52px; text-align: right; color: var(--tp-muted); font-weight: 600; }
 
 /* Ranking com escudos */
-.rg-escudos { display: flex; flex-wrap: wrap; gap: 20px; }
-.rg-escudo { position: relative; width: 96px; display: flex; flex-direction: column; align-items: center; text-align: center; }
-.rg-coroa { position: absolute; top: -6px; right: 12px; font-size: 15px; }
+.rg-escudos { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 18px 12px; }
+.rg-escudo { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.rg-coroa { position: absolute; top: -5px; left: 50%; margin-left: 13px; font-size: 15px; }
 .rg-escudo-n { font-size: var(--tp-fs-xs); color: var(--tp-slate); margin-top: 6px; line-height: 1.25; }
 .rg-escudo-uf { font-size: 10px; color: var(--tp-muted-2); }
 
@@ -113,7 +115,6 @@
 }
 @media (max-width: 560px) {
   .rg-kpis, .rg-kpis-3 { grid-template-columns: 1fr; }
-  .rg-svg { height: 160px; }
   .rg-x span { font-size: 9px; }
   .rg-conv-l span { width: 92px; }
 }
