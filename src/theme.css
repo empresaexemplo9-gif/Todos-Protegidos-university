@@ -1,0 +1,209 @@
+/* ================================================================
+   Estética do site sonatecnologia.com.br aplicada ao app interno.
+   Sobrescreve tokens do globals.css (fontes + acentos) e define a
+   tela de entrada/login. Carregado DEPOIS de globals.css.
+   ================================================================ */
+
+:root {
+  --font-geist-sans: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-geist-mono: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  --sona-green: #5b8e7d; /* verde do CTA do site */
+  --sona-teal: #0ebd9e; /* teal de destaque do site */
+  --sona-site-ink: #282f37; /* títulos do site */
+}
+
+/* ===== Tela de entrada / login (clima do hero escuro do site) ===== */
+.sona-auth {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: 24px;
+  font-family: var(--font-geist-sans);
+}
+.sona-auth__bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(125% 100% at 50% -10%, #34413c 0%, #232a2e 46%, #161b1e 100%);
+}
+.sona-auth__bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(55% 45% at 50% 42%, rgba(14, 189, 158, 0.13), transparent 70%);
+}
+.sona-auth__panel {
+  position: relative;
+  width: min(440px, 100%);
+  text-align: center;
+  color: #fff;
+}
+.sona-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+}
+.sona-logo span {
+  font-family: "Syne", var(--font-geist-sans);
+  font-weight: 800;
+  font-size: 46px;
+  letter-spacing: 0.05em;
+  color: #fff;
+  line-height: 1;
+}
+.sona-logo__ring {
+  width: 33px;
+  height: 33px;
+  border-radius: 50%;
+  border: 6px solid #fff;
+  display: block;
+}
+.sona-auth__tagline {
+  margin: 16px 0 26px;
+  color: #cfe6dd;
+  font-size: 14px;
+  font-weight: 300;
+}
+.sona-auth__card {
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: 20px;
+  padding: 26px 24px;
+  text-align: left;
+  color: #22282b;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  display: grid;
+  gap: 12px;
+}
+.sona-auth__eyebrow {
+  color: var(--sona-green);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  font-weight: 800;
+}
+.sona-auth__card h1 {
+  margin: 2px 0 0;
+  font-size: 20px;
+  color: var(--sona-site-ink);
+}
+.sona-auth__lead {
+  margin: 0 0 4px;
+  color: #6f7772;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.sona-auth__card label {
+  display: grid;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #5e6661;
+  letter-spacing: 0.03em;
+}
+.sona-auth__card input {
+  border: 1px solid #dde3e0;
+  border-radius: 11px;
+  padding: 12px 13px;
+  font-size: 13px;
+  background: #fafbfa;
+  outline: none;
+  transition: 0.2s;
+}
+.sona-auth__card input:focus {
+  border-color: var(--sona-green);
+  box-shadow: 0 0 0 3px rgba(91, 142, 125, 0.16);
+  background: #fff;
+}
+.sona-auth__error {
+  margin: 0;
+  color: #b3402f;
+  font-size: 12px;
+  background: #fdecea;
+  border-radius: 9px;
+  padding: 8px 10px;
+}
+.sona-auth__card button {
+  margin-top: 6px;
+  border: 0;
+  border-radius: 999px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #5b8e7d, #3f7c6b);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 14px 30px rgba(46, 110, 90, 0.35);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.sona-auth__card button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.sona-auth__card button:disabled {
+  opacity: 0.6;
+}
+.sona-auth__arrow {
+  font-size: 16px;
+}
+.sona-auth__foot {
+  margin-top: 20px;
+  color: #9fb3ac;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+/* ===== Carregando sessão ===== */
+.auth-boot {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #161b1e;
+}
+.auth-boot__spin {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--sona-teal);
+  animation: sona-spin 1s linear infinite;
+}
+@keyframes sona-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== Selo de conta / sair (temporário até a tela de Acessos) ===== */
+.sona-account {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--line, #e5e8e5);
+  border-radius: 999px;
+  padding: 7px 8px 7px 14px;
+  box-shadow: 0 10px 30px rgba(20, 30, 24, 0.14);
+  font-family: var(--font-geist-sans);
+}
+.sona-account small {
+  font-size: 11px;
+  color: #3a413d;
+}
+.sona-account button {
+  border: 0;
+  background: var(--sona-site-ink);
+  color: #fff;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}

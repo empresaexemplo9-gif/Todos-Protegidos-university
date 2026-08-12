@@ -40,3 +40,6 @@ next-env.d.ts
 /.sites-runtime/
 /outputs/
 /work/
+
+# Dados locais e segredos do sistema interno (nao versionar)
+/data/
