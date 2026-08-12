@@ -27,6 +27,10 @@ export default function AccessManager({
     password: "",
     role: "member",
   });
+  // Sem diálogos nativos (prompt/confirm) — tudo acontece dentro da tela.
+  const [pwEditId, setPwEditId] = useState<string | null>(null);
+  const [pwValue, setPwValue] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const flash = (message: string) => {
     setNotice(message);
@@ -90,20 +94,34 @@ export default function AccessManager({
       await post({ action: "update", id: u.id, active: !u.active });
       await load();
     });
-  const removeUser = (u: ManagedUser) =>
+  const savePassword = (u: ManagedUser) =>
     guard(async () => {
-      if (!window.confirm(`Excluir o acesso de ${u.name}?`)) return;
+      if (pwValue.trim().length < 6) {
+        setError("A nova senha precisa de ao menos 6 caracteres.");
+        return;
+      }
+      await post({ action: "update", id: u.id, password: pwValue });
+      setPwEditId(null);
+      setPwValue("");
+      flash("Senha atualizada");
+    });
+  const doDelete = (u: ManagedUser) =>
+    guard(async () => {
       await post({ action: "delete", id: u.id });
+      setConfirmDeleteId(null);
       await load();
       flash("Acesso excluído");
     });
-  const resetPassword = (u: ManagedUser) =>
-    guard(async () => {
-      const pw = window.prompt(`Nova senha para ${u.name} (mínimo 6 caracteres):`);
-      if (!pw) return;
-      await post({ action: "update", id: u.id, password: pw });
-      flash("Senha atualizada");
-    });
+
+  const startPassword = (u: ManagedUser) => {
+    setPwEditId(u.id);
+    setPwValue("");
+    setConfirmDeleteId(null);
+  };
+  const startDelete = (u: ManagedUser) => {
+    setConfirmDeleteId(u.id);
+    setPwEditId(null);
+  };
 
   return (
     <div className="catalog-dialog-backdrop" onMouseDown={(e) => { if (e.currentTarget === e.target) onClose(); }}>
@@ -145,12 +163,34 @@ export default function AccessManager({
                     </small>
                   </div>
                   <div className="access-actions">
-                    <button onClick={() => resetPassword(u)}>Senha</button>
-                    {u.id !== currentUserId && (
-                      <button onClick={() => toggleActive(u)}>{u.active ? "Desativar" : "Ativar"}</button>
-                    )}
-                    {u.id !== currentUserId && (
-                      <button className="access-danger" onClick={() => removeUser(u)}>Excluir</button>
+                    {pwEditId === u.id ? (
+                      <form className="access-pw" onSubmit={(e) => { e.preventDefault(); void savePassword(u); }}>
+                        <input
+                          autoFocus
+                          type="text"
+                          placeholder="Nova senha (mín. 6)"
+                          value={pwValue}
+                          onChange={(e) => setPwValue(e.target.value)}
+                          minLength={6}
+                        />
+                        <button type="submit">Salvar</button>
+                        <button type="button" onClick={() => { setPwEditId(null); setPwValue(""); }}>Cancelar</button>
+                      </form>
+                    ) : confirmDeleteId === u.id ? (
+                      <>
+                        <button className="access-danger" onClick={() => void doDelete(u)}>Confirmar exclusão</button>
+                        <button onClick={() => setConfirmDeleteId(null)}>Cancelar</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => startPassword(u)}>Senha</button>
+                        {u.id !== currentUserId && (
+                          <button onClick={() => void toggleActive(u)}>{u.active ? "Desativar" : "Ativar"}</button>
+                        )}
+                        {u.id !== currentUserId && (
+                          <button className="access-danger" onClick={() => startDelete(u)}>Excluir</button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

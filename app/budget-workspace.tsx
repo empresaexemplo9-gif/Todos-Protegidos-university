@@ -97,6 +97,8 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
   const [editor, setEditor] = useState<Partial<CatalogItem> | null>(null);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState("");
+  const [confirmPrompt, setConfirmPrompt] = useState<{ message: string; resolve: (ok: boolean) => void } | null>(null);
+  const askConfirm = (message: string) => new Promise<boolean>((resolve) => setConfirmPrompt({ message, resolve }));
 
   const showNotice = (message: string) => {
     setNotice(message);
@@ -229,7 +231,8 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
   };
 
   const removeLine = async (line: BudgetLine) => {
-    if (!activeBudget || !window.confirm(`Remover “${line.name}” deste orçamento?`)) return;
+    if (!activeBudget) return;
+    if (!(await askConfirm(`Remover “${line.name}” deste orçamento?`))) return;
     try {
       await post({ action: "deleteBudgetItem", budgetId: activeBudget.id, lineId: line.id });
       setBudgets((current) => current.map((budget) => budget.id === activeBudget.id
@@ -242,7 +245,8 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
   };
 
   const clearBudget = async () => {
-    if (!activeBudget?.items.length || !window.confirm("Limpar todos os itens deste orçamento?")) return;
+    if (!activeBudget?.items.length) return;
+    if (!(await askConfirm("Limpar todos os itens deste orçamento?"))) return;
     try {
       await post({ action: "clearBudget", budgetId: activeBudget.id });
       patchBudgetLocal({ items: [] });
@@ -253,7 +257,7 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
   };
 
   const deleteBudget = async (budget: Budget) => {
-    if (!window.confirm(`Excluir definitivamente o orçamento ${budget.code}?`)) return;
+    if (!(await askConfirm(`Excluir definitivamente o orçamento ${budget.code}?`))) return;
     try {
       await post({ action: "deleteBudget", budgetId: budget.id });
       await loadData(true);
@@ -294,7 +298,7 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
   };
 
   const deleteCatalogItem = async (item: CatalogItem) => {
-    if (!window.confirm(`Excluir “${item.name}” do catálogo? Os orçamentos existentes manterão a linha.`)) return;
+    if (!(await askConfirm(`Excluir “${item.name}” do catálogo? Os orçamentos existentes manterão a linha.`))) return;
     try {
       await post({ action: "deleteCatalogItem", itemId: item.id });
       setCatalogItems((current) => current.filter((entry) => entry.id !== item.id));
@@ -457,6 +461,8 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
         </div></div>
         <div className="catalog-dialog__footer"><button className="btn btn--ghost" onClick={() => setEditor(null)}>Cancelar</button><button className="btn btn--dark" onClick={() => void saveCatalogEditor()} disabled={saving}>{saving ? "Salvando…" : "Salvar no catálogo"}</button></div>
       </section></div>}
+
+      {confirmPrompt && <div className="catalog-dialog-backdrop" onMouseDown={(e) => { if (e.currentTarget === e.target) { confirmPrompt.resolve(false); setConfirmPrompt(null); } }}><section className="confirm-dialog" role="dialog" aria-modal="true"><p>{confirmPrompt.message}</p><div className="confirm-dialog__actions"><button className="btn btn--ghost" onClick={() => { confirmPrompt.resolve(false); setConfirmPrompt(null); }}>Cancelar</button><button className="btn btn--dark" onClick={() => { confirmPrompt.resolve(true); setConfirmPrompt(null); }}>Confirmar</button></div></section></div>}
 
       {notice && <div className="toast"><span>✓</span>{notice}</div>}
     </div>

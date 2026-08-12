@@ -338,3 +338,45 @@
   color: #fff;
   box-shadow: 0 8px 20px rgba(46, 110, 90, 0.22);
 }
+
+/* ===== Troca de senha inline (sem prompt nativo) ===== */
+.access-pw {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.access-pw input {
+  border: 1px solid #dce2de;
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-size: 11px;
+  width: 160px;
+}
+.access-pw input:focus {
+  outline: none;
+  border-color: #5b8e7d;
+  box-shadow: 0 0 0 3px rgba(91, 142, 125, 0.16);
+}
+
+/* ===== Confirmação in-app (sem confirm nativo) ===== */
+.confirm-dialog {
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px 22px 18px;
+  width: min(400px, 92vw);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+  font-family: var(--font-geist-sans);
+}
+.confirm-dialog p {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #22282b;
+}
+.confirm-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
