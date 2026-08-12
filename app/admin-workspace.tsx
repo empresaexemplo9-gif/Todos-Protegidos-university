@@ -31,7 +31,7 @@ export type Proposal = {
 };
 
 export type ScopeTool = { id: string; code: string; label: string; color: string; category: string };
-export type ScopeMarker = { id: number; type: string; label: string; environment: string; description: string; status: "previsto" | "revisar" | "aprovado"; x: number; y: number; size: number; range: number; catalogItemId?: string; catalogName?: string };
+export type ScopeMarker = { id: number; type: string; label: string; environment: string; description: string; status: "previsto" | "revisar" | "aprovado"; x: number; y: number; size: number; range: number; apModel?: string; catalogItemId?: string; catalogName?: string };
 export type PlanAsset = { id: number; name: string; src: string; x: number; y: number; width: number };
 type ScopeCatalogItem = { id: string; name: string; category: string; brand: string; model: string; system: string };
 export type ScopeReport = { project: string; address: string; planImage: string | null; markers: ScopeMarker[]; tools: ScopeTool[]; assets: PlanAsset[]; items: ProposalItem[] };
@@ -91,6 +91,71 @@ const scopeCatalogKeywords: Record<string, string[]> = {
 };
 
 const normalizeText = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+type UbiquitiAP = { id: string; name: string; r24: number; r5: number; r6?: number };
+// Raios de cobertura internos aproximados (metros) por faixa \u2014 refer\u00eancia para posicionamento.
+const ubiquitiAPs: UbiquitiAP[] = [
+  { id: "u6-lite", name: "UniFi U6 Lite", r24: 9, r5: 6 },
+  { id: "u6-plus", name: "UniFi U6+", r24: 10, r5: 7 },
+  { id: "u6-pro", name: "UniFi U6 Pro", r24: 12, r5: 9 },
+  { id: "u6-lr", name: "UniFi U6 Long-Range", r24: 15, r5: 10 },
+  { id: "u6-mesh", name: "UniFi U6 Mesh", r24: 11, r5: 8 },
+  { id: "u6-iw", name: "UniFi U6 In-Wall", r24: 8, r5: 6 },
+  { id: "u6-enterprise", name: "UniFi U6 Enterprise", r24: 12, r5: 9, r6: 8 },
+  { id: "u7-pro", name: "UniFi U7 Pro", r24: 13, r5: 10, r6: 9 },
+  { id: "u7-pro-max", name: "UniFi U7 Pro Max", r24: 14, r5: 11, r6: 10 },
+  { id: "u7-pro-xg", name: "UniFi U7 Pro XG", r24: 13, r5: 10, r6: 9 },
+  { id: "uap-ac-lite", name: "UniFi AC Lite", r24: 9, r5: 6 },
+  { id: "uap-ac-pro", name: "UniFi AC Pro", r24: 12, r5: 8 },
+  { id: "uap-ac-lr", name: "UniFi AC Long-Range", r24: 14, r5: 8 },
+  { id: "uap-ac-mesh", name: "UniFi AC Mesh", r24: 11, r5: 7 },
+  { id: "uap-flexhd", name: "UniFi FlexHD", r24: 10, r5: 8 },
+];
+function modelRadius(id: string, band: "2.4" | "5" | "6") {
+  const m = ubiquitiAPs.find((a) => a.id === id) ?? ubiquitiAPs[2];
+  return band === "2.4" ? m.r24 : band === "6" ? (m.r6 ?? m.r5) : m.r5;
+}
+// Camada de calor: desenha o sinal combinado dos APs (sinal mais forte por ponto) num canvas sobre a planta.
+function WifiHeatLayer({ aps, planWidthMeters }: { aps: ScopeMarker[]; planWidthMeters: number }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const cv = ref.current;
+    const host = cv?.parentElement;
+    if (!cv || !host) return;
+    const draw = () => {
+      const w = host.clientWidth;
+      const h = host.clientHeight;
+      if (!w || !h) return;
+      cv.width = w;
+      cv.height = h;
+      const ctx = cv.getContext("2d");
+      if (!ctx) return;
+      ctx.clearRect(0, 0, w, h);
+      if (!aps.length) return;
+      const metersPerPx = planWidthMeters / w;
+      const step = 7;
+      for (let y = 0; y < h; y += step) {
+        for (let x = 0; x < w; x += step) {
+          let best = 0;
+          for (const ap of aps) {
+            const radius = Math.max(1, ap.range || 10);
+            const distM = Math.hypot(x - (ap.x / 100) * w, y - (ap.y / 100) * h) * metersPerPx;
+            const signal = 1 - distM / radius;
+            if (signal > best) best = signal;
+          }
+          if (best <= 0.06) continue;
+          const color = best > 0.66 ? "46,204,113" : best > 0.42 ? "26,188,156" : best > 0.22 ? "241,196,15" : "230,126,34";
+          ctx.fillStyle = `rgba(${color},0.55)`;
+          ctx.fillRect(x, y, step, step);
+        }
+      }
+    };
+    draw();
+    window.addEventListener("resize", draw);
+    return () => window.removeEventListener("resize", draw);
+  }, [aps, planWidthMeters]);
+  return <canvas ref={ref} className="wifi-heat-canvas" aria-hidden="true" />;
+}
 
 export const plans = {
   SMARTLIFE: {
@@ -912,7 +977,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const [markers, setMarkers] = useState<ScopeMarker[]>([
     { id: 1, type: "light", label: "L01", environment: "Sala", description: "Circuito principal", status: "previsto", x: 28, y: 31, size: 38, range: 18 },
     { id: 2, type: "climate", label: "AR01", environment: "Sala", description: "Evaporadora", status: "aprovado", x: 67, y: 28, size: 38, range: 18 },
-    { id: 3, type: "access-point", label: "AP01", environment: "Circulação", description: "Cobertura Wi-Fi principal", status: "previsto", x: 53, y: 58, size: 38, range: 24 },
+    { id: 3, type: "access-point", label: "AP01", environment: "Circulação", description: "Cobertura Wi-Fi principal", status: "previsto", x: 53, y: 58, size: 38, range: 9, apModel: "u6-pro" },
   ]);
   const [selectedMarker, setSelectedMarker] = useState<number | null>(1);
   const [assets, setAssets] = useState<PlanAsset[]>([]);
@@ -928,10 +993,11 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const [detectedTools, setDetectedTools] = useState<string[]>([]);
   const [legendStatus, setLegendStatus] = useState("Aguardando uma planta para analisar a legenda");
   const [heatmap, setHeatmap] = useState(true);
-  const [heatBand, setHeatBand] = useState<"2.4" | "5">("5");
+  const [heatBand, setHeatBand] = useState<"2.4" | "5" | "6">("5");
   const [analyzing, setAnalyzing] = useState(false);
   const [toast, setToast] = useState("");
   const canvasRef = useRef<HTMLDivElement>(null);
+  const [planWidthMeters, setPlanWidthMeters] = useState(12);
 
   const activeTool = tools.find((tool) => tool.id === selectedTool) ?? tools[0];
   const marker = markers.find((item) => item.id === selectedMarker) ?? null;
@@ -967,6 +1033,11 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     return () => window.clearTimeout(timer);
   }, []);
 
+  // Ao trocar a faixa, recalcula o alcance dos APs que têm modelo Ubiquiti definido.
+  useEffect(() => {
+    setMarkers((current) => current.map((item) => item.type === "access-point" && item.apModel ? { ...item, range: modelRadius(item.apModel, heatBand) } : item));
+  }, [heatBand]);
+
   const updateMarker = (id: number, patch: Partial<ScopeMarker>) => setMarkers((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
   const updateAsset = (id: number, patch: Partial<PlanAsset>) => setAssets((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
 
@@ -974,7 +1045,8 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     const tool = tools.find((entry) => entry.id === toolId) ?? activeTool;
     const id = Math.max(0, ...markers.map((item) => item.id)) + 1;
     const count = markers.filter((item) => item.type === tool.id).length + 1;
-    const next: ScopeMarker = { id, type: tool.id, label: `${tool.code}${String(count).padStart(2, "0")}`, environment: "Novo ambiente", description: tool.label, status: "previsto", x, y, size: 38, range: tool.id === "access-point" ? 24 : 18 };
+    const isAp = tool.id === "access-point";
+    const next: ScopeMarker = { id, type: tool.id, label: `${tool.code}${String(count).padStart(2, "0")}`, environment: "Novo ambiente", description: tool.label, status: "previsto", x, y, size: 38, range: isAp ? modelRadius("u6-pro", heatBand) : 18, ...(isAp ? { apModel: "u6-pro" } : {}) };
     setMarkers((current) => [...current, next]);
     setSelectedMarker(id);
     setSelectedAsset(null);
@@ -1094,7 +1166,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
 
         <div className="plan-card">
           <div className="plan-card__bar">
-            <div><span className="live-dot" /> PLANTA DE MARCAÇÃO</div><div className="plan-bar-actions"><button className={heatmap ? "active" : ""} onClick={() => setHeatmap((value) => !value)}>◉ Mapa de calor</button><select value={heatBand} onChange={(event) => setHeatBand(event.target.value as "2.4" | "5")}><option value="2.4">2,4 GHz</option><option value="5">5 GHz</option></select><label className="plan-upload"><input type="file" accept="image/*" multiple onChange={(e) => e.target.files && void addOverlayImages(e.target.files)} />＋ Imagens</label><label className="plan-upload"><input type="file" accept="image/*,.pdf,application/pdf" onChange={(e) => e.target.files?.[0] && void loadPlan(e.target.files[0])} />{planImage ? "Trocar planta" : "＋ Carregar planta/PDF"}</label></div>
+            <div><span className="live-dot" /> PLANTA DE MARCAÇÃO</div><div className="plan-bar-actions"><button className={heatmap ? "active" : ""} onClick={() => setHeatmap((value) => !value)}>◉ Mapa de calor</button><select value={heatBand} onChange={(event) => setHeatBand(event.target.value as "2.4" | "5" | "6")}><option value="2.4">2,4 GHz</option><option value="5">5 GHz</option><option value="6">6 GHz</option></select><label className="plan-scale">Escala<input type="number" min="1" max="80" value={planWidthMeters} onChange={(event) => setPlanWidthMeters(Math.max(1, Number(event.target.value) || 1))} title="Largura real da planta, em metros" /><span>m</span></label><label className="plan-upload"><input type="file" accept="image/*" multiple onChange={(e) => e.target.files && void addOverlayImages(e.target.files)} />＋ Imagens</label><label className="plan-upload"><input type="file" accept="image/*,.pdf,application/pdf" onChange={(e) => e.target.files?.[0] && void loadPlan(e.target.files[0])} />{planImage ? "Trocar planta" : "＋ Carregar planta/PDF"}</label></div>
           </div>
           <div
             className={`plan-canvas ${planImage ? "plan-canvas--image" : ""}`}
@@ -1108,9 +1180,10 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
             }}
           >
             {planImage ? <img src={planImage} alt="Planta do projeto" draggable={false} /> : <DefaultFloorPlan />}
-            {heatmap && markers.filter((item) => item.type === "access-point").map((item) => <span key={`heat-${item.id}`} className={`wifi-heat wifi-heat--${heatBand.replace(".", "")}`} style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.range * 2}%` }} />)}
+            {heatmap && <WifiHeatLayer aps={markers.filter((item) => item.type === "access-point")} planWidthMeters={planWidthMeters} />}
             {assets.map((item) => <div key={item.id} className={`plan-asset ${selectedAsset === item.id ? "selected" : ""}`} style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%` }} onPointerDown={(event) => { event.stopPropagation(); setDraggingAsset(item.id); setSelectedAsset(item.id); setSelectedMarker(null); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (draggingAsset !== item.id || resizingAsset === item.id || event.buttons === 0) return; const point = pointFromEvent(event.clientX, event.clientY); if (point) updateAsset(item.id, point); }} onPointerUp={(event) => { event.stopPropagation(); setDraggingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }}><img src={item.src} alt={item.name} draggable={false} /><small>{item.name}</small><button onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); setAssets((current) => current.filter((entry) => entry.id !== item.id)); setSelectedAsset(null); }} aria-label={`Excluir ${item.name}`}>×</button><span className="resize-handle" onPointerDown={(event) => { event.stopPropagation(); setResizingAsset(item.id); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (resizingAsset !== item.id || event.buttons === 0) return; const rect = canvasRef.current?.getBoundingClientRect(); if (rect) updateAsset(item.id, { width: Math.max(5, Math.min(55, item.width + event.movementX / rect.width * 100)) }); }} onPointerUp={(event) => { event.stopPropagation(); setResizingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }} /></div>)}
             <div className="canvas-hint">Clique para inserir <b>{activeTool.code}</b></div>
+            {heatmap && markers.some((item) => item.type === "access-point") && <div className="wifi-legend" aria-hidden="true"><strong>Sinal · {heatBand === "2.4" ? "2,4" : heatBand} GHz</strong><span><i style={{ background: "#2ecc71" }} />Excelente</span><span><i style={{ background: "#1abc9c" }} />Bom</span><span><i style={{ background: "#f1c40f" }} />Regular</span><span><i style={{ background: "#e67e22" }} />Fraco</span></div>}
             {markers.map((item) => {
               const tool = tools.find((entry) => entry.id === item.type) ?? tools[0];
               return <button
@@ -1145,7 +1218,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
           <label className="field">Descrição técnica<textarea rows={3} value={marker.description} onChange={(e) => updateMarker(marker.id, { description: e.target.value })} /></label>
           <label className="field">Status<select value={marker.status} onChange={(e) => updateMarker(marker.id, { status: e.target.value as ScopeMarker["status"] })}><option value="previsto">Previsto</option><option value="revisar">Revisar</option><option value="aprovado">Aprovado</option></select></label>
           <label className="field">Tamanho do símbolo<input type="range" min="26" max="90" value={marker.size} onChange={(e) => updateMarker(marker.id, { size: Number(e.target.value) })} /></label>
-          {marker.type === "access-point" && <label className="field">Raio de cobertura<input type="range" min="10" max="42" value={marker.range} onChange={(e) => updateMarker(marker.id, { range: Number(e.target.value) })} /><small>{marker.range} m estimados · {heatBand} GHz</small></label>}
+          {marker.type === "access-point" && <><label className="field">Modelo Ubiquiti<select value={marker.apModel ?? "u6-pro"} onChange={(e) => updateMarker(marker.id, { apModel: e.target.value, range: modelRadius(e.target.value, heatBand) })}>{ubiquitiAPs.map((ap) => <option key={ap.id} value={ap.id}>{ap.name}</option>)}</select></label><label className="field">Alcance no plano (m)<input type="range" min="3" max="30" value={marker.range} onChange={(e) => updateMarker(marker.id, { range: Number(e.target.value) })} /><small>~{marker.range} m em {heatBand === "2.4" ? "2,4" : heatBand} GHz · ajuste fino</small></label></>}
           <div className="catalog-suggestions"><div><strong>ITENS COMPATÍVEIS</strong><small>Filtrados pela legenda “{tools.find((tool) => tool.id === marker.type)?.label}”</small></div>{suggestedCatalog.length ? suggestedCatalog.map((item) => <button key={item.id} className={marker.catalogItemId === item.id ? "selected" : ""} onClick={() => updateMarker(marker.id, { catalogItemId: item.id, catalogName: item.name, description: `${item.name} · ${[item.brand, item.model].filter(Boolean).join(" ")}` })}><span><b>{item.name}</b><small>{item.brand} · {item.model}</small></span><i>{marker.catalogItemId === item.id ? "✓" : "+"}</i></button>) : <p>Nenhum item compatível nesta categoria.</p>}</div>
           <button className="delete-marker" onClick={() => { setMarkers((current) => current.filter((item) => item.id !== marker.id)); setSelectedMarker(null); }}>Excluir ponto</button>
         </> : asset ? <><div className="asset-inspector-preview"><img src={asset.src} alt={asset.name} /></div><label className="field">Nome da imagem<input value={asset.name} onChange={(event) => updateAsset(asset.id, { name: event.target.value })} /></label><label className="field">Tamanho<input type="range" min="5" max="55" value={asset.width} onChange={(event) => updateAsset(asset.id, { width: Number(event.target.value) })} /><small>{asset.width}% da largura da planta</small></label><button className="delete-marker" onClick={() => { setAssets((current) => current.filter((item) => item.id !== asset.id)); setSelectedAsset(null); }}>Excluir imagem</button></> : <div className="inspector-empty"><span>⌖</span><p>Selecione um marcador ou uma imagem para mover, editar, aumentar, diminuir ou excluir.</p></div>}
