@@ -177,33 +177,164 @@
   }
 }
 
-/* ===== Selo de conta / sair (temporário até a tela de Acessos) ===== */
+/* ===== Conta (canto inferior direito) ===== */
 .sona-account {
   position: fixed;
   right: 16px;
   bottom: 16px;
   z-index: 60;
+  font-family: var(--font-geist-sans);
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.sona-account__chip {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   background: #fff;
   border: 1px solid var(--line, #e5e8e5);
   border-radius: 999px;
-  padding: 7px 8px 7px 14px;
+  padding: 6px 15px 6px 6px;
   box-shadow: 0 10px 30px rgba(20, 30, 24, 0.14);
-  font-family: var(--font-geist-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: #2b322e;
+  cursor: pointer;
 }
-.sona-account small {
-  font-size: 11px;
-  color: #3a413d;
-}
-.sona-account button {
-  border: 0;
-  background: var(--sona-site-ink);
+.sona-account__avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #5b8e7d, #3f7c6b);
   color: #fff;
-  border-radius: 999px;
-  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.sona-account__menu {
+  background: #fff;
+  border: 1px solid var(--line, #e5e8e5);
+  border-radius: 14px;
+  box-shadow: 0 18px 44px rgba(20, 30, 24, 0.18);
+  padding: 8px;
+  min-width: 214px;
+  display: grid;
+  gap: 4px;
+}
+.sona-account__who {
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid #eef1ef;
+  margin-bottom: 4px;
+}
+.sona-account__who strong {
+  display: block;
+  font-size: 12px;
+}
+.sona-account__who small {
+  display: block;
+  font-size: 10px;
+  color: #7c847f;
+  margin-top: 2px;
+}
+.sona-account__menu button {
+  text-align: left;
+  border: 0;
+  background: transparent;
+  border-radius: 9px;
+  padding: 9px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2b322e;
+  cursor: pointer;
+}
+.sona-account__menu button:hover {
+  background: #f2f5f3;
+}
+.sona-account__logout {
+  color: #b3402f !important;
+}
+
+/* ===== Gerenciador de acessos ===== */
+.access-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.access-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #e9ece9;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.access-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #eef8f3;
+  color: #34765e;
+  font-weight: 700;
+  font-size: 14px;
+}
+.access-id {
+  flex: 1;
+  min-width: 0;
+}
+.access-id strong {
+  display: block;
+  font-size: 13px;
+}
+.access-id small {
+  display: block;
+  font-size: 11px;
+  color: #7c847f;
+  margin-top: 2px;
+}
+.access-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.access-actions button {
+  border: 1px solid #dce2de;
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
   font-size: 11px;
   font-weight: 600;
+  color: #33403a;
   cursor: pointer;
+}
+.access-actions button:hover {
+  background: #f6f8f7;
+}
+.access-actions .access-danger {
+  color: #b3402f;
+  border-color: #f0d2cc;
+}
+.access-create {
+  border-top: 1px solid #eef1ef;
+  padding-top: 16px;
+}
+.access-create__head {
+  margin-bottom: 10px;
+}
+.access-create__foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+/* ===== Botão principal alinhado ao verde do site ===== */
+.btn--green {
+  background: #5b8e7d;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(46, 110, 90, 0.22);
 }

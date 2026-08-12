@@ -1,0 +1,42 @@
+SONA PROPOSTAS — SISTEMA INTERNO
+================================
+
+COMO ABRIR
+----------
+1. Dê dois cliques em "Iniciar.cmd".
+   (Na primeira vez ele prepara o app; nas próximas abre em segundos.)
+2. O navegador abre sozinho em http://localhost:4317
+3. Entre com:
+      Login: admin
+      Senha: sona01
+
+Para PARAR o sistema: feche a janela preta do servidor.
+
+INSTALAR COMO APLICATIVO (fica com ícone próprio)
+-------------------------------------------------
+No computador (Chrome ou Edge):
+  - Com o sistema aberto, clique no ícone "Instalar" na barra de endereço
+    (ou menu  ⋮  >  Instalar Sona Propostas).
+
+No iPhone / Android (na MESMA rede Wi-Fi do computador):
+  - Na janela preta do servidor aparece o endereço da rede
+    (algo como  http://192.168.0.10:4317 ).
+  - Abra esse endereço no navegador do celular (no iPhone, use o Safari).
+  - iPhone: toque em Compartilhar  >  "Adicionar à Tela de Início".
+  - Android: menu  ⋮  >  "Adicionar à tela inicial" / "Instalar app".
+  Observação: o computador precisa estar ligado e com o sistema aberto.
+
+ACESSOS (quem pode entrar)
+--------------------------
+- O login "admin" é o dono do sistema.
+- No canto inferior direito, clique em "Conta" para criar outros acessos
+  (para a equipe) ou trocar a senha do administrador.
+
+ONDE FICAM OS DADOS
+-------------------
+- Tudo (propostas, orçamentos, catálogo, acessos) é salvo na pasta "data",
+  dentro desta mesma pasta, no seu computador.
+- Para BACKUP, copie a pasta "data" para um lugar seguro.
+- Nada é enviado para a internet.
+
+Sona Automação — Av. Deputado Jamel Cecílio, Metropolitan Mall — Goiânia-GO

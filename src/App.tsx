@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Home from "../app/admin-workspace";
 import ClientProposalPage from "../app/proposta/page";
 import LoginScreen from "./LoginScreen";
+import AccessManager from "./AccessManager";
 
 export type SessionUser = { id: string; name: string; email: string; role: "owner" | "member" };
 type SessionState = { user: SessionUser | null; needsSetup: boolean };
@@ -13,6 +14,8 @@ export default function App() {
 
   const [session, setSession] = useState<SessionState | null>(null);
   const [loading, setLoading] = useState(!isClientView);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [accessOpen, setAccessOpen] = useState(false);
 
   const loadSession = async () => {
     try {
@@ -31,7 +34,6 @@ export default function App() {
   }, [isClientView]);
 
   if (isClientView) return <ClientProposalPage />;
-
   if (loading || !session) {
     return (
       <div className="auth-boot">
@@ -39,26 +41,39 @@ export default function App() {
       </div>
     );
   }
+  if (!session.user) return <LoginScreen needsSetup={session.needsSetup} onAuthed={loadSession} />;
 
-  if (!session.user) {
-    return <LoginScreen needsSetup={session.needsSetup} onAuthed={loadSession} />;
-  }
-
+  const user = session.user;
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
+    setMenuOpen(false);
     await loadSession();
   };
 
   return (
     <>
       <Home />
-      <div className="sona-account" role="status">
-        <small>
-          {session.user.name}
-          {session.user.role === "owner" ? " · dono" : ""}
-        </small>
-        <button onClick={() => void logout()}>Sair</button>
+      <div className="sona-account">
+        {menuOpen && (
+          <div className="sona-account__menu">
+            <div className="sona-account__who">
+              <strong>{user.name}</strong>
+              <small>
+                {user.email} · {user.role === "owner" ? "dono" : "equipe"}
+              </small>
+            </div>
+            {user.role === "owner" && (
+              <button onClick={() => { setAccessOpen(true); setMenuOpen(false); }}>Acessos e senha</button>
+            )}
+            <button className="sona-account__logout" onClick={() => void logout()}>Sair</button>
+          </div>
+        )}
+        <button className="sona-account__chip" onClick={() => setMenuOpen((v) => !v)}>
+          <span className="sona-account__avatar">{user.name.charAt(0).toUpperCase()}</span>
+          <span>Conta</span>
+        </button>
       </div>
+      {accessOpen && <AccessManager currentUserId={user.id} onClose={() => setAccessOpen(false)} />}
     </>
   );
 }

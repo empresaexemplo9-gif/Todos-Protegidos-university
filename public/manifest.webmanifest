@@ -1,0 +1,17 @@
+{
+  "name": "Sona Propostas",
+  "short_name": "Sona",
+  "description": "Plataforma interna de propostas da Sona Automação.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#161b1e",
+  "theme_color": "#282f37",
+  "icons": [
+    { "src": "/icons/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/icons/icon-512.png", "type": "image/png", "sizes": "512x512" },
+    { "src": "/icons/icon-maskable.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ]
+}
