@@ -2,25 +2,16 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <!-- A home do ADMINISTRADOR é o Painel regional. Este desvio roda antes de
-       qualquer pintura da tela, então o admin nunca vê a home do consultor.
-       (A checagem definitiva continua no app.js, pela sessão real.) -->
-  <script>
-    try {
-      var tpPapel = localStorage.getItem("tp_papel");
-      if (tpPapel === "admin" || tpPapel === "superadmin") location.replace("regional.html");
-    } catch (e) {}
-  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard do Consultor — Todos Protegidos University</title>
-  <meta name="description" content="Área do consultor Todos Protegidos University: treinamento do novato ao pro, vendas, comissões e ranking.">
+  <title>Painel — Sua Marca</title>
+  <meta name="description" content="Painel do usuário.">
   <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
-  <meta name="theme-color" content="#2536cf">
+  <meta name="theme-color" content="#334155">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="apple-touch-icon" href="assets/img/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/img/icon.svg">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="TP University">
+  <meta name="apple-mobile-web-app-title" content="Plataforma">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -32,215 +23,49 @@
   <div class="app">
 
     <!-- SIDEBAR -->
-    <aside id="sidebar-root" class="sidebar" data-active="dashboard"><noscript><a href="dashboard.html">Visão geral</a> · <a href="treinamentos.html">Treinamentos</a> · <a href="protocolos.html">Padrões &amp; protocolos</a> · <a href="scripts.html">Scripts</a> · <a href="conta.html">Minha conta</a></noscript></aside>
+    <aside id="sidebar-root" class="sidebar" data-active="dashboard"><noscript><a href="dashboard.html">Visão geral</a> · <a href="conta.html">Minha conta</a></noscript></aside>
 
     <!-- MAIN -->
     <div class="main">
       <!-- TOPBAR -->
-      <header id="topbar-root" class="topbar" data-title="Visão geral" data-sub="Sua área do consultor — do novato ao pro" data-search="Buscar módulo ou aula…"></header>
+      <header id="topbar-root" class="topbar" data-title="Visão geral" data-sub="Seu painel"></header>
 
       <!-- CONTENT -->
       <main class="content">
 
-        <!-- CABEÇALHO DE PERFIL (nome + foto + nível com moldura) -->
+        <!-- CABEÇALHO DE PERFIL (nome + foto) -->
         <section id="perfilHeader" style="margin-bottom:22px"></section>
 
-        <!-- DESEMPENHO DA SEMANA -->
+        <!-- BOAS-VINDAS -->
         <section class="welcome">
           <div>
-            <h2>Seu desempenho nesta semana 🚀</h2>
-            <p id="heroTexto">Carregando seu desempenho…</p>
-            <div style="margin-top:18px"><a href="vendas.html" class="btn btn-primary btn-sm">Registrar venda</a></div>
-          </div>
-          <div class="lvl">
-            <span class="tag" id="heroPremio">sem premiação ainda</span>
-            <div id="heroVendas" style="font-family:var(--tp-font-sans);font-weight:800;font-size:var(--tp-fs-3xl);margin-top:10px">0</div>
-            <div style="color:rgba(255,255,255,.8);font-size:var(--tp-fs-sm)">vendas nesta semana</div>
+            <h2>Bem-vindo 👋</h2>
+            <p>Este é o seu painel. A partir daqui você constrói o conteúdo do projeto.</p>
           </div>
         </section>
 
-        <!-- QUADROS -->
-        <section class="kpis">
-          <div class="kpi">
-            <div class="kpi-top"><div class="kpi-ico blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 3-3 3 3 5-6"/></svg></div></div>
-            <div class="val" id="kpiSemana">0</div>
-            <div class="lbl">Vendas na semana</div>
-            <div class="lbl" id="kpiSemanaHint" style="color:var(--tp-green-700);font-weight:600;margin-top:2px">—</div>
+        <!-- ESPAÇO DE TRABALHO -->
+        <section class="panel" style="margin-top:24px">
+          <div class="panel-head">
+            <h3>Comece por aqui</h3>
+            <span class="badge">base limpa</span>
           </div>
-          <div class="kpi">
-            <div class="kpi-top"><div class="kpi-ico green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M6 3h12v6a6 6 0 0 1-12 0Z"/><path d="M9 21h6M12 17v4"/></svg></div></div>
-            <div class="val" id="kpiPremio">R$ 0,00</div>
-            <div class="lbl">Premiação da semana</div>
-            <div class="lbl" id="kpiPremioSab" style="display:none;color:var(--tp-green-700);font-weight:600;margin-top:2px">+ 1 sábado livre 🎉</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-top"><div class="kpi-ico amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div></div>
-            <div class="val" id="kpiMes">0/15</div>
-            <div class="lbl">Vendas no mês (meta 15)</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-top"><div class="kpi-ico dark"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V5l-8-3Z"/><path d="M9 12l2 2 4-4"/></svg></div></div>
-            <div class="val" id="kpiVeiculos">0</div>
-            <div class="lbl">Veículos protegidos</div>
+          <div class="gestao-empty" style="padding:32px 24px">
+            <p style="max-width:56ch;margin:0 auto 16px">Nenhum conteúdo ainda. Administradores podem criar módulos e itens em <strong>Gestão de conteúdo</strong>. Este painel é um ponto de partida — adapte-o ao seu projeto.</p>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+              <a href="gestao.html" class="btn btn-primary btn-sm">Gestão de conteúdo</a>
+              <a href="conta.html" class="btn btn-ghost btn-sm">Minha conta</a>
+            </div>
           </div>
         </section>
 
-        <!-- COLS -->
-        <section class="cols">
-
-          <!-- ESQUERDA -->
-          <div class="stack" style="display:flex;flex-direction:column;gap:24px">
-
-            <!-- Os treinamentos ficam na seção "Treinamentos" (treinamentos.html) -->
-
-            <!-- DESEMPENHO SEMANAL (gráfico) -->
-            <div class="panel">
-              <div class="panel-head">
-                <h3>Meu desempenho semanal</h3>
-                <span class="badge">últimas 8 semanas</span>
-              </div>
-              <div id="desempenhoChart">
-                <div class="gestao-empty" style="padding:28px">Carregando desempenho…</div>
-              </div>
-            </div>
-
-            <!-- PROJEÇÃO DO MÊS -->
-            <div class="panel">
-              <div class="panel-head">
-                <h3>Projeção do mês</h3>
-                <span class="badge">meta 15 vendas</span>
-              </div>
-              <div id="projecaoMes">
-                <div class="gestao-empty" style="padding:22px">Calculando sua projeção…</div>
-              </div>
-            </div>
-
-            <!-- VENDAS RECENTES -->
-            <div class="panel">
-              <div class="panel-head">
-                <h3>Vendas recentes</h3>
-                <a href="vendas.html">Relatório completo</a>
-              </div>
-              <div class="table-wrap">
-              <table class="table">
-                <thead><tr><th>Data</th><th>Cliente</th><th>Plano</th><th>Veículo</th><th>Status</th></tr></thead>
-                <tbody id="vendasRecentes">
-                  <tr>
-                    <td colspan="5" style="text-align:center;color:var(--tp-muted);padding:28px 12px">Carregando vendas…</td>
-                  </tr>
-                </tbody>
-              </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- DIREITA -->
-          <div class="stack" style="display:flex;flex-direction:column;gap:24px">
-
-            <!-- PREMIAÇÃO DA SEMANA -->
-            <div class="panel">
-              <div class="panel-head">
-                <h3>Premiação da semana</h3>
-                <span class="badge badge-amber">🏆</span>
-              </div>
-              <div id="premioPainel">
-                <div class="gestao-empty" style="padding:22px">Carregando premiação…</div>
-              </div>
-            </div>
-
-            <!-- META DO MÊS -->
-            <div class="panel">
-              <div class="panel-head">
-                <h3>Meta do mês</h3>
-                <span class="badge" id="metaMesPct">0%</span>
-              </div>
-              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
-                <strong id="metaMesVal" style="font-family:var(--tp-font-sans);font-size:var(--tp-fs-2xl)">0 de 15</strong>
-                <span class="muted" style="font-size:var(--tp-fs-sm)">vendas</span>
-              </div>
-              <div class="progress" style="margin-top:12px"><i id="metaMesBar" style="width:0%"></i></div>
-              <div id="metaMesPremio" style="margin-top:12px;font-weight:600;color:var(--tp-green-700);font-size:var(--tp-fs-sm)">Prêmio da meta: R$ 750,00</div>
-            </div>
-
-            <!-- DICA PARA DESENVOLVER -->
-            <div class="panel dica-panel">
-              <div class="panel-head">
-                <h3>Dica para desenvolver</h3>
-                <span class="badge badge-blue">💡</span>
-              </div>
-              <div id="dicaDia">
-                <div class="gestao-empty" style="padding:22px">Carregando dica…</div>
-              </div>
-            </div>
-
-            <!-- HISTÓRICO DE PREMIAÇÕES -->
-            <div class="panel">
-              <div class="panel-head">
-                <h3>Histórico de premiações</h3>
-              </div>
-              <div id="premioHist">
-                <div class="gestao-empty" style="padding:22px">Carregando histórico…</div>
-              </div>
-            </div>
-
-            <!-- RANKING -->
-            <div class="panel">
-              <div class="panel-head">
-                <h3>Ranking de consultores</h3>
-                <a href="ranking.html">Geral</a>
-              </div>
-              <div class="gestao-empty" id="dashRanking" style="padding:24px">Carregando ranking…</div>
-            </div>
-
-            <!-- PADRÕES & PROTOCOLOS -->
-            <div class="panel" id="protocolos">
-              <div class="panel-head">
-                <h3>Padrões & protocolos</h3>
-                <a href="protocolos.html">Abrir manual</a>
-              </div>
-              <div class="track" style="gap:10px">
-                <a class="track-item" href="protocolos.html" style="padding:12px">
-                  <div class="track-step done" style="width:36px;height:36px">1</div>
-                  <div class="track-body"><div class="t" style="font-size:var(--tp-fs-sm)">Cotação</div><div class="d">Power CRM · placa ou ano/modelo</div></div>
-                </a>
-                <a class="track-item" href="protocolos.html" style="padding:12px">
-                  <div class="track-step done" style="width:36px;height:36px">2</div>
-                  <div class="track-body"><div class="t" style="font-size:var(--tp-fs-sm)">Cadastro do associado</div><div class="d">Documentação · sem Serasa/SPC/SCPC</div></div>
-                </a>
-                <a class="track-item" href="protocolos.html" style="padding:12px">
-                  <div class="track-step current" style="width:36px;height:36px">3</div>
-                  <div class="track-body"><div class="t" style="font-size:var(--tp-fs-sm)">Vistoria</div><div class="d">App Visto · fotos e CRLV</div></div>
-                </a>
-                <a class="track-item" href="protocolos.html" style="padding:12px">
-                  <div class="track-step current" style="width:36px;height:36px">4</div>
-                  <div class="track-body"><div class="t" style="font-size:var(--tp-fs-sm)">Contrato e ativação</div><div class="d">Boleto · 1ª mensalidade no fechamento</div></div>
-                </a>
-              </div>
-            </div>
-
-            <!-- PRIMEIROS PASSOS -->
-            <div class="panel" style="background:var(--tp-grad-fresh);border:0;color:#063a20">
-              <div style="display:flex;align-items:center;gap:14px">
-                <div style="width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.6);display:grid;place-items:center;font-size:26px">🎯</div>
-                <div>
-                  <strong style="font-family:var(--tp-font-sans);font-size:var(--tp-fs-lg)">Comece por aqui</strong>
-                  <div style="font-size:var(--tp-fs-sm)">Conclua seu primeiro módulo para desbloquear conquistas e subir de nível.</div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </section>
       </main>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <script src="assets/js/config.js"></script>
-
   <script src="assets/js/api.js"></script>
-
   <script src="assets/js/components.js"></script>
   <script src="assets/js/app.js"></script>
 </body>

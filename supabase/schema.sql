@@ -1,9 +1,9 @@
 -- ============================================================
--- TODOS PROTEGIDOS — Backend MULTI-TENANT (Supabase / PostgreSQL)
+-- Backend MULTI-TENANT (Supabase / PostgreSQL)
 -- Isolamento por TENANT (empresa/unidade): cada tenant só enxerga
 -- os próprios usuários e o próprio conteúdo (garantido por RLS).
 -- Rode UMA VEZ no SQL Editor do projeto certo.
--- (Se já rodou o schema antigo neste projeto, rode antes o rollback.sql.)
+-- (Se já rodou um schema antigo neste projeto, rode antes o rollback.sql.)
 -- ============================================================
 
 -- 1) TENANTS (empresas / unidades)
@@ -255,21 +255,21 @@ create policy "resultados_admin_select" on public.resultados
   );
 
 -- 9) Tenant inicial (necessário para os primeiros cadastros).
---    A trilha começa VAZIA — o admin de cada tenant cria os módulos.
+--    O conteúdo começa VAZIO — o admin de cada tenant cria os módulos.
 insert into public.tenants (nome, slug)
-select 'Todos Protegidos', 'todosprotegidos'
+select 'Minha Empresa', 'minhaempresa'
 where not exists (select 1 from public.tenants);
 
 -- ============================================================
 -- COMO CRIAR UM ADMIN (por tenant)
--- 1) Cadastre-se pelo site usando o CÓDIGO do tenant (ex.: "todosprotegidos").
+-- 1) Cadastre-se pelo site usando o CÓDIGO do tenant (ex.: "minhaempresa").
 -- 2) Promova o usuário a admin:
 --      update public.profiles set role = 'admin'
---      where id = (select id from auth.users where email = 'admin@todosprotegidos.com.br');
+--      where id = (select id from auth.users where email = 'voce@example.com');
 --
 -- COMO CRIAR OUTRO TENANT (empresa/unidade):
 --      insert into public.tenants (nome, slug) values ('Unidade SP', 'sp');
---   (depois os consultores dessa unidade se cadastram com o código "sp")
+--   (depois os usuários dessa unidade se cadastram com o código "sp")
 --
 -- SUPERADMIN (enxerga todos os tenants):
 --      update public.profiles set role = 'superadmin' where id = (...);

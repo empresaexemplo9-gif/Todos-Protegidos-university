@@ -375,29 +375,3 @@
   .rot-h { padding-top: 14px; font-size: var(--tp-fs-sm); }
   .rot-opts { grid-template-columns: 1fr; }
 }
-
-/* ============================================================
-   Conexão com o Power CRM (Operação/CRM)
-   ============================================================ */
-.op-url { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--tp-bg); border: 1px solid var(--tp-line); border-radius: var(--tp-radius-sm); padding: 10px 12px; margin-bottom: 14px; }
-.op-url code { flex: 1; min-width: 220px; font-size: var(--tp-fs-xs); color: var(--tp-ink); word-break: break-all; }
-.op-teste { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-.op-teste label { flex: 1; min-width: 260px; font-size: var(--tp-fs-sm); font-weight: 600; color: var(--tp-ink); }
-.op-teste input { width: 100%; margin-top: 6px; padding: 10px 12px; border: 1.5px solid var(--tp-line); border-radius: var(--tp-radius-sm); font: inherit; font-size: var(--tp-fs-sm); background: #fff; color: var(--tp-ink); }
-.op-teste input:focus { outline: none; border-color: var(--tp-green-400); box-shadow: var(--tp-ring); }
-.op-teste code { background: var(--tp-bg-alt); border-radius: 4px; padding: 1px 5px; font-size: var(--tp-fs-xs); font-weight: 400; }
-.op-msg { display: none; margin-top: 12px; padding: 11px 14px; border-radius: var(--tp-radius-sm); font-size: var(--tp-fs-sm); background: var(--tp-bg); color: var(--tp-slate); }
-.op-msg.show { display: block; }
-.op-msg.ok { background: var(--tp-green-50); color: var(--tp-green-800); }
-.op-msg.err { background: #fdecec; color: #8a1f1f; }
-.op-cmd { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,.08); }
-.op-cmd span { display: block; font-size: var(--tp-fs-xs); margin-bottom: 5px; opacity: .85; }
-.op-cmd code { display: block; background: rgba(0,0,0,.06); border-radius: var(--tp-radius-sm); padding: 8px 10px; font-size: var(--tp-fs-xs); word-break: break-all; }
-.op-sep { height: 1px; background: var(--tp-line); margin: 20px 0 16px; }
-.op-h4 { margin: 0 0 6px; font-family: var(--tp-font-sans); font-size: var(--tp-fs-base); color: var(--tp-ink); }
-.op-leg { margin: 8px 0 12px; padding-left: 18px; }
-.op-leg li { font-size: var(--tp-fs-xs); line-height: 1.55; margin-bottom: 5px; }
-.op-leg code { background: rgba(0,0,0,.06); border-radius: 4px; padding: 1px 5px; }
-.op-cmd a { color: inherit; text-decoration: underline; }
-.op-ajuda { display: block; font-weight: 400; font-size: var(--tp-fs-xs); color: var(--tp-muted); margin: 4px 0 2px; line-height: 1.5; }
-.op-opc { font-weight: 400; color: var(--tp-muted); font-size: var(--tp-fs-xs); }
