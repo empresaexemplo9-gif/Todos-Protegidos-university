@@ -509,6 +509,64 @@
   padding: 9px 12px;
 }
 
+/* ===== Editor de planta: zoom, mover, paredes ===== */
+.plan-card { overflow: hidden; }
+.plan-canvas { transform-origin: 0 0; }
+.plan-canvas--mode-pan { cursor: grab; }
+.plan-canvas--mode-pan:active { cursor: grabbing; }
+.plan-canvas--mode-wall { cursor: crosshair; }
+.scope-marker,
+.plan-asset { z-index: 3; }
+.plan-modes,
+.plan-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: #eef1ee;
+  border-radius: 9px;
+  padding: 2px;
+}
+.plan-modes button,
+.plan-zoom button {
+  border: none;
+  background: transparent;
+  padding: 5px 9px;
+  border-radius: 7px;
+  font-size: 11px;
+  cursor: pointer;
+  color: #45504a;
+  line-height: 1;
+}
+.plan-modes button:hover,
+.plan-zoom button:hover { background: #e2e7e3; }
+.plan-modes button.active { background: #202725; color: #fff; }
+.plan-zoom span {
+  font-size: 11px;
+  min-width: 42px;
+  text-align: center;
+  color: #45504a;
+}
+.plan-walls {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  overflow: visible;
+}
+.plan-walls polyline {
+  fill: none;
+  stroke: #26332e;
+  stroke-width: 0.7;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.plan-walls__draft {
+  stroke: #d19a45;
+  stroke-dasharray: 1.6 1.2;
+}
+
 /* ===== Importar catálogo (CSV / AVA) ===== */
 .import-dialog {
   width: min(760px, 96vw);

@@ -998,6 +998,22 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const [toast, setToast] = useState("");
   const canvasRef = useRef<HTMLDivElement>(null);
   const [planWidthMeters, setPlanWidthMeters] = useState(12);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [canvasMode, setCanvasMode] = useState<"marker" | "pan" | "wall">("marker");
+  const [walls, setWalls] = useState<Array<{ id: number; pts: Array<{ x: number; y: number }> }>>([]);
+  const [wallDraft, setWallDraft] = useState<Array<{ x: number; y: number }>>([]);
+  const panRef = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null);
+  const clampZoom = (z: number) => Math.min(6, Math.max(0.3, z));
+  const resetView = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
+  const finishWall = () => { if (wallDraft.length >= 2) setWalls((w) => [...w, { id: Date.now(), pts: wallDraft }]); setWallDraft([]); };
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => { e.preventDefault(); setZoom((z) => clampZoom(z * (e.deltaY < 0 ? 1.12 : 1 / 1.12))); };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
 
   const activeTool = tools.find((tool) => tool.id === selectedTool) ?? tools[0];
   const marker = markers.find((item) => item.id === selectedMarker) ?? null;
@@ -1166,24 +1182,33 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
 
         <div className="plan-card">
           <div className="plan-card__bar">
-            <div><span className="live-dot" /> PLANTA DE MARCAÇÃO</div><div className="plan-bar-actions"><button className={heatmap ? "active" : ""} onClick={() => setHeatmap((value) => !value)}>◉ Mapa de calor</button><select value={heatBand} onChange={(event) => setHeatBand(event.target.value as "2.4" | "5" | "6")}><option value="2.4">2,4 GHz</option><option value="5">5 GHz</option><option value="6">6 GHz</option></select><label className="plan-scale">Escala<input type="number" min="1" max="80" value={planWidthMeters} onChange={(event) => setPlanWidthMeters(Math.max(1, Number(event.target.value) || 1))} title="Largura real da planta, em metros" /><span>m</span></label><label className="plan-upload"><input type="file" accept="image/*" multiple onChange={(e) => e.target.files && void addOverlayImages(e.target.files)} />＋ Imagens</label><label className="plan-upload"><input type="file" accept="image/*,.pdf,application/pdf" onChange={(e) => e.target.files?.[0] && void loadPlan(e.target.files[0])} />{planImage ? "Trocar planta" : "＋ Carregar planta/PDF"}</label></div>
+            <div><span className="live-dot" /> PLANTA DE MARCAÇÃO</div><div className="plan-bar-actions"><div className="plan-modes"><button className={canvasMode === "marker" ? "active" : ""} onClick={() => setCanvasMode("marker")} title="Inserir pontos">✛ Marcar</button><button className={canvasMode === "pan" ? "active" : ""} onClick={() => setCanvasMode("pan")} title="Arrastar a planta">✋ Mover</button><button className={canvasMode === "wall" ? "active" : ""} onClick={() => setCanvasMode("wall")} title="Desenhar paredes — 2 cliques finaliza, clique direito cancela">▟ Parede</button></div><div className="plan-zoom"><button onClick={() => setZoom((z) => clampZoom(z / 1.2))} title="Diminuir">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom((z) => clampZoom(z * 1.2))} title="Aumentar">＋</button><button onClick={resetView} title="Ajustar à tela">⤢</button>{walls.length > 0 && <button onClick={() => { setWalls([]); setWallDraft([]); }} title="Limpar paredes">🗑</button>}</div><button className={heatmap ? "active" : ""} onClick={() => setHeatmap((value) => !value)}>◉ Mapa de calor</button><select value={heatBand} onChange={(event) => setHeatBand(event.target.value as "2.4" | "5" | "6")}><option value="2.4">2,4 GHz</option><option value="5">5 GHz</option><option value="6">6 GHz</option></select><label className="plan-scale">Escala<input type="number" min="1" max="80" value={planWidthMeters} onChange={(event) => setPlanWidthMeters(Math.max(1, Number(event.target.value) || 1))} title="Largura real da planta, em metros" /><span>m</span></label><label className="plan-upload"><input type="file" accept="image/*" multiple onChange={(e) => e.target.files && void addOverlayImages(e.target.files)} />＋ Imagens</label><label className="plan-upload"><input type="file" accept="image/*,.pdf,application/pdf" onChange={(e) => e.target.files?.[0] && void loadPlan(e.target.files[0])} />{planImage ? "Trocar planta" : "＋ Carregar planta/PDF"}</label></div>
           </div>
           <div
-            className={`plan-canvas ${planImage ? "plan-canvas--image" : ""}`}
+            className={`plan-canvas plan-canvas--mode-${canvasMode} ${planImage ? "plan-canvas--image" : ""}`}
             ref={canvasRef}
+            style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "0 0" }}
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event) => { event.preventDefault(); const point = pointFromEvent(event.clientX, event.clientY); const toolId = event.dataTransfer.getData("sona/tool"); if (point && toolId) addMarkerAt(point.x, point.y, toolId); }}
+            onContextMenu={(e) => { if (canvasMode === "wall" && wallDraft.length) { e.preventDefault(); setWallDraft([]); } }}
+            onDoubleClick={() => { if (canvasMode === "wall") finishWall(); }}
+            onPointerDown={(e) => { if (canvasMode !== "pan") return; panRef.current = { sx: e.clientX, sy: e.clientY, px: pan.x, py: pan.y }; try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* noop */ } }}
+            onPointerMove={(e) => { if (!panRef.current) return; setPan({ x: panRef.current.px + (e.clientX - panRef.current.sx), y: panRef.current.py + (e.clientY - panRef.current.sy) }); }}
+            onPointerUp={(e) => { if (panRef.current) { panRef.current = null; try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* noop */ } } }}
             onClick={(e) => {
-              if (dragging || draggingAsset || resizingMarker || resizingAsset) return;
+              if (canvasMode === "pan" || dragging || draggingAsset || resizingMarker || resizingAsset) return;
               const point = pointFromEvent(e.clientX, e.clientY);
-              if (point) addMarkerAt(point.x, point.y);
+              if (!point) return;
+              if (canvasMode === "wall") { setWallDraft((d) => [...d, point]); return; }
+              addMarkerAt(point.x, point.y);
             }}
           >
             {planImage ? <img src={planImage} alt="Planta do projeto" draggable={false} /> : <DefaultFloorPlan />}
             {heatmap && <WifiHeatLayer aps={markers.filter((item) => item.type === "access-point")} planWidthMeters={planWidthMeters} />}
             {assets.map((item) => <div key={item.id} className={`plan-asset ${selectedAsset === item.id ? "selected" : ""}`} style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%` }} onPointerDown={(event) => { event.stopPropagation(); setDraggingAsset(item.id); setSelectedAsset(item.id); setSelectedMarker(null); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (draggingAsset !== item.id || resizingAsset === item.id || event.buttons === 0) return; const point = pointFromEvent(event.clientX, event.clientY); if (point) updateAsset(item.id, point); }} onPointerUp={(event) => { event.stopPropagation(); setDraggingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }}><img src={item.src} alt={item.name} draggable={false} /><small>{item.name}</small><button onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); setAssets((current) => current.filter((entry) => entry.id !== item.id)); setSelectedAsset(null); }} aria-label={`Excluir ${item.name}`}>×</button><span className="resize-handle" onPointerDown={(event) => { event.stopPropagation(); setResizingAsset(item.id); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (resizingAsset !== item.id || event.buttons === 0) return; const rect = canvasRef.current?.getBoundingClientRect(); if (rect) updateAsset(item.id, { width: Math.max(5, Math.min(55, item.width + event.movementX / rect.width * 100)) }); }} onPointerUp={(event) => { event.stopPropagation(); setResizingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }} /></div>)}
-            <div className="canvas-hint">Clique para inserir <b>{activeTool.code}</b></div>
+            <div className="canvas-hint">{canvasMode === "pan" ? "Arraste para mover · use o zoom" : canvasMode === "wall" ? "Clique para traçar paredes · 2 cliques finaliza" : <>Clique para inserir <b>{activeTool.code}</b></>}</div>
             {heatmap && markers.some((item) => item.type === "access-point") && <div className="wifi-legend" aria-hidden="true"><strong>Sinal · {heatBand === "2.4" ? "2,4" : heatBand} GHz</strong><span><i style={{ background: "#2ecc71" }} />Excelente</span><span><i style={{ background: "#1abc9c" }} />Bom</span><span><i style={{ background: "#f1c40f" }} />Regular</span><span><i style={{ background: "#e67e22" }} />Fraco</span></div>}
+            {(walls.length > 0 || wallDraft.length > 0) && <svg className="plan-walls" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{walls.map((wall) => <polyline key={wall.id} points={wall.pts.map((p) => `${p.x},${p.y}`).join(" ")} />)}{wallDraft.length > 0 && <polyline className="plan-walls__draft" points={wallDraft.map((p) => `${p.x},${p.y}`).join(" ")} />}</svg>}
             {markers.map((item) => {
               const tool = tools.find((entry) => entry.id === item.type) ?? tools[0];
               return <button
