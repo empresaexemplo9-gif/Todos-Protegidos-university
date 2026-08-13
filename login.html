@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Entrar — Todos Protegidos University</title>
-  <meta name="description" content="Acesse a plataforma Todos Protegidos University: área do consultor e administração.">
+  <title>Entrar — Sua Marca</title>
+  <meta name="description" content="Acesse a plataforma: área do usuário e administração.">
   <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
-  <meta name="theme-color" content="#2536cf">
+  <meta name="theme-color" content="#334155">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="apple-touch-icon" href="assets/img/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/img/icon.svg">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="TP University">
+  <meta name="apple-mobile-web-app-title" content="Plataforma">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -43,14 +43,13 @@
 <body>
   <main class="auth">
     <aside class="auth-aside">
-      <a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="Todos Protegidos"></a>
+      <a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="Sua Marca"></a>
       <div>
-        <h1>Plataforma do consultor · Todos Protegidos University</h1>
-        <p>Entre para acessar sua trilha de formação, vendas e materiais. Administradores acessam a gestão de conteúdo.</p>
+        <h1>Acesse sua plataforma</h1>
+        <p>Entre para acessar seu painel. Administradores acessam a gestão de conteúdo.</p>
       </div>
       <div>
-        <span style="color:rgba(255,255,255,.6);font-size:var(--tp-fs-xs)">© 2026 Todos Protegidos University · Proteção Veicular</span>
-        <span class="drap-credit" style="display:flex;margin-top:8px">Desenvolvido por <img src="assets/img/drap-logo.svg" alt="DRAP"></span>
+        <span style="color:rgba(255,255,255,.6);font-size:var(--tp-fs-xs)">© 2026 Sua Marca</span>
       </div>
     </aside>
 
@@ -58,14 +57,14 @@
       <div class="auth-card">
         <span class="eyebrow">Acesso à plataforma</span>
         <h2>Entrar</h2>
-        <p class="muted" style="margin-top:-4px">Ainda não tem acesso? <a href="cadastro.html">Criar meu acesso</a>.</p>
+        <p class="muted" style="margin-top:-4px">Ainda não tem acesso? <a href="cadastro.html">Criar acesso</a>.</p>
 
         <div id="loginMsg" class="form-msg"></div>
 
         <form id="loginForm" novalidate>
           <div class="field">
             <label for="login">Usuário ou e-mail</label>
-            <input id="login" name="login" type="text" autocomplete="username" placeholder="presidente, admin ou seu@email.com" required>
+            <input id="login" name="login" type="text" autocomplete="username" placeholder="seu@email.com" required>
           </div>
           <div class="field">
             <label for="senha">Senha</label>
@@ -80,11 +79,8 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <script src="assets/js/config.js"></script>
-
   <script src="assets/js/api.js"></script>
-
   <script src="assets/js/app.js"></script>
 </body>
 </html>

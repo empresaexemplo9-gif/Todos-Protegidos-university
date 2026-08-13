@@ -147,7 +147,7 @@ textarea:focus-visible, [tabindex]:focus-visible, .side-link:focus-visible, .tab
 .hero-proof .num { font-family: var(--tp-font-sans); font-weight: var(--tp-fw-extra); font-size: var(--tp-fs-2xl); color: var(--tp-green-700); }
 .hero-proof .lbl { font-size: var(--tp-fs-sm); color: var(--tp-muted); }
 
-/* Cartão flutuante do hero */
+/* Card flutuante do hero */
 .hero-visual { position: relative; }
 .quote-card {
   background: var(--tp-grad-deep); color: #fff;
@@ -207,10 +207,6 @@ textarea:focus-visible, [tabindex]:focus-visible, .side-link:focus-visible, .tab
 .footer h4 { color: #fff; font-size: var(--tp-fs-sm); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 16px; }
 .footer-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 32px; }
 .footer-bottom { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.1); font-size: var(--tp-fs-sm); color: #8c97c0; }
-.footer-credit-row { text-align: center; margin-top: 20px; }
-.drap-credit { display: inline-flex; align-items: center; gap: 7px; font-size: var(--tp-fs-xs); color: #8c97c0; opacity: .7; transition: opacity var(--tp-transition); }
-.drap-credit:hover { opacity: 1; }
-.drap-credit img { height: 15px; width: auto; display: block; }
 
 /* ---------- Utilidades ---------- */
 .gestao-empty { text-align: center; color: var(--tp-muted); padding: 40px; border: 1px dashed var(--tp-line); border-radius: var(--tp-radius-lg); }

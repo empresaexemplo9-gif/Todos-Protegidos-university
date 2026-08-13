@@ -1,5 +1,5 @@
 -- ============================================================
--- TODOS PROTEGIDOS — Reverter o schema (rollback) — versão multi-tenant
+-- Reverter o schema (rollback) — versão multi-tenant
 -- Remove tudo que supabase/schema.sql criou neste projeto.
 -- NÃO afeta os usuários do Authentication (auth.users).
 -- Rode no SQL Editor do projeto onde deseja desfazer.
@@ -19,6 +19,7 @@ drop function if exists public.current_tenant_id() cascade;
 drop function if exists public.tenant_existe(text) cascade;
 
 -- 3) Tabelas (CASCADE remove também políticas RLS, FKs e o seed)
+drop table if exists public.resultados cascade;
 drop table if exists public.questoes  cascade;
 drop table if exists public.progresso cascade;
 drop table if exists public.itens   cascade;

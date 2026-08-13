@@ -1,5 +1,5 @@
 -- ============================================================
--- TODOS PROTEGIDOS — Storage para videoaulas/materiais
+-- Storage para vídeos/materiais
 -- Rode no SQL Editor DEPOIS do schema.sql.
 -- Cria um bucket público "midia" e as permissões:
 --   • leitura pública (para o vídeo tocar no navegador)

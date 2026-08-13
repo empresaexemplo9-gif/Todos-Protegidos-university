@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Design System — Todos Protegidos University</title>
+  <title>Design System — Sua Marca</title>
   <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
-  <meta name="theme-color" content="#2536cf">
+  <meta name="theme-color" content="#334155">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="apple-touch-icon" href="assets/img/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/img/icon.svg">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="TP University">
+  <meta name="apple-mobile-web-app-title" content="Plataforma">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -28,10 +28,10 @@
 <body>
   <header class="nav">
     <div class="container nav-inner">
-      <a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="Todos Protegidos"></a>
+      <a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="Sua Marca"></a>
       <div class="nav-cta">
         <a href="index.html" class="btn btn-ghost btn-sm">Landing</a>
-        <a href="dashboard.html" class="btn btn-primary btn-sm">Dashboard</a>
+        <a href="dashboard.html" class="btn btn-primary btn-sm">Painel</a>
       </div>
     </div>
   </header>
@@ -39,23 +39,23 @@
   <section class="section">
     <div class="container">
       <span class="eyebrow">Design System</span>
-      <h1>Identidade visual Todos Protegidos University</h1>
-      <p class="lead" style="max-width:640px">Sistema de design da plataforma de capacitação de consultores de proteção veicular: azul royal como cor principal, turquesa como acento/CTA e âmbar para energia. Use este guia para manter a consistência em toda a interface.</p>
+      <h1>Guia de estilo da plataforma</h1>
+      <p class="lead" style="max-width:640px">Tokens de design reutilizáveis: cor principal, acento/CTA e âmbar para destaques. Use este guia para manter a consistência ao construir seu projeto.</p>
 
       <!-- LOGO -->
       <div class="doc-section">
         <h2>Logo</h2>
         <div class="grid grid-2" style="margin-top:20px">
-          <div class="card" style="display:flex;align-items:center;justify-content:center;min-height:160px"><img src="assets/img/logo.svg" alt="Logo principal" style="height:56px"></div>
-          <div class="card" style="display:flex;align-items:center;justify-content:center;min-height:160px;background:var(--tp-blue-900)"><img src="assets/img/logo-mark.svg" alt="Símbolo" style="height:72px"></div>
+          <div class="card" style="display:flex;align-items:center;justify-content:center;min-height:160px"><img src="assets/img/logo.svg" alt="Logo (placeholder)" style="height:56px"></div>
+          <div class="card" style="display:flex;align-items:center;justify-content:center;min-height:160px;background:var(--tp-blue-900)"><img src="assets/img/logo-mark.svg" alt="Símbolo (placeholder)" style="height:72px"></div>
         </div>
-        <p class="muted" style="margin-top:14px">O símbolo combina um <strong>escudo</strong> (proteção) com um <strong>arco de abraço/infinito</strong> e um <strong>check de confiança</strong>.</p>
+        <p class="muted" style="margin-top:14px">Placeholders neutros — substitua os arquivos em <code>assets/img/</code> (<code>logo.svg</code>, <code>logo-mark.svg</code>, <code>favicon.svg</code>, <code>icon.svg</code>) pela sua marca.</p>
       </div>
 
       <!-- CORES -->
       <div class="doc-section">
         <h2>Paleta de cores</h2>
-        <h3 style="margin-top:24px">Azul royal · principal</h3>
+        <h3 style="margin-top:24px">Principal</h3>
         <div class="sw-grid" style="margin-bottom:24px">
           <div class="swatch" style="background:var(--tp-blue-300)"><span><span class="sw-name">blue-300</span>#7d8cf2</span></div>
           <div class="swatch" style="background:var(--tp-blue-500)"><span><span class="sw-name">blue-500</span>#2536cf</span></div>
@@ -63,7 +63,7 @@
           <div class="swatch" style="background:var(--tp-blue-700)"><span><span class="sw-name">blue-700</span>#141c93</span></div>
           <div class="swatch" style="background:var(--tp-blue-900)"><span><span class="sw-name">blue-900</span>#0a1252</span></div>
         </div>
-        <h3>Turquesa · acento &nbsp;/&nbsp; CTA</h3>
+        <h3>Acento &nbsp;/&nbsp; CTA</h3>
         <div class="sw-grid">
           <div class="swatch" style="background:var(--tp-green-300)"><span><span class="sw-name">teal-300</span>#5fdccd</span></div>
           <div class="swatch" style="background:var(--tp-green-500)"><span><span class="sw-name">teal-500</span>#14c2ad</span></div>
@@ -81,7 +81,7 @@
           <h1 style="margin:0">Aa — Título Display</h1>
           <h2 style="margin:12px 0 0">Aa — Título de Seção</h2>
           <h3 style="margin:12px 0 0">Aa — Subtítulo</h3>
-          <p style="margin:12px 0 0">Inter Regular — Formação de consultores de proteção veicular, do novato ao pro, com padrão e protocolo.</p>
+          <p style="margin:12px 0 0">Inter Regular — texto de corpo para parágrafos e descrições.</p>
         </div>
       </div>
 
@@ -106,11 +106,8 @@
 
   <footer class="footer">
     <div class="container footer-bottom" style="border:0;margin:0">
-      <span>© 2026 Todos Protegidos University · Design System</span>
-      <span>Academia do Consultor · do novato ao pro</span>
-    </div>
-    <div class="container footer-credit-row">
-      <span class="drap-credit">Desenvolvido por <img src="assets/img/drap-logo.svg" alt="DRAP"></span>
+      <span>© 2026 Sua Marca · Design System</span>
+      <span>Plataforma multi-tenant</span>
     </div>
   </footer>
 </body>

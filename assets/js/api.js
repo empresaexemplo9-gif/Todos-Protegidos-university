@@ -1,5 +1,5 @@
 // ============================================================
-// TODOS PROTEGIDOS — Camada de dados (TPData)
+// Camada de dados (TPData)
 // Usa Supabase quando configurado (assets/js/config.js);
 // caso contrário, funciona em modo LOCAL (localStorage).
 // API uniforme baseada em Promises para os dois modos.
@@ -10,7 +10,7 @@
   var cfg = window.TP_CONFIG || {};
   var hasSB = !!(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && window.supabase);
   var sb = hasSB ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY) : null;
-  var ADMIN_EMAIL = (cfg.ADMIN_EMAIL || "admin@todosprotegidos.com.br").toLowerCase();
+  var ADMIN_EMAIL = (cfg.ADMIN_EMAIL || "admin@example.com").toLowerCase();
   var ADMIN_LOCAL_SENHA = cfg.ADMIN_LOCAL_SENHA || "admin2026";
 
   // ---------- helpers locais ----------
@@ -27,30 +27,13 @@
     return msg ? (msg.charAt(0).toUpperCase() + msg.slice(1)) : "Não foi possível concluir. Tente novamente.";
   }
 
+  // Conteúdo inicial vazio — o admin cria os módulos pela Gestão de conteúdo.
   function modulosDefault() {
-    return [
-      { id: uid(), titulo: "Nível 1 · Novato", sub: "Fundamentos da proteção veicular e cultura da empresa", itens: [
-        { id: uid(), tipo: "video", titulo: "Boas-vindas e cultura Todos Protegidos", meta: "08:00", url: "", desc: "" },
-        { id: uid(), tipo: "info", titulo: "Benefícios (assistência 24h, FIPE, carro e moto)", meta: "Texto de apoio", url: "", desc: "" }
-      ] },
-      { id: uid(), titulo: "Nível 2 · Intermediário", sub: "Padrão de atendimento e abordagem", itens: [
-        { id: uid(), tipo: "aula", titulo: "Abordagem: formas e técnicas", meta: "5 modelos de abordagem", url: "", desc: "" }
-      ] },
-      { id: uid(), titulo: "Nível 3 · Avançado", sub: "Protocolos de venda, vistoria e objeções", itens: [
-        { id: uid(), tipo: "info", titulo: "Contorno de 10 objeções", meta: "Biblioteca de scripts", url: "", desc: "" },
-        { id: uid(), tipo: "file", titulo: "Checklist de vistoria", meta: "PDF", url: "", desc: "" }
-      ] },
-      { id: uid(), titulo: "Nível 4 · Pro", sub: "Gestão de carteira, pós-venda e mentoria", itens: [
-        { id: uid(), tipo: "info", titulo: "Reativação de inadimplentes", meta: "Scripts de voz e WhatsApp", url: "", desc: "" }
-      ] }
-    ];
+    return [];
   }
 
   function manualDefault() {
-    return [
-      { id: uid(), ordem: 1, titulo: "Diretriz de Atendimento aos Associados",
-        conteudo: "Sempre que um associado entrar em contato com o consultor solicitando informações, suporte ou acionamento relacionado à assistência 24 horas ou sinistro, o consultor deverá orientá-lo a entrar em contato diretamente com a Central de Atendimento da Todos Protegidos, por meio do telefone 0800. É importante informar ao associado que a equipe especializada fornecerá todas as orientações necessárias, garantindo maior agilidade, precisão e qualidade no atendimento.\n\nNos casos em que o associado buscar informações sobre eventos já registrados, tais como sinistros, colisões, roubos, furtos ou demais ocorrências em análise, o consultor deverá direcioná-lo para o canal específico do Setor de Eventos. Dessa forma, as informações serão prestadas pela área responsável, assegurando maior fidelidade, atualização e detalhamento sobre o andamento e as particularidades de cada caso.\n\nO direcionamento correto dos atendimentos contribui para a eficiência dos processos, reduz retrabalhos e garante uma experiência mais segura e satisfatória ao associado.\n\nOrientação resumida:\n• Assistência 24h e abertura de sinistros: encaminhar para o 0800 da Todos Protegidos.\n• Informações sobre processos já existentes (colisão, roubo, furto, indenização e demais eventos): encaminhar para o Setor de Eventos.\n• Evitar repassar informações sem validação da área responsável, garantindo a precisão das informações fornecidas ao associado." }
-    ];
+    return [];
   }
 
   // =================== Modo LOCAL ===================
@@ -132,9 +115,6 @@
     },
     getFonteFiliais: function () { return Promise.resolve(lsGet("tp_filiais_fonte", null)); },
     setFonteFiliais: function (d) { lsSet("tp_filiais_fonte", d); return Promise.resolve({ ok: true }); },
-    powercrmApi: function () {
-      return Promise.resolve({ ok: false, error: "A integração com o Power CRM funciona só no modo nuvem (Supabase configurado)." });
-    },
     listHistorico: function () { return Promise.resolve(lsGet("tp_filiais_hist", [])); },
     saveHistorico: function (l) { lsSet("tp_filiais_hist", l || []); return Promise.resolve({ ok: true }); },
 
@@ -439,32 +419,6 @@
     getFonteFiliais: function () {
       return sb.from("filiais_fontes").select("*").order("criado_em", { ascending: false }).limit(1)
         .then(function (res) { return (res.error || !res.data || !res.data.length) ? null : res.data[0]; });
-    },
-    // Ponte para a API do Power CRM (a função guarda o token no servidor)
-    powercrmApi: function (caminho, dados) {
-      var base = String(cfg.SUPABASE_URL || "").replace(/\/+$/, "");
-      if (!base) return Promise.resolve({ ok: false, error: "Supabase não configurado em assets/js/config.js." });
-      return sb.auth.getSession().then(function (r) {
-        var jwt = r.data && r.data.session && r.data.session.access_token;
-        if (!jwt) return { ok: false, error: "Sessão expirada. Entre novamente." };
-        return fetch(base + "/functions/v1/powercrm-api", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            authorization: "Bearer " + jwt,
-            apikey: cfg.SUPABASE_ANON_KEY || ""   // exigido pelo porteiro do Supabase
-          },
-          body: JSON.stringify({ caminho: caminho || "", dados: dados || {}, teste: !caminho })
-        }).then(function (res) {
-          return res.json().catch(function () { return {}; }).then(function (d) {
-            if (res.status === 404) return { ok: false, error: "A função powercrm-api ainda não foi publicada no Supabase." };
-            if (!d || (d.ok === undefined && !d.error)) return { ok: false, error: "Resposta inesperada da ponte (HTTP " + res.status + ")." };
-            return d;
-          });
-        }, function () {
-          return { ok: false, error: "Não alcancei a função powercrm-api. Confirme que ela foi publicada neste projeto." };
-        });
-      });
     },
     // Histórico mensal (gráfico de evolução por estado)
     listHistorico: function () {
@@ -785,7 +739,6 @@
     saveFiliais: function (l) { return impl.saveFiliais(l); },
     deleteFilial: function (id) { return impl.deleteFilial(id); },
     getFonteFiliais: function () { return impl.getFonteFiliais(); },
-    powercrmApi: function (caminho, dados) { return impl.powercrmApi(caminho, dados); },
     listHistorico: function () { return impl.listHistorico(); },
     saveHistorico: function (l) { return impl.saveHistorico(l); },
     setFonteFiliais: function (d) { return impl.setFonteFiliais(d); },

@@ -1,7 +1,7 @@
-// Todos Protegidos University — Service Worker (PWA)
+// Service Worker (PWA)
 // Estratégia: NETWORK-FIRST (sempre tenta a versão mais nova online; cache só
 // como reserva offline). Evita servir conteúdo desatualizado.
-var CACHE = "tp-univ-v1";
+var CACHE = "app-v1";
 
 self.addEventListener("install", function (e) { self.skipWaiting(); });
 
