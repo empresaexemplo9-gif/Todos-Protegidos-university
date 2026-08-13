@@ -1000,13 +1000,29 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const [planWidthMeters, setPlanWidthMeters] = useState(12);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [canvasMode, setCanvasMode] = useState<"marker" | "pan" | "wall">("marker");
+  const [canvasMode, setCanvasMode] = useState<"marker" | "pan" | "wall" | "calibrate">("marker");
   const [walls, setWalls] = useState<Array<{ id: number; pts: Array<{ x: number; y: number }> }>>([]);
   const [wallDraft, setWallDraft] = useState<Array<{ x: number; y: number }>>([]);
+  const [planPages, setPlanPages] = useState<string[]>([]);
+  const [activePage, setActivePage] = useState(0);
+  const [calibLine, setCalibLine] = useState<Array<{ x: number; y: number }>>([]);
+  const [calibMeters, setCalibMeters] = useState("");
   const panRef = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null);
   const clampZoom = (z: number) => Math.min(6, Math.max(0.3, z));
   const resetView = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
   const finishWall = () => { if (wallDraft.length >= 2) setWalls((w) => [...w, { id: Date.now(), pts: wallDraft }]); setWallDraft([]); };
+  const applyCalibration = (meters: number) => {
+    const el = canvasRef.current;
+    if (calibLine.length < 2 || !el || !(meters > 0)) return;
+    const w = el.clientWidth, h = el.clientHeight;
+    const [a, b] = calibLine;
+    const distPx = Math.hypot(((b.x - a.x) / 100) * w, ((b.y - a.y) / 100) * h);
+    if (distPx < 1) return;
+    setPlanWidthMeters(Math.max(1, Math.round((meters / distPx) * w * 10) / 10));
+    setCalibLine([]);
+    setCalibMeters("");
+    setCanvasMode("marker");
+  };
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
@@ -1092,20 +1108,32 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
         const pdfjs = await import("pdfjs-dist");
         pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
         const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
-        const page = await pdf.getPage(1);
-        const viewport = page.getViewport({ scale: 2 });
-        const canvas = document.createElement("canvas");
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const context = canvas.getContext("2d");
-        if (!context) throw new Error("Canvas indisponível");
-        await page.render({ canvas, canvasContext: context, viewport }).promise;
-        setPlanImage(canvas.toDataURL("image/jpeg", .92));
-        const content = await page.getTextContent();
-        const legendText = content.items.map((item) => "str" in item ? item.str : "").join(" ");
+        const pageCount = Math.min(pdf.numPages, 20);
+        const pages: string[] = [];
+        let legendText = "";
+        for (let n = 1; n <= pageCount; n++) {
+          setLegendStatus(`Renderizando página ${n} de ${pageCount}…`);
+          const page = await pdf.getPage(n);
+          const viewport = page.getViewport({ scale: 2 });
+          const canvas = document.createElement("canvas");
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const context = canvas.getContext("2d");
+          if (!context) continue;
+          await page.render({ canvas, canvasContext: context, viewport }).promise;
+          pages.push(canvas.toDataURL("image/jpeg", .9));
+          if (n === 1) { const content = await page.getTextContent(); legendText = content.items.map((item) => "str" in item ? item.str : "").join(" "); }
+        }
+        if (!pages.length) throw new Error("PDF sem páginas renderizáveis");
+        setPlanPages(pages);
+        setActivePage(0);
+        setPlanImage(pages[0]);
         recognizeLegend(legendText);
-      } else {
+        if (pages.length > 1) setLegendStatus(`PDF com ${pages.length} páginas carregado. Use as miniaturas para trocar de página.`);
+      } else if (file.type.startsWith("image/")) {
         const dataUrl = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
+        setPlanPages([]);
+        setActivePage(0);
         setPlanImage(dataUrl);
         const textDetector = (window as unknown as { TextDetector?: new () => { detect(source: ImageBitmapSource): Promise<Array<{ rawValue?: string }>> } }).TextDetector;
         if (textDetector) {
@@ -1113,6 +1141,10 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
           const detected = await new textDetector().detect(bitmap);
           recognizeLegend(detected.map((item) => item.rawValue ?? "").join(" "));
         } else recognizeLegend(file.name);
+      } else {
+        setLegendStatus(`Formato "${(file.name.split(".").pop() || "?").toUpperCase()}" não abre direto no navegador. Envie imagem (PNG, JPG, WebP, SVG) ou PDF. Arquivos CAD (DWG/DXF) devem ser exportados como PDF ou imagem.`);
+        setAnalyzing(false);
+        return;
       }
     } catch {
       setLegendStatus("A planta foi carregada, mas a legenda automática precisa de conferência manual.");
@@ -1182,7 +1214,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
 
         <div className="plan-card">
           <div className="plan-card__bar">
-            <div><span className="live-dot" /> PLANTA DE MARCAÇÃO</div><div className="plan-bar-actions"><div className="plan-modes"><button className={canvasMode === "marker" ? "active" : ""} onClick={() => setCanvasMode("marker")} title="Inserir pontos">✛ Marcar</button><button className={canvasMode === "pan" ? "active" : ""} onClick={() => setCanvasMode("pan")} title="Arrastar a planta">✋ Mover</button><button className={canvasMode === "wall" ? "active" : ""} onClick={() => setCanvasMode("wall")} title="Desenhar paredes — 2 cliques finaliza, clique direito cancela">▟ Parede</button></div><div className="plan-zoom"><button onClick={() => setZoom((z) => clampZoom(z / 1.2))} title="Diminuir">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom((z) => clampZoom(z * 1.2))} title="Aumentar">＋</button><button onClick={resetView} title="Ajustar à tela">⤢</button>{walls.length > 0 && <button onClick={() => { setWalls([]); setWallDraft([]); }} title="Limpar paredes">🗑</button>}</div><button className={heatmap ? "active" : ""} onClick={() => setHeatmap((value) => !value)}>◉ Mapa de calor</button><select value={heatBand} onChange={(event) => setHeatBand(event.target.value as "2.4" | "5" | "6")}><option value="2.4">2,4 GHz</option><option value="5">5 GHz</option><option value="6">6 GHz</option></select><label className="plan-scale">Escala<input type="number" min="1" max="80" value={planWidthMeters} onChange={(event) => setPlanWidthMeters(Math.max(1, Number(event.target.value) || 1))} title="Largura real da planta, em metros" /><span>m</span></label><label className="plan-upload"><input type="file" accept="image/*" multiple onChange={(e) => e.target.files && void addOverlayImages(e.target.files)} />＋ Imagens</label><label className="plan-upload"><input type="file" accept="image/*,.pdf,application/pdf" onChange={(e) => e.target.files?.[0] && void loadPlan(e.target.files[0])} />{planImage ? "Trocar planta" : "＋ Carregar planta/PDF"}</label></div>
+            <div><span className="live-dot" /> PLANTA DE MARCAÇÃO</div><div className="plan-bar-actions"><div className="plan-modes"><button className={canvasMode === "marker" ? "active" : ""} onClick={() => setCanvasMode("marker")} title="Inserir pontos">✛ Marcar</button><button className={canvasMode === "pan" ? "active" : ""} onClick={() => setCanvasMode("pan")} title="Arrastar a planta">✋ Mover</button><button className={canvasMode === "wall" ? "active" : ""} onClick={() => setCanvasMode("wall")} title="Desenhar paredes — 2 cliques finaliza, clique direito cancela">▟ Parede</button><button className={canvasMode === "calibrate" ? "active" : ""} onClick={() => { setCanvasMode("calibrate"); setCalibLine([]); }} title="Calibrar escala: trace uma medida conhecida na planta">📏 Escala</button></div><div className="plan-zoom"><button onClick={() => setZoom((z) => clampZoom(z / 1.2))} title="Diminuir">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom((z) => clampZoom(z * 1.2))} title="Aumentar">＋</button><button onClick={resetView} title="Ajustar à tela">⤢</button>{walls.length > 0 && <button onClick={() => { setWalls([]); setWallDraft([]); }} title="Limpar paredes">🗑</button>}</div><button className={heatmap ? "active" : ""} onClick={() => setHeatmap((value) => !value)}>◉ Mapa de calor</button><select value={heatBand} onChange={(event) => setHeatBand(event.target.value as "2.4" | "5" | "6")}><option value="2.4">2,4 GHz</option><option value="5">5 GHz</option><option value="6">6 GHz</option></select><label className="plan-scale">Escala<input type="number" min="1" max="80" value={planWidthMeters} onChange={(event) => setPlanWidthMeters(Math.max(1, Number(event.target.value) || 1))} title="Largura real da planta, em metros" /><span>m</span></label><label className="plan-upload"><input type="file" accept="image/*" multiple onChange={(e) => e.target.files && void addOverlayImages(e.target.files)} />＋ Imagens</label><label className="plan-upload"><input type="file" accept="image/*,.pdf,application/pdf" onChange={(e) => e.target.files?.[0] && void loadPlan(e.target.files[0])} />{planImage ? "Trocar planta" : "＋ Carregar planta/PDF"}</label></div>
           </div>
           <div
             className={`plan-canvas plan-canvas--mode-${canvasMode} ${planImage ? "plan-canvas--image" : ""}`}
@@ -1200,6 +1232,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
               const point = pointFromEvent(e.clientX, e.clientY);
               if (!point) return;
               if (canvasMode === "wall") { setWallDraft((d) => [...d, point]); return; }
+              if (canvasMode === "calibrate") { setCalibLine((c) => (c.length >= 2 ? [point] : [...c, point])); return; }
               addMarkerAt(point.x, point.y);
             }}
           >
@@ -1208,7 +1241,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
             {assets.map((item) => <div key={item.id} className={`plan-asset ${selectedAsset === item.id ? "selected" : ""}`} style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%` }} onPointerDown={(event) => { event.stopPropagation(); setDraggingAsset(item.id); setSelectedAsset(item.id); setSelectedMarker(null); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (draggingAsset !== item.id || resizingAsset === item.id || event.buttons === 0) return; const point = pointFromEvent(event.clientX, event.clientY); if (point) updateAsset(item.id, point); }} onPointerUp={(event) => { event.stopPropagation(); setDraggingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }}><img src={item.src} alt={item.name} draggable={false} /><small>{item.name}</small><button onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); setAssets((current) => current.filter((entry) => entry.id !== item.id)); setSelectedAsset(null); }} aria-label={`Excluir ${item.name}`}>×</button><span className="resize-handle" onPointerDown={(event) => { event.stopPropagation(); setResizingAsset(item.id); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (resizingAsset !== item.id || event.buttons === 0) return; const rect = canvasRef.current?.getBoundingClientRect(); if (rect) updateAsset(item.id, { width: Math.max(5, Math.min(55, item.width + event.movementX / rect.width * 100)) }); }} onPointerUp={(event) => { event.stopPropagation(); setResizingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }} /></div>)}
             <div className="canvas-hint">{canvasMode === "pan" ? "Arraste para mover · use o zoom" : canvasMode === "wall" ? "Clique para traçar paredes · 2 cliques finaliza" : <>Clique para inserir <b>{activeTool.code}</b></>}</div>
             {heatmap && markers.some((item) => item.type === "access-point") && <div className="wifi-legend" aria-hidden="true"><strong>Sinal · {heatBand === "2.4" ? "2,4" : heatBand} GHz</strong><span><i style={{ background: "#2ecc71" }} />Excelente</span><span><i style={{ background: "#1abc9c" }} />Bom</span><span><i style={{ background: "#f1c40f" }} />Regular</span><span><i style={{ background: "#e67e22" }} />Fraco</span></div>}
-            {(walls.length > 0 || wallDraft.length > 0) && <svg className="plan-walls" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{walls.map((wall) => <polyline key={wall.id} points={wall.pts.map((p) => `${p.x},${p.y}`).join(" ")} />)}{wallDraft.length > 0 && <polyline className="plan-walls__draft" points={wallDraft.map((p) => `${p.x},${p.y}`).join(" ")} />}</svg>}
+            {(walls.length > 0 || wallDraft.length > 0 || calibLine.length > 0) && <svg className="plan-walls" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{walls.map((wall) => <polyline key={wall.id} points={wall.pts.map((p) => `${p.x},${p.y}`).join(" ")} />)}{wallDraft.length > 0 && <polyline className="plan-walls__draft" points={wallDraft.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.length > 0 && <polyline className="plan-calib" points={calibLine.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.map((p, i) => <circle key={`c${i}`} className="plan-calib-node" cx={p.x} cy={p.y} r="0.9" />)}</svg>}
             {markers.map((item) => {
               const tool = tools.find((entry) => entry.id === item.type) ?? tools[0];
               return <button
@@ -1223,6 +1256,8 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
               >{item.label}<span className="resize-handle" onPointerDown={(event) => { event.stopPropagation(); setDragging(null); setResizingMarker(item.id); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (resizingMarker !== item.id || event.buttons === 0) return; updateMarker(item.id, { size: Math.max(26, Math.min(90, item.size + event.movementX)) }); }} onPointerUp={(event) => { event.stopPropagation(); setResizingMarker(null); event.currentTarget.releasePointerCapture(event.pointerId); }} /></button>;
             })}
           </div>
+          {planPages.length > 1 && <div className="plan-pages">{planPages.map((src, i) => <button key={i} className={activePage === i ? "active" : ""} onClick={() => { setActivePage(i); setPlanImage(src); }} title={`Página ${i + 1}`}><img src={src} alt={`Página ${i + 1}`} /><span>{i + 1}</span></button>)}</div>}
+          {canvasMode === "calibrate" && <div className="calib-panel">{calibLine.length < 2 ? <span>Trace uma medida conhecida na planta ({calibLine.length}/2)</span> : <><label>Distância real<input type="number" min="0.1" step="0.1" value={calibMeters} onChange={(e) => setCalibMeters(e.target.value)} autoFocus /><span>m</span></label><button className="calib-apply" onClick={() => applyCalibration(Number(calibMeters))}>Aplicar</button></>}<button className="calib-cancel" onClick={() => { setCalibLine([]); setCalibMeters(""); }}>Limpar</button></div>}
         </div>
 
         <div className="quant-card">
