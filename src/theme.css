@@ -443,3 +443,195 @@
   border-radius: 3px;
   display: inline-block;
 }
+
+/* ===== Integração AVA ===== */
+.ava-dialog {
+  max-width: 780px;
+}
+.ava-section {
+  border-top: 1px solid #eef1ef;
+  margin-top: 16px;
+  padding-top: 14px;
+}
+.ava-section > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #3a443f;
+  margin-bottom: 10px;
+}
+.ava-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ava-header-row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 34px;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.ava-header-row input {
+  border: 1px solid #dce2de;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.ava-header-row input:focus {
+  outline: none;
+  border-color: #5b8e7d;
+  box-shadow: 0 0 0 3px rgba(91, 142, 125, 0.16);
+}
+.ava-header-row button {
+  border: none;
+  background: #f0f2f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  color: #55605a;
+}
+.ava-hint {
+  display: block;
+  font-size: 11px;
+  color: #6b756f;
+  margin-top: 8px;
+  line-height: 1.55;
+}
+.ava-lastsync {
+  margin-top: 14px;
+  font-size: 11.5px;
+  color: #2f7d5b;
+  background: #eefaf3;
+  border: 1px solid #cdeede;
+  border-radius: 10px;
+  padding: 9px 12px;
+}
+
+/* ===== Importar catálogo (CSV / AVA) ===== */
+.import-dialog {
+  width: min(760px, 96vw);
+}
+.import-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 34px 20px;
+  border: 2px dashed #cdd6d1;
+  border-radius: 14px;
+  text-align: center;
+  cursor: pointer;
+  color: #2a322e;
+  background: #f7faf8;
+}
+.import-drop:hover {
+  border-color: #5b8e7d;
+  background: #f1f7f4;
+}
+.import-drop input {
+  display: none;
+}
+.import-drop__icon {
+  font-size: 26px;
+}
+.import-drop small {
+  color: #6b756f;
+}
+.import-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f2f5f3;
+  border-radius: 10px;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+.import-file small {
+  color: #6b756f;
+}
+.import-file button {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: #5b8e7d;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 12px;
+}
+.import-map {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.import-map__head {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: #8a938d;
+  padding: 0 2px;
+}
+.import-map__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+  font-size: 12.5px;
+}
+.import-map__row select {
+  border: 1px solid #dce2de;
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 12px;
+  background: #fff;
+}
+.import-preview .eyebrow {
+  display: block;
+  margin-bottom: 6px;
+}
+.import-preview__table {
+  overflow-x: auto;
+  border: 1px solid #e6ebe8;
+  border-radius: 10px;
+}
+.import-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+.import-preview th,
+.import-preview td {
+  text-align: left;
+  padding: 7px 10px;
+  border-bottom: 1px solid #eef2f0;
+  white-space: nowrap;
+}
+.import-preview th {
+  background: #f6f9f7;
+  color: #55605a;
+  font-weight: 600;
+}
+.import-preview em {
+  color: #b3bbb6;
+}
+.import-done {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+}
+.import-done > span {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e2f3ec;
+  color: #2e8b6a;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}

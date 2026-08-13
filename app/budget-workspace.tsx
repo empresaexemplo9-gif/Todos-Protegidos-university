@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import CatalogImport from "./catalog-import";
 
 type CatalogKind = "equipment" | "service";
 type BudgetStatus = "draft" | "sent" | "approved";
@@ -99,6 +100,7 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
   const [syncing, setSyncing] = useState("");
   const [confirmPrompt, setConfirmPrompt] = useState<{ message: string; resolve: (ok: boolean) => void } | null>(null);
   const askConfirm = (message: string) => new Promise<boolean>((resolve) => setConfirmPrompt({ message, resolve }));
+  const [importOpen, setImportOpen] = useState(false);
 
   const showNotice = (message: string) => {
     setNotice(message);
@@ -428,7 +430,7 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
               <div className="catalog-tabs"><button className={catalogKind === "equipment" ? "active" : ""} onClick={() => { setCatalogKind("equipment"); setCategoryFilter(""); setSystemFilter(""); }}>Equipamentos</button><button className={catalogKind === "service" ? "active" : ""} onClick={() => { setCatalogKind("service"); setCategoryFilter(""); setSystemFilter(""); }}>Serviços</button></div>
               <label className="catalog-search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar produto, marca, modelo ou código" /></label>
               <div className="catalog-filters"><select value={systemFilter} onChange={(event) => setSystemFilter(event.target.value)}><option value="">Todos os sistemas</option>{systems.map((system) => <option key={system}>{system}</option>)}</select><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="">Todas as categorias</option>{categories.map((category) => <option key={category}>{category}</option>)}</select></div>
-              <button className="btn btn--dark" onClick={() => openCatalogEditor()}>＋ Cadastrar</button>
+              <button className="btn btn--ghost" onClick={() => setImportOpen(true)}>⇪ Importar CSV</button><button className="btn btn--dark" onClick={() => openCatalogEditor()}>＋ Cadastrar</button>
             </div>
             <div className="ava-table-wrap"><table className="ava-table ava-table--catalog"><thead><tr><th>Produto / serviço</th><th>Sistema</th><th>Compra</th><th>Venda</th><th>Margem</th><th>Ações</th></tr></thead><tbody>
               {filteredCatalog.map((item) => {
@@ -463,6 +465,8 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
       </section></div>}
 
       {confirmPrompt && <div className="catalog-dialog-backdrop" onMouseDown={(e) => { if (e.currentTarget === e.target) { confirmPrompt.resolve(false); setConfirmPrompt(null); } }}><section className="confirm-dialog" role="dialog" aria-modal="true"><p>{confirmPrompt.message}</p><div className="confirm-dialog__actions"><button className="btn btn--ghost" onClick={() => { confirmPrompt.resolve(false); setConfirmPrompt(null); }}>Cancelar</button><button className="btn btn--dark" onClick={() => { confirmPrompt.resolve(true); setConfirmPrompt(null); }}>Confirmar</button></div></section></div>}
+
+      {importOpen && <CatalogImport onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); void loadData(true, activeId); showNotice("Catálogo atualizado a partir do arquivo"); }} />}
 
       {notice && <div className="toast"><span>✓</span>{notice}</div>}
     </div>

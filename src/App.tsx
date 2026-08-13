@@ -3,6 +3,7 @@ import Home from "../app/admin-workspace";
 import ClientProposalPage from "../app/proposta/page";
 import LoginScreen from "./LoginScreen";
 import AccessManager from "./AccessManager";
+import AvaIntegration from "./AvaIntegration";
 
 export type SessionUser = { id: string; name: string; email: string; role: "owner" | "member" };
 type SessionState = { user: SessionUser | null; needsSetup: boolean };
@@ -16,6 +17,7 @@ export default function App() {
   const [loading, setLoading] = useState(!isClientView);
   const [menuOpen, setMenuOpen] = useState(false);
   const [accessOpen, setAccessOpen] = useState(false);
+  const [avaOpen, setAvaOpen] = useState(false);
 
   const loadSession = async () => {
     try {
@@ -65,6 +67,9 @@ export default function App() {
             {user.role === "owner" && (
               <button onClick={() => { setAccessOpen(true); setMenuOpen(false); }}>Acessos e senha</button>
             )}
+            {user.role === "owner" && (
+              <button onClick={() => { setAvaOpen(true); setMenuOpen(false); }}>Integração AVA</button>
+            )}
             <button className="sona-account__logout" onClick={() => void logout()}>Sair</button>
           </div>
         )}
@@ -74,6 +79,7 @@ export default function App() {
         </button>
       </div>
       {accessOpen && <AccessManager currentUserId={user.id} onClose={() => setAccessOpen(false)} />}
+      {avaOpen && <AvaIntegration onClose={() => setAvaOpen(false)} />}
     </>
   );
 }
