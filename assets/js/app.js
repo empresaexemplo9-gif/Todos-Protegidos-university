@@ -12,7 +12,7 @@
       if (document.getElementById("tpInstall") || !document.body) return;
       var b = document.createElement("button");
       b.id = "tpInstall"; b.type = "button"; b.textContent = "📲 Instalar app";
-      b.setAttribute("style", "position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:9999;border:0;cursor:pointer;background:#334155;color:#fff;font:600 14px/1 Inter,system-ui,sans-serif;padding:13px 20px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.28)");
+      b.setAttribute("style", "position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:9999;border:0;cursor:pointer;background:#2536cf;color:#fff;font:600 14px/1 Inter,system-ui,sans-serif;padding:13px 20px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.28)");
       b.addEventListener("click", function () {
         if (!deferred) return;
         deferred.prompt();
@@ -31,7 +31,7 @@
       if (!isIOS || isStandalone() || !document.body || document.getElementById("tpIosHint")) return;
       try { if (localStorage.getItem("tp_ios_hint") === "1") return; } catch (e) {}
       var d = document.createElement("div"); d.id = "tpIosHint";
-      d.setAttribute("style", "position:fixed;left:12px;right:12px;bottom:14px;z-index:9999;background:#334155;color:#fff;font:500 13px/1.45 Inter,system-ui,sans-serif;padding:12px 14px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.28);display:flex;align-items:center;gap:10px");
+      d.setAttribute("style", "position:fixed;left:12px;right:12px;bottom:14px;z-index:9999;background:#2536cf;color:#fff;font:500 13px/1.45 Inter,system-ui,sans-serif;padding:12px 14px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.28);display:flex;align-items:center;gap:10px");
       d.innerHTML = '<span style="font-size:18px">📲</span><span style="flex:1">Para instalar no iPhone: toque em <b>Compartilhar</b> e depois em <b>Adicionar à Tela de Início</b>.</span><button type="button" aria-label="Fechar" style="background:transparent;border:0;color:#fff;font-size:20px;line-height:1;cursor:pointer">&times;</button>';
       d.querySelector("button").addEventListener("click", function () { try { localStorage.setItem("tp_ios_hint", "1"); } catch (e) {} if (d.parentNode) d.parentNode.removeChild(d); });
       document.body.appendChild(d);
@@ -335,7 +335,7 @@
           return setTimeout(function () { window.location.href = "login.html"; }, 2400);
         }
         showMsg("Acesso criado com sucesso! Redirecionando…", true);
-        setTimeout(function () { window.location.href = "dashboard.html"; }, 1400);
+        setTimeout(function () { window.location.href = "propostas.html"; }, 1400);
       }, function () { btn.disabled = false; showMsg("Erro de conexão. Tente novamente.", false); });
     });
   }
@@ -361,7 +361,7 @@
         var nome = (r.session && r.session.nome) || "";
         lembrarPapel((r.session && r.session.role) || "usuario");
         lShow("Acesso liberado" + (nome ? ", " + nome.split(" ")[0] : "") + "! Redirecionando…", true);
-        setTimeout(function () { window.location.href = "dashboard.html"; }, 1000);
+        setTimeout(function () { window.location.href = "propostas.html"; }, 1000);
       }, function () { btn.disabled = false; lShow("Erro de conexão. Tente novamente.", false); });
     });
   }
@@ -465,6 +465,283 @@
         }
         cShow("Dados atualizados com sucesso! ✓", true);
       }, function () { btn.disabled = false; cShow("Erro de conexão. Tente novamente.", false); });
+    });
+  }
+
+  // ==========================================================
+  // PROPOSTAS — helpers compartilhados
+  // ==========================================================
+  var PROP_STATUS_LABEL = { rascunho: "Rascunho", enviada: "Enviada", aceita: "Aceita", recusada: "Recusada" };
+  function propEsc(s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+  function propBRL(n) {
+    n = Number(n) || 0;
+    var neg = n < 0; n = Math.abs(n);
+    var s = n.toFixed(2).split("."); s[0] = s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return (neg ? "- " : "") + "R$ " + s[0] + "," + s[1];
+  }
+  function propData(s) { if (!s) return "—"; var d = new Date(String(s).length === 10 ? s + "T00:00:00" : s); return isNaN(d) ? "—" : d.toLocaleDateString("pt-BR"); }
+  function propStatusHtml(st) { var ok = PROP_STATUS_LABEL[st] ? st : "rascunho"; return '<span class="st st-' + ok + '">' + PROP_STATUS_LABEL[ok] + '</span>'; }
+
+  // ---- Propostas: LISTA ----
+  var propostasRoot = document.getElementById("propostasRoot");
+  if (propostasRoot && window.TPData) {
+    var filtroEl = document.getElementById("propostasFiltro");
+    var resumoEl = document.getElementById("propostasResumo");
+    var propostasCache = [];
+    var filtroAtivo = "todos";
+
+    function propResumo(list) {
+      var by = { rascunho: 0, enviada: 0, aceita: 0, recusada: 0 }, totalAceita = 0;
+      list.forEach(function (p) { by[p.status] = (by[p.status] || 0) + 1; if (p.status === "aceita") totalAceita += Number(p.total) || 0; });
+      if (resumoEl) resumoEl.innerHTML =
+        '<div class="kpi"><div class="val">' + list.length + '</div><div class="lbl">Propostas</div></div>' +
+        '<div class="kpi"><div class="val">' + by.enviada + '</div><div class="lbl">Enviadas</div></div>' +
+        '<div class="kpi"><div class="val">' + by.aceita + '</div><div class="lbl">Aceitas</div></div>' +
+        '<div class="kpi"><div class="val" style="font-size:var(--tp-fs-xl)">' + propBRL(totalAceita) + '</div><div class="lbl">Total aceito</div></div>';
+    }
+
+    function propFiltros(list) {
+      if (!filtroEl) return;
+      var counts = { todos: list.length, rascunho: 0, enviada: 0, aceita: 0, recusada: 0 };
+      list.forEach(function (p) { counts[p.status] = (counts[p.status] || 0) + 1; });
+      var chips = [["todos", "Todas"], ["rascunho", "Rascunho"], ["enviada", "Enviada"], ["aceita", "Aceita"], ["recusada", "Recusada"]];
+      filtroEl.innerHTML = chips.map(function (c) {
+        return '<button class="prop-chip' + (filtroAtivo === c[0] ? " active" : "") + '" data-f="' + c[0] + '">' + c[1] + " (" + (counts[c[0]] || 0) + ")</button>";
+      }).join("");
+      Array.prototype.forEach.call(filtroEl.querySelectorAll("[data-f]"), function (b) {
+        b.addEventListener("click", function () { filtroAtivo = b.getAttribute("data-f"); renderProp(); });
+      });
+    }
+
+    function renderProp() {
+      propFiltros(propostasCache);
+      if (!propostasCache.length) {
+        propostasRoot.innerHTML = '<div class="gestao-empty" style="padding:44px 28px">Nenhuma proposta ainda. Clique em <strong>“+ Nova proposta”</strong> para começar.</div>';
+        return;
+      }
+      var list = filtroAtivo === "todos" ? propostasCache : propostasCache.filter(function (p) { return p.status === filtroAtivo; });
+      if (!list.length) { propostasRoot.innerHTML = '<div class="gestao-empty" style="padding:36px">Nenhuma proposta neste filtro.</div>'; return; }
+      var rows = list.map(function (p) {
+        return '<tr>' +
+          '<td style="font-weight:600">' + (propEsc(p.numero) || "—") + '</td>' +
+          '<td><a href="proposta-view.html?id=' + encodeURIComponent(p.id) + '" style="font-weight:600;color:inherit">' + (propEsc(p.titulo) || "(sem título)") + '</a><div class="muted" style="font-size:var(--tp-fs-xs)">' + (propEsc(p.cliente_nome) || "—") + '</div></td>' +
+          '<td style="text-align:right;white-space:nowrap">' + propBRL(p.total) + '</td>' +
+          '<td>' + propStatusHtml(p.status) + '</td>' +
+          '<td style="white-space:nowrap">' + propData(p.validade) + '</td>' +
+          '<td><div class="prop-acts">' +
+            '<a class="btn btn-ghost btn-sm" href="proposta-view.html?id=' + encodeURIComponent(p.id) + '">Ver</a>' +
+            '<a class="btn btn-ghost btn-sm" href="proposta.html?id=' + encodeURIComponent(p.id) + '">Editar</a>' +
+            '<button class="btn btn-ghost btn-sm" data-del="' + p.id + '">Excluir</button>' +
+          '</div></td>' +
+        '</tr>';
+      }).join("");
+      propostasRoot.innerHTML = '<div class="panel"><div class="table-wrap"><table class="table">' +
+        '<thead><tr><th>Nº</th><th>Proposta</th><th style="text-align:right">Total</th><th>Status</th><th>Validade</th><th></th></tr></thead>' +
+        '<tbody>' + rows + '</tbody></table></div></div>';
+      Array.prototype.forEach.call(propostasRoot.querySelectorAll("[data-del]"), function (b) {
+        b.addEventListener("click", function () {
+          var id = b.getAttribute("data-del");
+          var p = propostasCache.filter(function (x) { return x.id === id; })[0];
+          if (confirm('Excluir a proposta "' + ((p && p.titulo) || "") + '"? Esta ação não pode ser desfeita.')) {
+            TPData.deleteProposta(id).then(loadProp);
+          }
+        });
+      });
+    }
+
+    function loadProp() {
+      return TPData.listPropostas().then(function (list) {
+        propostasCache = list || []; propResumo(propostasCache); renderProp();
+      }, function () { propostasRoot.innerHTML = '<div class="gestao-empty" style="padding:40px">Não foi possível carregar as propostas.</div>'; });
+    }
+
+    propostasRoot.innerHTML = '<div class="gestao-empty" style="padding:40px">Carregando…</div>';
+    TPData.session().then(function (s) { if (!s) { window.location.replace("login.html"); return; } loadProp(); }, function () { loadProp(); });
+  }
+
+  // ---- Propostas: FORMULÁRIO (criar/editar) ----
+  var propostaForm = document.getElementById("propostaForm");
+  if (propostaForm && window.TPData) {
+    var pfMsg = document.getElementById("propFormMsg");
+    var itensBox = document.getElementById("propItens");
+    var totalEl = document.getElementById("propTotal");
+    var descEl = document.getElementById("p_desconto");
+    var addItemBtn = document.getElementById("addItem");
+    var pid = new URLSearchParams(location.search).get("id") || "novo";
+    var editando = pid && pid !== "novo";
+
+    function pfShow(t, ok) { if (!pfMsg) return; pfMsg.textContent = t; pfMsg.className = "form-msg show " + (ok ? "ok" : "err"); if (!ok) pfMsg.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    function pfVal(id) { var e = document.getElementById(id); return e ? e.value.trim() : ""; }
+
+    function itemRow(it) {
+      it = it || {};
+      var row = document.createElement("div");
+      row.className = "pf-item";
+      row.innerHTML =
+        '<input data-k="descricao" type="text" placeholder="Descrição do item">' +
+        '<input data-k="quantidade" type="number" min="0" step="1" placeholder="1">' +
+        '<input data-k="valor_unitario" type="number" min="0" step="0.01" placeholder="0,00">' +
+        '<div class="pf-lt">R$ 0,00</div>' +
+        '<button type="button" class="pf-rm" aria-label="Remover item">&times;</button>';
+      row.querySelector('[data-k="descricao"]').value = it.descricao || "";
+      row.querySelector('[data-k="quantidade"]').value = it.quantidade != null ? it.quantidade : "";
+      row.querySelector('[data-k="valor_unitario"]').value = it.valor_unitario != null ? it.valor_unitario : "";
+      row.addEventListener("input", recalcProp);
+      row.querySelector(".pf-rm").addEventListener("click", function () { row.parentNode.removeChild(row); recalcProp(); });
+      return row;
+    }
+    function coletaItens() {
+      return Array.prototype.map.call(itensBox.querySelectorAll(".pf-item"), function (r) {
+        return {
+          descricao: r.querySelector('[data-k="descricao"]').value.trim(),
+          quantidade: Number(r.querySelector('[data-k="quantidade"]').value) || 0,
+          valor_unitario: Number(r.querySelector('[data-k="valor_unitario"]').value) || 0
+        };
+      });
+    }
+    function recalcProp() {
+      var itens = coletaItens();
+      Array.prototype.forEach.call(itensBox.querySelectorAll(".pf-item"), function (r, i) {
+        r.querySelector(".pf-lt").textContent = propBRL(itens[i].quantidade * itens[i].valor_unitario);
+      });
+      totalEl.textContent = propBRL(TPProposta.calcTotal(itens, descEl.value));
+    }
+    if (addItemBtn) addItemBtn.addEventListener("click", function () { itensBox.appendChild(itemRow({ quantidade: 1 })); recalcProp(); });
+    if (descEl) descEl.addEventListener("input", recalcProp);
+
+    function preencher(p) {
+      document.getElementById("p_titulo").value = p.titulo || "";
+      document.getElementById("p_validade").value = p.validade || "";
+      document.getElementById("p_cliente_nome").value = p.cliente_nome || "";
+      document.getElementById("p_cliente_documento").value = p.cliente_documento || "";
+      document.getElementById("p_cliente_email").value = p.cliente_email || "";
+      document.getElementById("p_cliente_telefone").value = p.cliente_telefone || "";
+      document.getElementById("p_status").value = p.status || "rascunho";
+      document.getElementById("p_desconto").value = p.desconto || 0;
+      document.getElementById("p_obs").value = p.observacoes || "";
+      document.getElementById("p_cond").value = p.condicoes || "";
+      itensBox.innerHTML = "";
+      (p.itens || []).forEach(function (it) { itensBox.appendChild(itemRow(it)); });
+      if (!(p.itens || []).length) itensBox.appendChild(itemRow({ quantidade: 1 }));
+      recalcProp();
+    }
+
+    function coletaProposta() {
+      return {
+        titulo: pfVal("p_titulo"), validade: pfVal("p_validade") || null,
+        cliente_nome: pfVal("p_cliente_nome"), cliente_documento: pfVal("p_cliente_documento"),
+        cliente_email: pfVal("p_cliente_email"), cliente_telefone: pfVal("p_cliente_telefone"),
+        status: document.getElementById("p_status").value,
+        desconto: Number(descEl.value) || 0,
+        observacoes: pfVal("p_obs"), condicoes: pfVal("p_cond"),
+        itens: coletaItens().filter(function (it) { return it.descricao || it.valor_unitario; })
+      };
+    }
+
+    propostaForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var d = coletaProposta();
+      if (!d.titulo) return pfShow("Informe um título para a proposta.", false);
+      if (!d.itens.length) return pfShow("Adicione ao menos um item com descrição ou valor.", false);
+      var btn = propostaForm.querySelector('button[type="submit"]'); btn.disabled = true;
+      var req = editando ? TPData.updateProposta(pid, d) : TPData.addProposta(d);
+      req.then(function (r) {
+        btn.disabled = false;
+        if (r && r.ok === false) return pfShow(r.error || "Não foi possível salvar.", false);
+        var novoId = editando ? pid : (r.proposta && r.proposta.id);
+        pfShow("Proposta salva! ✓", true);
+        setTimeout(function () { window.location.href = novoId ? ("proposta-view.html?id=" + encodeURIComponent(novoId)) : "propostas.html"; }, 700);
+      }, function () { btn.disabled = false; pfShow("Erro de conexão. Tente novamente.", false); });
+    });
+
+    var titleEl = document.getElementById("propFormTitle"), crumbEl = document.getElementById("propCrumb");
+    TPData.session().then(function (s) {
+      if (!s) { window.location.replace("login.html"); return; }
+      if (editando) {
+        if (titleEl) titleEl.textContent = "Editar proposta";
+        if (crumbEl) crumbEl.textContent = "Editar proposta";
+        TPData.getProposta(pid).then(function (p) {
+          if (!p) { pfShow("Proposta não encontrada.", false); itensBox.appendChild(itemRow({ quantidade: 1 })); recalcProp(); return; }
+          preencher(p);
+        }, function () { pfShow("Não foi possível carregar a proposta.", false); itensBox.appendChild(itemRow({ quantidade: 1 })); recalcProp(); });
+      } else {
+        itensBox.appendChild(itemRow({ quantidade: 1 })); recalcProp();
+      }
+    }, function () { itensBox.appendChild(itemRow({ quantidade: 1 })); recalcProp(); });
+  }
+
+  // ---- Propostas: VISUALIZAÇÃO (imprimível) ----
+  var propostaView = document.getElementById("propostaView");
+  if (propostaView && window.TPData) {
+    var pvId = new URLSearchParams(location.search).get("id");
+    var pvPrint = document.getElementById("pvPrint");
+    var pvEdit = document.getElementById("pvEdit");
+    if (pvEdit && pvId) pvEdit.href = "proposta.html?id=" + encodeURIComponent(pvId);
+    if (pvPrint) pvPrint.addEventListener("click", function () { window.print(); });
+
+    function renderDoc(p) {
+      var linhas = (p.itens || []).map(function (it) {
+        var t = (Number(it.quantidade) || 0) * (Number(it.valor_unitario) || 0);
+        return '<tr><td>' + (propEsc(it.descricao) || "—") + '</td><td class="num">' + (Number(it.quantidade) || 0) + '</td><td class="num">' + propBRL(it.valor_unitario) + '</td><td class="num">' + propBRL(t) + '</td></tr>';
+      }).join("");
+      var cliente = [
+        p.cliente_nome ? '<div><span class="k">Cliente:</span>' + propEsc(p.cliente_nome) + '</div>' : '',
+        p.cliente_documento ? '<div><span class="k">Documento:</span>' + propEsc(p.cliente_documento) + '</div>' : '',
+        p.cliente_email ? '<div><span class="k">E-mail:</span>' + propEsc(p.cliente_email) + '</div>' : '',
+        p.cliente_telefone ? '<div><span class="k">Telefone:</span>' + propEsc(p.cliente_telefone) + '</div>' : ''
+      ].join("");
+      var desconto = Number(p.desconto) || 0;
+      propostaView.innerHTML =
+        '<div class="prop-doc">' +
+          '<div class="pd-head"><img src="assets/img/logo.svg" alt="Sona"><div class="pd-meta"><div><strong>' + (propEsc(p.numero) || "Proposta") + '</strong></div>' + propStatusHtml(p.status) + (p.validade ? '<div style="margin-top:6px">Validade: ' + propData(p.validade) + '</div>' : '') + '</div></div>' +
+          '<h1 class="pd-title">' + (propEsc(p.titulo) || "Proposta") + '</h1>' +
+          (cliente ? '<div class="pd-cliente">' + cliente + '</div>' : '') +
+          '<table class="pd-itens"><thead><tr><th>Descrição</th><th class="num">Qtd</th><th class="num">Valor unit.</th><th class="num">Total</th></tr></thead><tbody>' + (linhas || '<tr><td colspan="4" class="muted">Sem itens.</td></tr>') + '</tbody></table>' +
+          (desconto ? '<div class="pd-tot"><span class="lbl">Desconto</span><span class="v" style="font-size:var(--tp-fs-lg)">' + propBRL(-desconto) + '</span></div>' : '') +
+          '<div class="pd-tot"><span class="lbl">Total</span><span class="v">' + propBRL(p.total) + '</span></div>' +
+          (p.condicoes ? '<div class="pd-sec"><h4>Condições comerciais</h4><p>' + propEsc(p.condicoes) + '</p></div>' : '') +
+          (p.observacoes ? '<div class="pd-sec"><h4>Observações</h4><p>' + propEsc(p.observacoes) + '</p></div>' : '') +
+        '</div>';
+    }
+
+    TPData.session().then(function (s) {
+      if (!s) { window.location.replace("login.html"); return; }
+      if (!pvId) { propostaView.innerHTML = '<div class="gestao-empty" style="padding:40px">Proposta não informada.</div>'; return; }
+      TPData.getProposta(pvId).then(function (p) {
+        if (!p) { propostaView.innerHTML = '<div class="gestao-empty" style="padding:40px">Proposta não encontrada.</div>'; return; }
+        renderDoc(p);
+      }, function () { propostaView.innerHTML = '<div class="gestao-empty" style="padding:40px">Não foi possível carregar a proposta.</div>'; });
+    }, function () {});
+  }
+
+  // ---- Dashboard: resumo de propostas ----
+  var dashPropResumo = document.getElementById("dashPropResumo");
+  var dashPropRecentes = document.getElementById("dashPropRecentes");
+  if ((dashPropResumo || dashPropRecentes) && window.TPData) {
+    TPData.listPropostas().then(function (list) {
+      list = list || [];
+      var by = { rascunho: 0, enviada: 0, aceita: 0, recusada: 0 }, totalAceita = 0;
+      list.forEach(function (p) { by[p.status] = (by[p.status] || 0) + 1; if (p.status === "aceita") totalAceita += Number(p.total) || 0; });
+      if (dashPropResumo) dashPropResumo.innerHTML =
+        '<div class="kpi"><div class="val">' + list.length + '</div><div class="lbl">Propostas</div></div>' +
+        '<div class="kpi"><div class="val">' + by.enviada + '</div><div class="lbl">Enviadas</div></div>' +
+        '<div class="kpi"><div class="val">' + by.aceita + '</div><div class="lbl">Aceitas</div></div>' +
+        '<div class="kpi"><div class="val" style="font-size:var(--tp-fs-xl)">' + propBRL(totalAceita) + '</div><div class="lbl">Total aceito</div></div>';
+      if (dashPropRecentes) {
+        if (!list.length) { dashPropRecentes.innerHTML = '<div class="gestao-empty" style="padding:26px">Nenhuma proposta ainda. <a href="proposta.html?id=novo">Criar a primeira</a>.</div>'; return; }
+        var rows = list.slice(0, 5).map(function (p) {
+          return '<tr>' +
+            '<td style="font-weight:600">' + (propEsc(p.numero) || "—") + '</td>' +
+            '<td><a href="proposta-view.html?id=' + encodeURIComponent(p.id) + '" style="font-weight:600;color:inherit">' + (propEsc(p.titulo) || "(sem título)") + '</a></td>' +
+            '<td style="text-align:right;white-space:nowrap">' + propBRL(p.total) + '</td>' +
+            '<td>' + propStatusHtml(p.status) + '</td>' +
+          '</tr>';
+        }).join("");
+        dashPropRecentes.innerHTML = '<div class="table-wrap"><table class="table"><thead><tr><th>Nº</th><th>Proposta</th><th style="text-align:right">Total</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+      }
+    }, function () {
+      if (dashPropResumo) dashPropResumo.innerHTML = '<div class="gestao-empty" style="grid-column:1/-1;padding:24px">Não foi possível carregar o resumo.</div>';
+      if (dashPropRecentes) dashPropRecentes.innerHTML = "";
     });
   }
 

@@ -27,6 +27,46 @@
     return msg ? (msg.charAt(0).toUpperCase() + msg.slice(1)) : "Não foi possível concluir. Tente novamente.";
   }
 
+  // ---- Propostas: status, total e normalização ----
+  var PROPOSTA_STATUS = ["rascunho", "enviada", "aceita", "recusada"];
+  function calcTotalProposta(itens, desconto) {
+    var soma = (itens || []).reduce(function (s, it) {
+      return s + (Number(it.quantidade) || 0) * (Number(it.valor_unitario) || 0);
+    }, 0);
+    var t = soma - (Number(desconto) || 0);
+    return t > 0 ? Math.round(t * 100) / 100 : 0;
+  }
+  function normalizaProposta(d) {
+    d = d || {};
+    var itens = (d.itens || []).map(function (it) {
+      return {
+        descricao: String(it.descricao || ""),
+        quantidade: Number(it.quantidade) || 0,
+        valor_unitario: Number(it.valor_unitario) || 0
+      };
+    });
+    return {
+      titulo: String(d.titulo || ""),
+      cliente_nome: String(d.cliente_nome || ""),
+      cliente_email: String(d.cliente_email || ""),
+      cliente_telefone: String(d.cliente_telefone || ""),
+      cliente_documento: String(d.cliente_documento || ""),
+      status: PROPOSTA_STATUS.indexOf(d.status) >= 0 ? d.status : "rascunho",
+      validade: d.validade || null,
+      itens: itens,
+      desconto: Number(d.desconto) || 0,
+      observacoes: String(d.observacoes || ""),
+      condicoes: String(d.condicoes || ""),
+      total: calcTotalProposta(itens, d.desconto)
+    };
+  }
+  function proximoNumeroProposta(arr) {
+    var max = 0;
+    (arr || []).forEach(function (p) { var m = /(\d+)/.exec(p.numero || ""); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+    return "PROP-" + ("000" + (max + 1)).slice(-4);
+  }
+  window.TPProposta = { STATUS: PROPOSTA_STATUS, calcTotal: calcTotalProposta };
+
   // Conteúdo inicial vazio — o admin cria os módulos pela Gestão de conteúdo.
   function modulosDefault() {
     return [];
@@ -307,6 +347,45 @@
       var all = lsGet("tp_metas", {});
       all[ano + "-" + mes] = { mes: mes, ano: ano, meta_vendas: Number(d.meta_vendas) || 0, meta_comissao: Number(d.meta_comissao) || 0 };
       lsSet("tp_metas", all);
+      return Promise.resolve({ ok: true });
+    },
+
+    // ---- Propostas (modo local) ----
+    listPropostas: function () {
+      var p = lsGet("tp_propostas", []);
+      return Promise.resolve(p.slice().sort(function (a, b) { return (b.criado_em || "").localeCompare(a.criado_em || ""); }));
+    },
+    getProposta: function (id) {
+      return Promise.resolve(lsGet("tp_propostas", []).filter(function (x) { return x.id === id; })[0] || null);
+    },
+    addProposta: function (d) {
+      var arr = lsGet("tp_propostas", []);
+      var now = new Date().toISOString();
+      var p = normalizaProposta(d);
+      p.id = uid(); p.numero = proximoNumeroProposta(arr); p.criado_em = now; p.atualizado_em = now;
+      arr.unshift(p); lsSet("tp_propostas", arr);
+      return Promise.resolve({ ok: true, proposta: p });
+    },
+    updateProposta: function (id, d) {
+      var arr = lsGet("tp_propostas", []), found = null;
+      arr.forEach(function (p, i) {
+        if (p.id === id) {
+          var n = normalizaProposta(d);
+          n.id = p.id; n.numero = p.numero; n.criado_em = p.criado_em; n.atualizado_em = new Date().toISOString();
+          arr[i] = n; found = n;
+        }
+      });
+      lsSet("tp_propostas", arr);
+      return Promise.resolve(found ? { ok: true, proposta: found } : { ok: false, error: "Proposta não encontrada." });
+    },
+    deleteProposta: function (id) {
+      lsSet("tp_propostas", lsGet("tp_propostas", []).filter(function (p) { return p.id !== id; }));
+      return Promise.resolve({ ok: true });
+    },
+    setStatusProposta: function (id, status) {
+      var arr = lsGet("tp_propostas", []);
+      arr.forEach(function (p) { if (p.id === id) { p.status = PROPOSTA_STATUS.indexOf(status) >= 0 ? status : p.status; p.atualizado_em = new Date().toISOString(); } });
+      lsSet("tp_propostas", arr);
       return Promise.resolve({ ok: true });
     }
   };
@@ -718,6 +797,43 @@
         return sb.from("metas").upsert({ user_id: u.id, mes: mes, ano: ano, meta_vendas: Number(d.meta_vendas) || 0, meta_comissao: Number(d.meta_comissao) || 0 }, { onConflict: "user_id,mes,ano" })
           .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
       });
+    },
+
+    // ---- Propostas (Supabase) — o RLS decide o que aparece:
+    //      cada usuário vê as suas; admin/superadmin veem as do tenant. ----
+    listPropostas: function () {
+      return sb.from("propostas").select("*").order("criado_em", { ascending: false })
+        .then(function (res) { if (res.error) throw res.error; return res.data || []; });
+    },
+    getProposta: function (id) {
+      return sb.from("propostas").select("*").eq("id", id).maybeSingle()
+        .then(function (res) { return res.data || null; });
+    },
+    addProposta: function (d) {
+      return sb.auth.getUser().then(function (r) {
+        var u = r.data && r.data.user; if (!u) return { ok: false, error: "Sessão expirada." };
+        return sb.from("propostas").select("*", { count: "exact", head: true }).then(function (c) {
+          var p = normalizaProposta(d);
+          p.user_id = u.id;                             // tenant_id vem do trigger set_tenant_id
+          p.numero = "PROP-" + ("000" + ((c.count || 0) + 1)).slice(-4);
+          return sb.from("propostas").insert(p).select().single()
+            .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true, proposta: res.data }; });
+        });
+      });
+    },
+    updateProposta: function (id, d) {
+      var p = normalizaProposta(d);
+      p.atualizado_em = new Date().toISOString();
+      return sb.from("propostas").update(p).eq("id", id)
+        .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+    },
+    deleteProposta: function (id) {
+      return sb.from("propostas").delete().eq("id", id)
+        .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
+    },
+    setStatusProposta: function (id, status) {
+      return sb.from("propostas").update({ status: status, atualizado_em: new Date().toISOString() }).eq("id", id)
+        .then(function (res) { return res.error ? { ok: false, error: traduzErro(res.error.message) } : { ok: true }; });
     }
   };
 
@@ -789,6 +905,14 @@
     addCertificate: function (d) { return impl.addCertificate(d); },
     getRanking: function (mes, ano) { return impl.getRanking(mes, ano); },
     getMeta: function (mes, ano) { return impl.getMeta(mes, ano); },
-    setMeta: function (mes, ano, d) { return impl.setMeta(mes, ano, d); }
+    setMeta: function (mes, ano, d) { return impl.setMeta(mes, ano, d); },
+
+    // ---- Propostas ----
+    listPropostas: function () { return impl.listPropostas(); },
+    getProposta: function (id) { return impl.getProposta(id); },
+    addProposta: function (d) { return impl.addProposta(d); },
+    updateProposta: function (id, d) { return impl.updateProposta(id, d); },
+    deleteProposta: function (id) { return impl.deleteProposta(id); },
+    setStatusProposta: function (id, s) { return impl.setStatusProposta(id, s); }
   };
 })();

@@ -1,14 +1,14 @@
 {
-  "name": "Sua Marca",
-  "short_name": "Plataforma",
-  "description": "Plataforma multi-tenant.",
+  "name": "Sona · Propostas",
+  "short_name": "Sona",
+  "description": "Propostas comerciais — multi-tenant.",
   "lang": "pt-BR",
-  "start_url": "./dashboard.html",
+  "start_url": "./propostas.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#334155",
-  "theme_color": "#334155",
+  "background_color": "#2536cf",
+  "theme_color": "#2536cf",
   "icons": [
     { "src": "assets/img/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
     { "src": "assets/img/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "maskable" }

@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel — Sua Marca</title>
-  <meta name="description" content="Painel do usuário.">
+  <title>Visão geral — Sona</title>
+  <meta name="description" content="Visão geral das suas propostas na Sona.">
   <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
-  <meta name="theme-color" content="#334155">
+  <meta name="theme-color" content="#2536cf">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="assets/img/icon.svg">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Plataforma">
+  <meta name="apple-mobile-web-app-title" content="Sona">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -23,12 +23,12 @@
   <div class="app">
 
     <!-- SIDEBAR -->
-    <aside id="sidebar-root" class="sidebar" data-active="dashboard"><noscript><a href="dashboard.html">Visão geral</a> · <a href="conta.html">Minha conta</a></noscript></aside>
+    <aside id="sidebar-root" class="sidebar" data-active="dashboard"><noscript><a href="propostas.html">Propostas</a> · <a href="conta.html">Minha conta</a></noscript></aside>
 
     <!-- MAIN -->
     <div class="main">
       <!-- TOPBAR -->
-      <header id="topbar-root" class="topbar" data-title="Visão geral" data-sub="Seu painel"></header>
+      <header id="topbar-root" class="topbar" data-title="Visão geral" data-sub="Suas propostas em resumo"></header>
 
       <!-- CONTENT -->
       <main class="content">
@@ -39,23 +39,28 @@
         <!-- BOAS-VINDAS -->
         <section class="welcome">
           <div>
-            <h2>Bem-vindo 👋</h2>
-            <p>Este é o seu painel. A partir daqui você constrói o conteúdo do projeto.</p>
+            <h2>Bem-vindo à Sona 👋</h2>
+            <p>Acompanhe suas propostas comerciais e crie novas em segundos.</p>
+            <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+              <a href="proposta.html?id=novo" class="btn btn-primary btn-sm">+ Nova proposta</a>
+              <a href="propostas.html" class="btn btn-ghost btn-sm">Ver todas</a>
+            </div>
           </div>
         </section>
 
-        <!-- ESPAÇO DE TRABALHO -->
+        <!-- RESUMO DE PROPOSTAS -->
+        <section class="kpis" id="dashPropResumo" style="margin-top:24px">
+          <div class="gestao-empty" style="grid-column:1/-1;padding:28px">Carregando resumo…</div>
+        </section>
+
+        <!-- PROPOSTAS RECENTES -->
         <section class="panel" style="margin-top:24px">
           <div class="panel-head">
-            <h3>Comece por aqui</h3>
-            <span class="badge">base limpa</span>
+            <h3>Propostas recentes</h3>
+            <a href="propostas.html">Ver todas</a>
           </div>
-          <div class="gestao-empty" style="padding:32px 24px">
-            <p style="max-width:56ch;margin:0 auto 16px">Nenhum conteúdo ainda. Administradores podem criar módulos e itens em <strong>Gestão de conteúdo</strong>. Este painel é um ponto de partida — adapte-o ao seu projeto.</p>
-            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-              <a href="gestao.html" class="btn btn-primary btn-sm">Gestão de conteúdo</a>
-              <a href="conta.html" class="btn btn-ghost btn-sm">Minha conta</a>
-            </div>
+          <div id="dashPropRecentes">
+            <div class="gestao-empty" style="padding:24px">Carregando…</div>
           </div>
         </section>
 

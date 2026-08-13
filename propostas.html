@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Propostas — Sona</title>
+  <meta name="description" content="Suas propostas comerciais na Sona.">
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+  <meta name="theme-color" content="#2536cf">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/img/icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Sona">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/internal.css">
+  <style>
+    .prop-filtros { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 18px; }
+    .prop-chip { border: 1.5px solid var(--tp-line); background: #fff; color: var(--tp-slate); border-radius: var(--tp-radius-pill); padding: 7px 14px; font: inherit; font-size: var(--tp-fs-sm); font-weight: 600; cursor: pointer; transition: all var(--tp-transition); }
+    .prop-chip:hover { border-color: var(--tp-blue-300); }
+    .prop-chip.active { background: var(--tp-blue-500); border-color: var(--tp-blue-500); color: #fff; }
+    .st { display: inline-block; padding: 3px 10px; border-radius: var(--tp-radius-pill); font-size: var(--tp-fs-xs); font-weight: 700; }
+    .st-rascunho { background: var(--tp-bg-alt); color: var(--tp-slate); }
+    .st-enviada  { background: var(--tp-blue-50); color: var(--tp-blue-600); }
+    .st-aceita   { background: var(--tp-green-50); color: var(--tp-green-700); }
+    .st-recusada { background: #fdecec; color: #b3261e; }
+    .prop-acts { display: flex; gap: 6px; justify-content: flex-end; }
+  </style>
+</head>
+<body class="dash">
+  <div class="app">
+    <aside id="sidebar-root" class="sidebar" data-active="propostas"><noscript><a href="propostas.html">Propostas</a> · <a href="conta.html">Minha conta</a></noscript></aside>
+
+    <div class="main">
+      <header id="topbar-root" class="topbar" data-title="Propostas" data-sub="Suas propostas comerciais"></header>
+
+      <main class="content">
+        <div class="page-head">
+          <div>
+            <div class="crumb">Sona · Propostas</div>
+            <h2 style="margin:0">Propostas comerciais</h2>
+            <p class="mb-0 muted">Crie, envie e acompanhe suas propostas.</p>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <a class="btn btn-primary btn-sm" href="proposta.html?id=novo">+ Nova proposta</a>
+          </div>
+        </div>
+
+        <div id="propostasResumo" class="kpis" style="margin-bottom:18px"></div>
+        <div id="propostasFiltro" class="prop-filtros"></div>
+        <div id="propostasRoot"></div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

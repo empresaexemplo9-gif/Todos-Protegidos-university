@@ -7,6 +7,7 @@
   // SVGs de ícone (só o conteúdo do <svg>).
   var ICON = {
     grid: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+    file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/>',
     edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
     gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 6.6 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 4 13.6H4a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 5 6.6l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10.4 4h.2a2 2 0 1 1 4 0v.1A1.6 1.6 0 0 0 18 5.6l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8Z"/>',
     menu: '<path d="M4 7h16M4 12h16M4 17h16"/>'
@@ -21,7 +22,8 @@
   // match = arquivos que ativam o item.
   var NAV = [
     { section: null, items: [
-      { id: "dashboard", label: "Visão geral", href: "dashboard.html", icon: "grid", match: ["dashboard.html", ""] },
+      { id: "propostas", label: "Propostas", href: "propostas.html", icon: "file", match: ["propostas.html", "proposta.html", "proposta-view.html"] },
+      { id: "dashboard", label: "Visão geral", href: "dashboard.html", icon: "grid", match: ["dashboard.html"] },
       { id: "gestao",    label: "Gestão de conteúdo", href: "gestao.html", icon: "edit", match: ["gestao.html"], roles: ["admin", "superadmin"] },
       { id: "conta",     label: "Minha conta", href: "conta.html", icon: "gear", match: ["conta.html"] }
     ] }
@@ -69,7 +71,7 @@
   // ---- Sidebar --------------------------------------------------------------
   function buildSidebar(root) {
     var explicit = root.getAttribute("data-active");
-    var html = '<div class="sidebar-brand"><a class="brand" href="dashboard.html"><img src="assets/img/logo.svg" alt="Sua Marca"></a></div>';
+    var html = '<div class="sidebar-brand"><a class="brand" href="propostas.html"><img src="assets/img/logo-light.svg" alt="Sona"></a></div>';
     NAV.forEach(function (group) {
       if (group.section) html += '<div class="side-label">' + group.section + '</div>';
       group.items.forEach(function (item) {

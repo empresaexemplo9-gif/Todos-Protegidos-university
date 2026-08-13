@@ -100,6 +100,13 @@ textarea:focus-visible, [tabindex]:focus-visible, .side-link:focus-visible, .tab
 .badge-danger { background: #fde6e6;            color: var(--tp-danger); }
 .badge-dot::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 
+/* Status de proposta (rascunho / enviada / aceita / recusada) */
+.st { display: inline-block; padding: 3px 10px; border-radius: var(--tp-radius-pill); font-size: var(--tp-fs-xs); font-weight: 700; }
+.st-rascunho { background: var(--tp-bg-alt);   color: var(--tp-slate); }
+.st-enviada  { background: var(--tp-blue-50);  color: var(--tp-blue-600); }
+.st-aceita   { background: var(--tp-green-50); color: var(--tp-green-700); }
+.st-recusada { background: #fdecec;            color: #b3261e; }
+
 /* ---------- Cards ---------- */
 .card {
   background: var(--tp-surface);

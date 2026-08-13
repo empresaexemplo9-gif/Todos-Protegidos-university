@@ -1,77 +1,77 @@
-# Plataforma multi-tenant — base limpa
+# Sona · Propostas
 
-Base de plataforma **multi-tenant** em **HTML/CSS/JS puro** com backend
-**Supabase** (Postgres + login real). Sem nome, sem logo e sem dados de
-terceiros — um ponto de partida genérico para construir o seu projeto.
+Plataforma de **propostas comerciais** em **HTML/CSS/JS puro** com backend
+**Supabase** (Postgres + login real), sobre uma base **multi-tenant**
+(isolamento por empresa/unidade via RLS).
 
-O que já vem pronto:
-
-- **Multi-tenant** com isolamento por empresa/unidade (RLS no banco).
-- **Cadastro** (por código de empresa), **login** e **conta** do usuário.
-- **Painel** (dashboard) e **Gestão de conteúdo** (área do admin).
-- **Design system** (tokens de cor/tipografia) e **PWA** (instalável/offline).
-
-> Marca e identidade estão como **placeholder** ("Sua Marca"). Troque os
-> arquivos em `assets/img/` (`logo.svg`, `logo-mark.svg`, `favicon.svg`,
-> `icon.svg`) e os textos das páginas pela sua marca.
+Fluxo da proposta: **rascunho → enviada → aceita / recusada**. Cada proposta
+tem cabeçalho do cliente, **itens** (descrição, quantidade, valor unitário) com
+**total calculado**, desconto, validade, observações e condições — além de uma
+**visualização limpa e imprimível** (Salvar em PDF) para enviar ao cliente.
 
 ## 📄 Páginas
 
 | Arquivo | Descrição |
 |---|---|
-| `index.html` | Landing genérica (apresentação + acesso) |
-| `login.html` | Login |
-| `cadastro.html` | Criar acesso (com código de empresa/unidade) |
-| `dashboard.html` | Painel do usuário (base limpa) |
-| `gestao.html` | Gestão de conteúdo — módulos e itens (admin) |
-| `conta.html` | Minha conta (editar dados e senha) |
-| `styleguide.html` | Guia de estilo / design system |
+| `index.html` | Landing da Sona |
+| `login.html` · `cadastro.html` | Acesso (cadastro por código de empresa/unidade) |
+| `propostas.html` | Lista de propostas (filtro por status + resumo) |
+| `proposta.html` | Criar / editar proposta (`?id=novo` ou `?id=<uuid>`) |
+| `proposta-view.html` | Visualizar / imprimir proposta (`?id=<uuid>`) |
+| `dashboard.html` | Visão geral (resumo e propostas recentes) |
+| `conta.html` | Minha conta |
+| `gestao.html` | Gestão de conteúdo (admin) — herdado da base |
+| `styleguide.html` | Design System |
 
 ## 🚀 Como visualizar
 
-Não há build — HTML/CSS/JS puro. Abra `index.html` no navegador ou sirva a pasta:
+Não há build. Abra `index.html` no navegador ou sirva a pasta:
 
 ```bash
 python3 -m http.server 8000
 # acesse http://localhost:8000
 ```
 
-Sem configurar o Supabase, a plataforma roda em **modo local** (dados no
-navegador), útil para demonstração.
+Sem Supabase configurado, roda em **modo local** (dados no navegador) — ótimo
+para testar o fluxo de propostas de ponta a ponta.
 
 ## ☁️ Backend (Supabase)
 
-1. Crie um projeto no Supabase e rode, no **SQL Editor**:
-   - `supabase/schema.sql` — tabelas multi-tenant + RLS + tenant inicial.
-   - `supabase/storage.sql` — bucket `midia` para vídeos/materiais.
+1. No **SQL Editor** do seu projeto, rode nesta ordem:
+   - `supabase/schema.sql` — base multi-tenant (tenants, profiles, RLS).
+   - `supabase/storage.sql` — bucket de arquivos (opcional).
+   - `supabase/propostas.sql` — **tabela `propostas` + RLS** (o módulo).
 2. Em `assets/js/config.js`, preencha `SUPABASE_URL`, `SUPABASE_ANON_KEY` e
    `ADMIN_EMAIL`.
-3. Cadastre-se pelo site usando o **código do tenant** (padrão: `minhaempresa`)
-   e promova sua conta a admin/superadmin (veja o rodapé do `schema.sql`).
+3. Cadastre-se pelo site com o **código do tenant** e promova sua conta a
+   admin/superadmin (veja o rodapé do `schema.sql`).
 
-Utilitários SQL:
+**Visibilidade (RLS):** cada usuário vê as **suas** propostas; **admin/superadmin**
+veem as do próprio tenant.
 
-- `supabase/rollback.sql` — desfaz o schema (não afeta usuários do Auth).
-- `supabase/limpeza.sql` — **reset geral**: apaga todo o conteúdo e todos os
-  acessos, mantendo apenas **um** usuário (ajustável no arquivo), e recria um
-  tenant limpo. Rode no SQL Editor do Supabase (a chave anon do site não
-  consegue apagar usuários).
+> ⚠️ `supabase/propostas.sql` é **aditivo** — cria apenas a tabela `propostas`,
+> sem tocar em usuários, acessos ou dados existentes.
+>
+> ⚠️ **Não** rode `supabase/limpeza.sql` a menos que queira apagar conteúdo e
+> acessos — ele existe só como utilitário de reset e não é necessário para a Sona.
 
 ## 📁 Estrutura
 
 ```
 .
 ├── index.html · login.html · cadastro.html
-├── dashboard.html · gestao.html · conta.html · styleguide.html
+├── propostas.html · proposta.html · proposta-view.html
+├── dashboard.html · conta.html · gestao.html · styleguide.html
 ├── assets/
 │   ├── css/  (tokens.css, main.css, dashboard.css, internal.css)
 │   ├── js/   (config.js, api.js, components.js, app.js)
-│   └── img/  (logo.svg, logo-mark.svg, favicon.svg, icon.svg)
-└── supabase/ (schema.sql, storage.sql, rollback.sql, limpeza.sql)
+│   └── img/  (logo.svg, logo-light.svg, logo-mark.svg, favicon.svg, icon.svg)
+└── supabase/ (schema.sql, storage.sql, propostas.sql, rollback.sql, limpeza.sql)
 ```
 
-## 🎨 Design System
+## 🎨 Marca & Design System
 
-- **Tokens:** `assets/css/tokens.css` — cores, tipografia, espaçamento, sombras.
-- **Base + componentes:** `assets/css/main.css`, `dashboard.css`, `internal.css`.
+- **Marca Sona:** `logo.svg` (fundo claro), `logo-light.svg` (fundo escuro),
+  `logo-mark.svg` (símbolo), `favicon.svg`, `icon.svg`.
+- **Tokens:** `assets/css/tokens.css` — cores, tipografia, espaçamento.
 - **Tipografia:** Poppins (títulos) · Inter (texto).
