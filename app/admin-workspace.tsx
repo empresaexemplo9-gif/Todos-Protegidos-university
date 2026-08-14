@@ -183,7 +183,7 @@ function Icon({ children }: { children: React.ReactNode }) {
 }
 
 export default function Home() {
-  const [section, setSection] = useState<"proposals" | "scope" | "budget" | "clients" | "reports">("proposals");
+  const [section, setSection] = useState<"proposals" | "scope" | "budget" | "clients" | "reports" | "templates">("proposals");
   const [proposal, setProposal] = useState<Proposal>(initialProposal);
   const [proposalId, setProposalId] = useState<string | null>(null);
   const [proposalStatus, setProposalStatus] = useState<ProposalStatus>("draft");
@@ -333,6 +333,18 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const applyTemplate = (data: Partial<Proposal>) => {
+    productImages.forEach((src) => { if (src.startsWith("blob:")) URL.revokeObjectURL(src); });
+    Object.values(itemImages).flat().forEach((src) => { if (src.startsWith("blob:")) URL.revokeObjectURL(src); });
+    setProductImages([]);
+    setItemImages({});
+    setScopeReport(null);
+    setProposal((current) => ({ ...current, ...data }));
+    setProposalStatus("draft");
+    setSection("proposals");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const finalizeProposal = async () => {
     setBusy("finalizing");
     try {
@@ -400,7 +412,9 @@ export default function Home() {
         ? { kicker: "GESTÃO", title: "Clientes" }
         : section === "reports"
           ? { kicker: "GESTÃO", title: "Relatórios" }
-          : { kicker: "GESTÃO COMERCIAL", title: "Orçamento" };
+          : section === "templates"
+            ? { kicker: "BIBLIOTECA", title: "Modelos" }
+            : { kicker: "GESTÃO COMERCIAL", title: "Orçamento" };
 
   return (
     <div className="app-shell">
@@ -421,7 +435,9 @@ export default function Home() {
           <button className={section === "budget" ? "active" : ""} onClick={() => { setSection("budget"); setMobileMenu(false); }}>
             <Icon>R$</Icon><span>Orçamento</span><em>Novo</em>
           </button>
-          <button disabled><Icon>□</Icon><span>Modelos</span><small>em breve</small></button>
+          <button className={section === "templates" ? "active" : ""} onClick={() => { setSection("templates"); setMobileMenu(false); }}>
+            <Icon>□</Icon><span>Modelos</span>
+          </button>
 
           <p className="nav-label nav-label--second">GESTÃO</p>
           <button className={section === "clients" ? "active" : ""} onClick={() => { setSection("clients"); setMobileMenu(false); }}>
@@ -520,8 +536,10 @@ export default function Home() {
           }} />
         ) : section === "clients" ? (
           <ClientsView records={savedProposals} onOpen={openSavedProposal} />
-        ) : (
+        ) : section === "reports" ? (
           <ReportsView records={savedProposals} />
+        ) : (
+          <TemplatesView currentProposal={proposal} onApply={applyTemplate} />
         )}
       </main>
 
@@ -537,6 +555,118 @@ export default function Home() {
         onShare={() => void shareProposal()}
       />}
       {notice && <div className="toast"><span>✓</span>{notice}</div>}
+    </div>
+  );
+}
+
+type TemplateData = {
+  overview?: string; services?: string; exclusions?: string; notes?: string;
+  payment?: string; deadline?: string; validity?: string; discount?: number; items?: ProposalItem[];
+};
+type TemplateSummary = { id: string; name: string; description: string; plan: string; data: TemplateData | null; updatedBy: string; updatedAt: string };
+
+function TemplatesView({ currentProposal, onApply }: { currentProposal: Proposal; onApply: (data: Partial<Proposal>) => void }) {
+  const [templates, setTemplates] = useState<TemplateSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  const load = () => {
+    setLoading(true);
+    return fetch("/api/templates", { cache: "no-store" })
+      .then(async (response) => {
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) { setError(body.error || "Não foi possível carregar os modelos."); setTemplates([]); return; }
+        setTemplates(Array.isArray(body.templates) ? body.templates : []);
+        setError("");
+      })
+      .catch(() => setError("Falha de conexão ao carregar modelos."))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => { void load(); }, []);
+
+  const saveCurrent = async () => {
+    const name = window.prompt("Nome do modelo:", currentProposal.project || "Novo modelo");
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const description = (window.prompt("Descrição curta (opcional):", "") || "").trim();
+    setBusyId("new");
+    const data: TemplateData = {
+      overview: currentProposal.overview, services: currentProposal.services,
+      exclusions: currentProposal.exclusions, notes: currentProposal.notes,
+      payment: currentProposal.payment, deadline: currentProposal.deadline,
+      validity: currentProposal.validity, discount: currentProposal.discount,
+      items: currentProposal.items,
+    };
+    const result = await fetch("/api/templates", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "save", name: trimmed, description, plan: currentProposal.plan, data }),
+    }).then((response) => response.json()).catch(() => ({}));
+    setBusyId(null);
+    if (result?.template) await load();
+    else setError(result?.error || "Não foi possível salvar o modelo.");
+  };
+
+  const useTemplate = (template: TemplateSummary) => {
+    const data = template.data ?? {};
+    onApply({
+      plan: (["SMARTLIFE", "VETRA", "SCENARIO"].includes(template.plan) ? template.plan : "SMARTLIFE") as Proposal["plan"],
+      overview: data.overview ?? "", services: data.services ?? "", exclusions: data.exclusions ?? "",
+      notes: data.notes ?? "", payment: data.payment ?? "", deadline: data.deadline ?? "",
+      validity: data.validity ?? "", discount: Number(data.discount) || 0,
+      items: (data.items ?? []).map((item, index) => ({ ...item, id: index + 1 })),
+    });
+  };
+
+  const removeTemplate = async (template: TemplateSummary) => {
+    if (!window.confirm(`Excluir o modelo "${template.name}"? Esta ação não pode ser desfeita.`)) return;
+    setBusyId(template.id);
+    await fetch("/api/templates", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "delete", id: template.id }),
+    }).catch(() => {});
+    setBusyId(null);
+    await load();
+  };
+
+  return (
+    <div className="mgmt-view">
+      <div className="mgmt-panel">
+        <div className="mgmt-panel__head">
+          <div><span className="eyebrow">BIBLIOTECA</span><h2>Modelos de proposta</h2><p>Reaproveite escopo, textos e itens. “Usar modelo” preenche a proposta atual mantendo cliente e código.</p></div>
+          <button className="btn btn--dark" onClick={() => void saveCurrent()} disabled={busyId === "new"}>{busyId === "new" ? "Salvando…" : "＋ Salvar proposta atual"}</button>
+        </div>
+        <div className="tpl-body">
+          {error && <p className="tpl-error">{error}</p>}
+          {loading ? (
+            <p className="mgmt-hint">Carregando modelos…</p>
+          ) : templates.length === 0 ? (
+            <div className="mgmt-empty mgmt-empty--inline"><span>□</span><p>Nenhum modelo ainda. Configure uma proposta e clique em <strong>“Salvar proposta atual”</strong> para criar seu primeiro modelo reutilizável.</p></div>
+          ) : (
+            <div className="tpl-grid">
+              {templates.map((template) => {
+                const items = template.data?.items ?? [];
+                const accent = plans[template.plan as keyof typeof plans]?.accent ?? "#6f8e89";
+                return (
+                  <article className="tpl-card" key={template.id}>
+                    <div className="tpl-card__top">
+                      <span className="tpl-plan" style={{ background: accent }}>{template.plan}</span>
+                      <span className="tpl-count">{items.length} {items.length === 1 ? "item" : "itens"}</span>
+                    </div>
+                    <h3>{template.name}</h3>
+                    <p>{template.description || "Sem descrição."}</p>
+                    <div className="tpl-card__foot">
+                      <button className="btn btn--green" onClick={() => useTemplate(template)}>Usar modelo</button>
+                      <button className="btn btn--ghost" onClick={() => void removeTemplate(template)} disabled={busyId === template.id}>{busyId === template.id ? "…" : "Excluir"}</button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

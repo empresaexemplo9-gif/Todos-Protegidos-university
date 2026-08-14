@@ -92,3 +92,15 @@ export const proposals = sqliteTable("proposals", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const proposalTemplates = sqliteTable("proposal_templates", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  plan: text("plan").notNull().default("SMARTLIFE"),
+  dataJson: text("data_json").notNull(),
+  createdBy: text("created_by").notNull().default("Equipe Sona"),
+  updatedBy: text("updated_by").notNull().default("Equipe Sona"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});

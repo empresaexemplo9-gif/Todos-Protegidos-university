@@ -381,3 +381,19 @@ button { cursor: pointer; }
 @media (max-width: 760px) {
   .mgmt-view { padding: 18px; }
 }
+
+/* ---- Gestão: Modelos (templates) ---- */
+.tpl-body { padding: 20px 22px 22px; }
+.tpl-error { margin: 0 0 14px; padding: 10px 12px; border-radius: 9px; background: #fff0f0; color: #9b4545; font-size: 10px; }
+.tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+.tpl-card { border: 1px solid var(--line); border-radius: 15px; padding: 16px 17px 15px; background: #fff; display: flex; flex-direction: column; gap: 9px; transition: box-shadow .2s, transform .2s; }
+.tpl-card:hover { box-shadow: 0 12px 30px rgba(21,30,24,.08); transform: translateY(-2px); }
+.tpl-card__top { display: flex; align-items: center; justify-content: space-between; }
+.tpl-plan { color: #fff; font-size: 8px; font-weight: 800; letter-spacing: .1em; padding: 4px 9px; border-radius: 999px; }
+.tpl-count { color: var(--muted); font-size: 9px; font-weight: 700; }
+.tpl-card h3 { margin: 2px 0 0; font-size: 15px; letter-spacing: -.02em; }
+.tpl-card > p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; flex: 1; }
+.tpl-card__foot { display: flex; gap: 8px; margin-top: 4px; }
+.tpl-card__foot .btn { min-height: 34px; font-size: 10px; flex: 1; }
+.tpl-card__foot .btn--ghost { flex: 0 0 auto; }
+.mgmt-empty--inline { min-height: 0; padding: 34px 20px; }
