@@ -183,7 +183,7 @@ function Icon({ children }: { children: React.ReactNode }) {
 }
 
 export default function Home() {
-  const [section, setSection] = useState<"proposals" | "scope" | "budget">("proposals");
+  const [section, setSection] = useState<"proposals" | "scope" | "budget" | "clients" | "reports">("proposals");
   const [proposal, setProposal] = useState<Proposal>(initialProposal);
   const [proposalId, setProposalId] = useState<string | null>(null);
   const [proposalStatus, setProposalStatus] = useState<ProposalStatus>("draft");
@@ -396,7 +396,11 @@ export default function Home() {
     ? { kicker: "PROPOSTAS", title: "Nova proposta comercial" }
     : section === "scope"
       ? { kicker: "PLANEJAMENTO", title: "Escopo técnico" }
-      : { kicker: "GESTÃO COMERCIAL", title: "Orçamento" };
+      : section === "clients"
+        ? { kicker: "GESTÃO", title: "Clientes" }
+        : section === "reports"
+          ? { kicker: "GESTÃO", title: "Relatórios" }
+          : { kicker: "GESTÃO COMERCIAL", title: "Orçamento" };
 
   return (
     <div className="app-shell">
@@ -420,8 +424,12 @@ export default function Home() {
           <button disabled><Icon>□</Icon><span>Modelos</span><small>em breve</small></button>
 
           <p className="nav-label nav-label--second">GESTÃO</p>
-          <button disabled><Icon>◎</Icon><span>Clientes</span></button>
-          <button disabled><Icon>↗</Icon><span>Relatórios</span></button>
+          <button className={section === "clients" ? "active" : ""} onClick={() => { setSection("clients"); setMobileMenu(false); }}>
+            <Icon>◎</Icon><span>Clientes</span>{savedProposals.length > 0 && <em>{new Set(savedProposals.map((entry) => (entry.client || "").trim().toLowerCase()).filter(Boolean)).size}</em>}
+          </button>
+          <button className={section === "reports" ? "active" : ""} onClick={() => { setSection("reports"); setMobileMenu(false); }}>
+            <Icon>↗</Icon><span>Relatórios</span>
+          </button>
         </nav>
 
         <div className="sidebar__footer">
@@ -448,7 +456,7 @@ export default function Home() {
                 <button className="btn btn--ghost" onClick={() => setHistoryOpen(true)}>◷ <span>Propostas salvas</span></button>
                 <button className="btn btn--ghost" onClick={() => void saveDraft()} disabled={busy !== null}>{busy === "saving" ? "Salvando…" : "✓ Salvar rascunho"}</button>
                 <button className="btn btn--green" onClick={() => setConfirmOpen(true)} disabled={busy !== null}>Finalizar e enviar</button>
-              </> : <button className="btn btn--ghost" onClick={() => void saveDraft()}>✓ <span>Salvar rascunho</span></button>}
+              </> : section === "scope" ? <button className="btn btn--ghost" onClick={() => void saveDraft()}>✓ <span>Salvar rascunho</span></button> : null}
             <button className="btn btn--dark" onClick={newProposal}>＋ <span>Nova proposta</span></button>
           </div>
         </header>
@@ -501,7 +509,7 @@ export default function Home() {
             setSection("proposals");
             window.scrollTo({ top: 0, behavior: "smooth" });
           }} />
-        ) : (
+        ) : section === "budget" ? (
           <AvaBudgetWorkspace onUseInProposal={({ items, discountPercent }) => {
             Object.values(itemImages).flat().forEach((src) => { if (src.startsWith("blob:")) URL.revokeObjectURL(src); });
             setItemImages({});
@@ -510,6 +518,10 @@ export default function Home() {
             setSection("proposals");
             window.scrollTo({ top: 0, behavior: "smooth" });
           }} />
+        ) : section === "clients" ? (
+          <ClientsView records={savedProposals} onOpen={openSavedProposal} />
+        ) : (
+          <ReportsView records={savedProposals} />
         )}
       </main>
 
@@ -525,6 +537,177 @@ export default function Home() {
         onShare={() => void shareProposal()}
       />}
       {notice && <div className="toast"><span>✓</span>{notice}</div>}
+    </div>
+  );
+}
+
+function proposalValue(record: SavedProposal) {
+  const proposal = record.data?.proposal;
+  const items = proposal?.items ?? [];
+  const gross = items.reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.unitPrice) || 0), 0);
+  const discount = Math.min(100, Math.max(0, Number(proposal?.discount) || 0));
+  return gross > 0 ? gross * (1 - discount / 100) : 0;
+}
+
+function formatShortDate(value: string | null) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function ManagementEmpty({ children }: { children: React.ReactNode }) {
+  return <div className="mgmt-view"><div className="mgmt-empty"><span>◎</span><p>{children}</p></div></div>;
+}
+
+function ClientsView({ records, onOpen }: { records: SavedProposal[]; onOpen: (record: SavedProposal) => void }) {
+  const clients = useMemo(() => {
+    const groups = new Map<string, { name: string; items: SavedProposal[] }>();
+    records.forEach((record) => {
+      const name = (record.client || "").trim() || "Sem cliente";
+      const key = name.toLowerCase();
+      const group = groups.get(key) ?? { name, items: [] };
+      group.items.push(record);
+      groups.set(key, group);
+    });
+    return Array.from(groups.values())
+      .map((group) => {
+        const accepted = group.items.filter((item) => item.status === "accepted");
+        const latest = group.items.reduce((first, second) => (first.updatedAt >= second.updatedAt ? first : second));
+        return {
+          name: group.name,
+          latest,
+          count: group.items.length,
+          accepted: accepted.length,
+          acceptedValue: accepted.reduce((sum, item) => sum + proposalValue(item), 0),
+          totalValue: group.items.reduce((sum, item) => sum + proposalValue(item), 0),
+        };
+      })
+      .sort((first, second) => second.acceptedValue - first.acceptedValue || second.totalValue - first.totalValue || second.count - first.count);
+  }, [records]);
+
+  if (!records.length) {
+    return <ManagementEmpty>Nenhuma proposta ainda. Assim que você salvar propostas, os clientes aparecem aqui automaticamente.</ManagementEmpty>;
+  }
+
+  return (
+    <div className="mgmt-view">
+      <div className="mgmt-panel">
+        <div className="mgmt-panel__head">
+          <div><span className="eyebrow">CARTEIRA</span><h2>{clients.length} {clients.length === 1 ? "cliente" : "clientes"}</h2></div>
+          <p>Agrupados pelas propostas salvas. O valor aceito considera propostas com aceite do cliente.</p>
+        </div>
+        <div className="mgmt-table-wrap">
+          <table className="mgmt-table">
+            <thead><tr><th>Cliente</th><th>Propostas</th><th>Aceitas</th><th>Valor aceito</th><th>Valor total</th><th>Última atividade</th><th /></tr></thead>
+            <tbody>
+              {clients.map((client) => (
+                <tr key={client.name}>
+                  <td><div className="mgmt-client"><span className="mgmt-avatar">{client.name.slice(0, 2).toUpperCase()}</span><div><strong>{client.name}</strong><small>{client.latest.project || "—"}</small></div></div></td>
+                  <td>{client.count}</td>
+                  <td>{client.accepted}</td>
+                  <td className="mgmt-num"><strong>{brl.format(client.acceptedValue)}</strong></td>
+                  <td className="mgmt-num">{brl.format(client.totalValue)}</td>
+                  <td>{formatShortDate(client.latest.updatedAt)}</td>
+                  <td><button className="btn btn--ghost" onClick={() => onOpen(client.latest)}>Abrir</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReportsView({ records }: { records: SavedProposal[] }) {
+  const stats = useMemo(() => {
+    const byStatus: Record<ProposalStatus, number> = { draft: 0, finalized: 0, sent: 0, accepted: 0 };
+    const byPlan: Record<string, number> = { SMARTLIFE: 0, VETRA: 0, SCENARIO: 0 };
+    let totalValue = 0;
+    let acceptedValue = 0;
+    records.forEach((record) => {
+      byStatus[record.status] = (byStatus[record.status] ?? 0) + 1;
+      const value = proposalValue(record);
+      totalValue += value;
+      if (record.status === "accepted") acceptedValue += value;
+      const plan = record.data?.proposal?.plan;
+      if (plan && plan in byPlan) byPlan[plan] += 1;
+    });
+    const decided = byStatus.finalized + byStatus.sent + byStatus.accepted;
+    const conversion = decided ? Math.round((byStatus.accepted / decided) * 100) : 0;
+    const recent = [...records].sort((first, second) => (first.updatedAt < second.updatedAt ? 1 : -1)).slice(0, 6);
+    return { byStatus, byPlan, totalValue, acceptedValue, conversion, total: records.length, recent };
+  }, [records]);
+
+  if (!records.length) {
+    return <ManagementEmpty>Sem dados ainda. Os relatórios são calculados a partir das propostas salvas.</ManagementEmpty>;
+  }
+
+  const statusOrder: ProposalStatus[] = ["draft", "finalized", "sent", "accepted"];
+  const planEntries = Object.entries(stats.byPlan).filter(([, count]) => count > 0);
+
+  return (
+    <div className="mgmt-view">
+      <div className="report-kpis">
+        <div className="report-kpi"><span>Propostas</span><strong>{stats.total}</strong><small>no total</small></div>
+        <div className="report-kpi"><span>Aceitas</span><strong>{stats.byStatus.accepted}</strong><small>{stats.conversion}% de conversão</small></div>
+        <div className="report-kpi report-kpi--accent"><span>Valor aceito</span><strong>{brl.format(stats.acceptedValue)}</strong><small>propostas com aceite</small></div>
+        <div className="report-kpi"><span>Valor em carteira</span><strong>{brl.format(stats.totalValue)}</strong><small>todas as propostas</small></div>
+      </div>
+
+      <div className="report-grid">
+        <div className="mgmt-panel">
+          <div className="mgmt-panel__head"><div><span className="eyebrow">FUNIL</span><h2>Por status</h2></div></div>
+          <div className="report-bars">
+            {statusOrder.map((status) => {
+              const count = stats.byStatus[status];
+              const pct = stats.total ? Math.round((count / stats.total) * 100) : 0;
+              return (
+                <div className="report-bar" key={status}>
+                  <div className="report-bar__label"><span>{proposalStatusLabel[status]}</span><b>{count}</b></div>
+                  <div className="report-bar__track"><i className={`report-bar__fill report-bar__fill--${status}`} style={{ width: `${pct}%` }} /></div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mgmt-panel">
+          <div className="mgmt-panel__head"><div><span className="eyebrow">LINHAS</span><h2>Por sistema</h2></div></div>
+          <div className="report-bars">
+            {planEntries.length ? planEntries.map(([plan, count]) => {
+              const pct = stats.total ? Math.round((count / stats.total) * 100) : 0;
+              return (
+                <div className="report-bar" key={plan}>
+                  <div className="report-bar__label"><span>{plan}</span><b>{count}</b></div>
+                  <div className="report-bar__track"><i className="report-bar__fill report-bar__fill--plan" style={{ width: `${pct}%` }} /></div>
+                </div>
+              );
+            }) : <p className="mgmt-hint">Nenhum sistema definido ainda.</p>}
+          </div>
+        </div>
+      </div>
+
+      <div className="mgmt-panel">
+        <div className="mgmt-panel__head"><div><span className="eyebrow">ATIVIDADE</span><h2>Propostas recentes</h2></div></div>
+        <div className="mgmt-table-wrap">
+          <table className="mgmt-table">
+            <thead><tr><th>Código</th><th>Cliente</th><th>Projeto</th><th>Status</th><th>Valor</th><th>Atualizada</th></tr></thead>
+            <tbody>
+              {stats.recent.map((record) => (
+                <tr key={record.id}>
+                  <td><strong>{record.code}</strong></td>
+                  <td>{record.client || "—"}</td>
+                  <td>{record.project || "—"}</td>
+                  <td><span className={`status-pill status-pill--${record.status}`}>{proposalStatusLabel[record.status]}</span></td>
+                  <td className="mgmt-num">{brl.format(proposalValue(record))}</td>
+                  <td>{formatShortDate(record.updatedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
