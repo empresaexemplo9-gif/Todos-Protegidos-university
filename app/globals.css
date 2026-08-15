@@ -398,18 +398,63 @@ button { cursor: pointer; }
 .tpl-card__foot .btn--ghost { flex: 0 0 auto; }
 .mgmt-empty--inline { min-height: 0; padding: 34px 20px; }
 
-/* ---- Login (acesso da equipe) ---- */
-.login-shell { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--canvas); }
-.login-card { width: min(400px, 100%); background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 34px 32px 28px; box-shadow: 0 24px 70px rgba(21,30,24,.10); display: grid; gap: 6px; }
-.login-brand { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.login-card h1 { margin: 4px 0 0; font-size: 22px; letter-spacing: -.03em; }
-.login-card > p { margin: 0 0 8px; color: var(--muted); font-size: 11px; line-height: 1.5; }
-.login-field { display: grid; gap: 6px; color: #5e6661; font-size: 9px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
-.login-field input { width: 100%; border: 1px solid #e1e6e2; border-radius: 10px; background: #fafbfa; color: var(--ink); padding: 12px 13px; font-size: 13px; outline: none; transition: .2s; }
-.login-field input:focus { border-color: #73c9a8; background: #fff; box-shadow: 0 0 0 3px #e8f7f0; }
-.login-error { margin: 4px 0 0; padding: 9px 11px; border-radius: 9px; background: #fff0f0; color: #9b4545; font-size: 10px; }
-.login-submit { margin-top: 12px; min-height: 46px; width: 100%; }
-.login-hint { color: #8b948f; font-size: 9px; margin-top: 6px; line-height: 1.5; }
+/* ---- Home (hero SONA + acesso da equipe) ---- */
+.sona-home { --sona-teal: #2fc09b; --sona-teal-soft: #43cfad; position: relative; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #0d1412; color: #fff; font-family: var(--sona-proposal-light); }
+.sona-home__scene { position: absolute; inset: 0; z-index: 0; background:
+  linear-gradient(160deg, #16211d 0%, #0f1815 42%, #0a100e 100%); }
+.sona-home__scene > span { position: absolute; display: block; }
+.sona-home__glow { border-radius: 50%; filter: blur(90px); opacity: .85; }
+.sona-home__glow--warm { width: 62vw; height: 62vw; right: -14vw; top: -12vw; background: radial-gradient(circle, rgba(214,178,120,.42) 0%, rgba(140,110,66,.16) 45%, transparent 70%); }
+.sona-home__glow--cool { width: 58vw; height: 58vw; left: -16vw; bottom: -18vw; background: radial-gradient(circle, rgba(47,192,155,.34) 0%, rgba(28,96,80,.14) 48%, transparent 72%); }
+.sona-home__grid { inset: 0; opacity: .16; background-image: linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px); background-size: 92px 92px; mask-image: radial-gradient(ellipse at 50% 45%, #000 20%, transparent 78%); }
+.sona-home__vignette { inset: 0; background: radial-gradient(ellipse at 50% 38%, transparent 34%, rgba(6,10,9,.55) 78%, rgba(4,7,6,.86) 100%); }
+
+.sona-nav { position: relative; z-index: 2; height: 78px; padding: 0 34px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 20px; background: rgba(10,15,13,.42); border-bottom: 1px solid rgba(255,255,255,.07); backdrop-filter: blur(14px); }
+.sona-nav__brand { display: inline-flex; align-items: center; gap: 5px; color: #fff; text-decoration: none; font-size: 15px; letter-spacing: .34em; font-weight: 500; }
+.sona-nav__brand i { width: 11px; height: 11px; border-radius: 50%; background: #fff; display: block; margin: 0 1px; }
+.sona-nav__links { display: flex; align-items: center; gap: 4px; }
+.sona-nav__links a { padding: 11px 22px; border-radius: 8px; color: #e6ece9; text-decoration: none; font-size: 13.5px; letter-spacing: .01em; transition: background .2s, color .2s; }
+.sona-nav__links a:hover { background: rgba(255,255,255,.08); color: #fff; }
+.sona-nav__links a.is-active { background: var(--sona-teal); color: #06120e; }
+.sona-nav__social { display: flex; align-items: center; justify-content: flex-end; gap: 18px; }
+.sona-nav__social a { color: #fff; opacity: .9; display: grid; place-items: center; transition: opacity .2s, transform .2s; }
+.sona-nav__social a:hover { opacity: 1; transform: translateY(-1px); }
+
+.sona-hero { position: relative; z-index: 2; flex: 1; display: grid; align-content: center; justify-items: center; text-align: center; padding: 60px 24px 90px; }
+.sona-hero__wordmark { margin: 0; display: inline-flex; align-items: center; gap: 18px; font-size: clamp(56px, 11vw, 118px); font-weight: 400; letter-spacing: .06em; line-height: 1; text-shadow: 0 12px 45px rgba(0,0,0,.35); }
+.sona-hero__wordmark i { width: clamp(44px, 8.6vw, 92px); height: clamp(44px, 8.6vw, 92px); border-radius: 50%; background: #fff; display: block; box-shadow: 0 12px 45px rgba(0,0,0,.3); }
+.sona-hero__tagline { margin: 22px 0 0; font-size: clamp(14px, 1.5vw, 19px); color: rgba(255,255,255,.94); letter-spacing: .01em; }
+.sona-hero__cta { margin-top: 34px; min-height: 52px; padding: 0 30px; border: 0; border-radius: 999px; background: var(--sona-teal); color: #06231b; font-family: inherit; font-size: 15px; font-weight: 500; letter-spacing: .01em; display: inline-flex; align-items: center; gap: 12px; box-shadow: 0 16px 38px rgba(10,60,46,.42); transition: transform .2s, background .2s, box-shadow .2s; }
+.sona-hero__cta:hover { transform: translateY(-2px); background: var(--sona-teal-soft); box-shadow: 0 20px 44px rgba(10,60,46,.5); }
+
+.sona-home__foot { position: relative; z-index: 2; padding: 0 34px 26px; display: flex; justify-content: space-between; gap: 16px; color: rgba(255,255,255,.42); font-size: 10.5px; letter-spacing: .1em; }
+
+.sona-modal { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 24px; }
+.sona-modal__backdrop { position: absolute; inset: 0; border: 0; padding: 0; background: rgba(5,9,8,.62); backdrop-filter: blur(6px); cursor: pointer; }
+.sona-modal__card { position: relative; width: min(392px, 100%); display: grid; gap: 7px; padding: 32px 30px 26px; border: 1px solid rgba(255,255,255,.1); border-radius: 20px; background: linear-gradient(165deg, #141d1a 0%, #0d1512 100%); box-shadow: 0 34px 90px rgba(0,0,0,.55); color: #fff; font-family: var(--font-geist-sans), Arial, sans-serif; }
+.sona-modal__close { position: absolute; top: 12px; right: 14px; width: 30px; height: 30px; border: 0; border-radius: 50%; background: transparent; color: rgba(255,255,255,.5); font-size: 22px; line-height: 1; }
+.sona-modal__close:hover { color: #fff; background: rgba(255,255,255,.08); }
+.sona-modal__mark { display: inline-flex; align-items: center; gap: 4px; margin-bottom: 8px; font-family: var(--sona-proposal-light); font-size: 17px; letter-spacing: .3em; }
+.sona-modal__mark b { font-weight: 400; }
+.sona-modal__mark i { width: 12px; height: 12px; border-radius: 50%; background: var(--sona-teal); display: block; }
+.sona-modal__card h2 { margin: 0; font-size: 20px; letter-spacing: -.02em; font-weight: 600; }
+.sona-modal__card > p { margin: 0 0 10px; color: rgba(255,255,255,.55); font-size: 11.5px; line-height: 1.55; }
+.sona-modal__field { display: grid; gap: 7px; color: rgba(255,255,255,.55); font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.sona-modal__field input { width: 100%; border: 1px solid rgba(255,255,255,.14); border-radius: 11px; background: rgba(255,255,255,.05); color: #fff; padding: 13px 14px; font-size: 14px; letter-spacing: .06em; outline: none; transition: .2s; }
+.sona-modal__field input::placeholder { color: rgba(255,255,255,.3); }
+.sona-modal__field input:focus { border-color: var(--sona-teal); background: rgba(47,192,155,.08); box-shadow: 0 0 0 3px rgba(47,192,155,.15); }
+.sona-modal__error { margin: 6px 0 0; padding: 9px 11px; border-radius: 10px; background: rgba(190,72,72,.16); border: 1px solid rgba(214,105,105,.28); color: #ffb9b9; font-size: 10.5px; }
+.sona-modal__submit { margin-top: 14px; min-height: 48px; width: 100%; border: 0; border-radius: 12px; background: var(--sona-teal); color: #06231b; font-size: 13px; font-weight: 700; letter-spacing: .02em; transition: background .2s, opacity .2s; }
+.sona-modal__submit:hover:not(:disabled) { background: var(--sona-teal-soft); }
+.sona-modal__submit:disabled { opacity: .45; cursor: not-allowed; }
+.sona-modal__hint { margin-top: 8px; color: rgba(255,255,255,.35); font-size: 9.5px; line-height: 1.55; }
+
+@media (max-width: 860px) {
+  .sona-nav { height: auto; padding: 14px 18px; grid-template-columns: 1fr auto; row-gap: 12px; }
+  .sona-nav__links { grid-column: 1 / -1; order: 3; justify-content: center; flex-wrap: wrap; }
+  .sona-nav__links a { padding: 9px 15px; font-size: 12.5px; }
+  .sona-home__foot { flex-direction: column; gap: 6px; text-align: center; }
+}
 
 /* logout na sidebar */
 .sidebar-logout { margin-left: auto; border: 1px solid #2b3531; background: transparent; color: #9ea6a2; border-radius: 9px; padding: 6px 11px; font-size: 10px; font-weight: 650; transition: .2s; }
