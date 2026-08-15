@@ -1,0 +1,14 @@
+const response = await fetch('/api/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ username, password })
+});
+
+// Verifica se o servidor retornou sucesso antes de tentar converter para JSON
+if (!response.ok) {
+  const text = await response.text();
+  console.error("Erro do servidor:", text);
+  throw new Error("Servidor fora do ar ou rota não encontrada.");
+}
+
+const data = await response.json();
