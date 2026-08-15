@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { catalogMeta, proposalTemplates } from "../../../db/schema";
 import { adminActorFrom } from "../../admin-access";
@@ -125,23 +125,22 @@ const starterTemplates: Array<{ id: string; name: string; description: string; p
   },
 ];
 
-async function ensureSchema() {
-  const { env } = await import("cloudflare:workers");
-  const d1 = env.DB;
-  if (!d1) throw new Error("A base de modelos está indisponível.");
-  await d1.batch([
-    d1.prepare(`CREATE TABLE IF NOT EXISTS proposal_templates (
-      id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL,
-      description TEXT DEFAULT '' NOT NULL, plan TEXT DEFAULT 'SMARTLIFE' NOT NULL,
-      data_json TEXT NOT NULL,
-      created_by TEXT DEFAULT 'Equipe Sona' NOT NULL, updated_by TEXT DEFAULT 'Equipe Sona' NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL, updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
-    )`),
-    d1.prepare(`CREATE TABLE IF NOT EXISTS catalog_meta (
-      key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
-    )`),
-  ]);
+let schemaReady = false;
+async function ensureSchema(db: Db) {
+  if (schemaReady) return;
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS proposal_templates (
+    id text PRIMARY KEY, name text NOT NULL,
+    description text NOT NULL DEFAULT '', plan text NOT NULL DEFAULT 'SMARTLIFE',
+    data_json text NOT NULL,
+    created_by text NOT NULL DEFAULT 'Equipe Sona', updated_by text NOT NULL DEFAULT 'Equipe Sona',
+    created_at text NOT NULL DEFAULT to_char((now() at time zone 'utc'), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+    updated_at text NOT NULL DEFAULT to_char((now() at time zone 'utc'), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+  )`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS catalog_meta (
+    key text PRIMARY KEY, value text NOT NULL,
+    updated_at text NOT NULL DEFAULT to_char((now() at time zone 'utc'), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+  )`);
+  schemaReady = true;
 }
 
 type Db = Awaited<ReturnType<typeof getDb>>;
@@ -175,8 +174,8 @@ function mapTemplate(row: typeof proposalTemplates.$inferSelect) {
 
 export async function GET(request: Request) {
   try {
-    await ensureSchema();
     const db = await getDb();
+    await ensureSchema(db);
     if (!(await adminActorFrom(request))) return Response.json({ error: "Acesso administrativo necessário." }, { status: 401 });
     await seedStarters(db);
     const rows = await db.select().from(proposalTemplates).orderBy(desc(proposalTemplates.updatedAt));
@@ -196,8 +195,8 @@ export async function POST(request: Request) {
       plan?: string;
       data?: unknown;
     };
-    await ensureSchema();
     const db = await getDb();
+    await ensureSchema(db);
     const actor = await adminActorFrom(request);
     if (!actor) return Response.json({ error: "Acesso administrativo necessário." }, { status: 401 });
     const id = clean(payload.id, 100);

@@ -1,83 +1,61 @@
-# Deploy — Sona Propostas
+# Deploy na Vercel — Sona Propostas
 
-Guia de publicação da plataforma (Next.js 16 + Vinext em **Cloudflare Workers**,
-banco **Cloudflare D1** via Drizzle). Este documento **não** contém segredos e
-**não** define o `project_id` — apenas descreve os passos.
+App **Next.js** (App Router) com banco **Postgres (Vercel Postgres / Neon)** e
+login de admin por **senha**. Sem segredos no código — tudo por variáveis de
+ambiente.
 
-## Pré-requisitos
+## 1) Conectar o repositório
 
-- Node.js **>= 22.13**
-- Um projeto no **ChatGPT Sites** (recomendado) ou uma conta **Cloudflare** com
-  Workers + D1.
+1. Na Vercel: **Add New… → Project** e importe este repositório do GitHub.
+2. Framework Preset: **Next.js** (detectado automaticamente). Build/Output
+   padrão. Node 20+.
 
-## 1) Rodar localmente
+## 2) Banco de dados (Postgres)
+
+1. No projeto da Vercel: **Storage → Create Database → Postgres** (Neon).
+2. Conecte o banco ao projeto. A Vercel injeta **`DATABASE_URL`**
+   automaticamente (o código também aceita `POSTGRES_URL`).
+3. Não é preciso rodar migração: o schema e o **catálogo inicial** (155 itens) e
+   os **modelos** de proposta são criados sozinhos na primeira requisição
+   (`CREATE TABLE IF NOT EXISTS` + seed idempotente).
+
+## 3) Acesso administrativo
+
+- Defina a variável **`ADMIN_PASSWORD`** (Settings → Environment Variables) com a
+  senha da equipe. É ela que libera o painel em `/`.
+- Sem `ADMIN_PASSWORD` definida, o painel fica bloqueado (comportamento seguro).
+
+## 4) Deploy
+
+Faça o deploy pela Vercel (ou um push na branch conectada). Ao abrir a URL:
+
+- `/` → tela de login da equipe (senha `ADMIN_PASSWORD`).
+- `/proposta?token=…` → proposta pública para o cliente (sem login).
+
+## Rodar localmente
 
 ```bash
-npm install        # ou: npm run install:ci
-npm run dev        # sobe o Vite/Vinext em http://localhost:5173
+npm install
+# .env.local
+#   DATABASE_URL=postgres://usuario:senha@host/banco?sslmode=require
+#   ADMIN_PASSWORD=suasenha
+npm run dev            # http://localhost:3000
 ```
 
-- O banco local (Miniflare/D1) é criado automaticamente. As rotas
-  (`/api/budget`, `/api/proposals`, `/api/templates`) **criam o schema sob
-  demanda** (`CREATE TABLE IF NOT EXISTS`) e **semeiam** o catálogo e os
-  modelos iniciais na primeira chamada — não é preciso rodar migração manual.
-- **Acesso admin no local:** a página `/` exige identidade (cabeçalho
-  `oai-authenticated-user-email`) e que o e-mail esteja em `ADMIN_EMAILS`.
-  Para pré-visualizar, crie um arquivo `.dev.vars` (ignorado pelo Git):
+> Dica: use a mesma `DATABASE_URL` do Neon no `.env.local` para desenvolver com
+> o banco real. Cookies de sessão usam `secure` apenas em produção, então o
+> login funciona em `http://localhost`.
 
-  ```env
-  ADMIN_EMAILS=seu-email@empresa.com
-  ```
+## Variáveis de ambiente
 
-  e exponha essa variável ao worker local (o binding é lido de `process.env`).
-
-## 2) Variáveis e acesso
-
-O acesso administrativo é controlado pela identidade do usuário + a lista:
-
-```env
-ADMIN_EMAILS=primeiro@empresa.com,segundo@empresa.com
-```
-
-> Não coloque senhas nem chaves no código. Configure `ADMIN_EMAILS` como
-> variável/secret no ambiente de produção (ChatGPT Sites ou Cloudflare),
-> **não** em arquivos versionados.
-
-## 3) Deploy no ChatGPT Sites (recomendado)
-
-1. Em `.openai/hosting.json`, defina o `project_id` do **seu** projeto Sites
-   (campo hoje com placeholder) e mantenha o binding D1 `"DB"`.
-2. Configure o secret `ADMIN_EMAILS` no projeto Sites.
-3. Publique pelo fluxo do próprio ChatGPT Sites. O builder remoto roda
-   `npm run build` no commit enviado e valida o artefato do Worker.
-
-## 4) Deploy na Cloudflare (alternativa)
-
-1. Crie um banco **D1** e um binding chamado `DB` para o Worker.
-2. Defina `ADMIN_EMAILS` como variável/secret do Worker.
-3. Build e publicação:
-
-   ```bash
-   npm run build      # gera e valida o artefato do Worker
-   npx wrangler deploy
-   ```
-
-   Se preferir aplicar as migrações explicitamente (em vez do auto-schema em
-   runtime), use os arquivos em `drizzle/` com o D1.
+| Variável | Obrigatória | Descrição |
+|---|---|---|
+| `DATABASE_URL` | sim | String de conexão Postgres (Vercel/Neon injeta) |
+| `ADMIN_PASSWORD` | sim | Senha de acesso do painel administrativo |
 
 ## Verificação pós-deploy
 
-- Acesse a raiz `/` autenticado com um e-mail de `ADMIN_EMAILS` → deve abrir o
-  **workspace admin** (Propostas, Escopo técnico, Orçamento, Modelos, Clientes,
-  Relatórios).
-- Finalize uma proposta e abra o **link público** `/proposta?token=...` para
-  conferir o aceite do cliente.
-
-## Comandos úteis
-
-| Comando | O que faz |
-|---|---|
-| `npm run dev` | Servidor de desenvolvimento |
-| `npm run build` | Build + validação do artefato Sites |
-| `npm test` | Build + teste de metadados de render |
-| `npm run db:generate` | Gera migrações Drizzle após mudança de schema |
+1. Abra `/`, entre com a senha → deve abrir o workspace (Propostas, Escopo
+   técnico, Orçamento, Modelos, Clientes, Relatórios).
+2. Crie e finalize uma proposta, copie o link público e abra em uma aba anônima
+   para conferir o aceite do cliente.

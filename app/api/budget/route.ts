@@ -64,48 +64,49 @@ function routeError(error: unknown) {
 
 const catalogSeedVersion = "2026-08-11-catalogo-integral-editor-v4";
 
-async function ensureSchema() {
-  const { env } = await import("cloudflare:workers");
-  const d1 = env.DB;
-  if (!d1) throw new Error("A base compartilhada do orçamento está indisponível.");
-  await d1.batch([
-    d1.prepare(`CREATE TABLE IF NOT EXISTS catalog_items (
-      id TEXT PRIMARY KEY NOT NULL, kind TEXT NOT NULL, name TEXT NOT NULL,
-      category TEXT DEFAULT '' NOT NULL, brand TEXT DEFAULT '' NOT NULL,
-      model TEXT DEFAULT '' NOT NULL, sku TEXT DEFAULT '' NOT NULL,
-      system TEXT DEFAULT 'UNIVERSAL' NOT NULL, description TEXT DEFAULT '' NOT NULL,
-      source_url TEXT DEFAULT '' NOT NULL, unit TEXT DEFAULT 'un' NOT NULL,
-      purchase_price_cents INTEGER DEFAULT 0 NOT NULL, sale_price_cents INTEGER DEFAULT 0 NOT NULL,
-      updated_by TEXT DEFAULT 'Equipe Sona' NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL, updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
-    )`),
-    d1.prepare(`CREATE TABLE IF NOT EXISTS catalog_meta (
-      key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
-    )`),
-    d1.prepare(`CREATE TABLE IF NOT EXISTS budgets (
-      id TEXT PRIMARY KEY NOT NULL, code TEXT UNIQUE NOT NULL,
-      client TEXT DEFAULT 'Novo cliente' NOT NULL, project TEXT DEFAULT 'Novo projeto' NOT NULL,
-      status TEXT DEFAULT 'draft' NOT NULL, validity_days INTEGER DEFAULT 10 NOT NULL,
-      discount_percent REAL DEFAULT 0 NOT NULL, adjustment_cents INTEGER DEFAULT 0 NOT NULL,
-      notes TEXT DEFAULT '' NOT NULL, created_by TEXT DEFAULT 'Equipe Sona' NOT NULL,
-      updated_by TEXT DEFAULT 'Equipe Sona' NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL, updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
-    )`),
-    d1.prepare(`CREATE TABLE IF NOT EXISTS budget_items (
-      id TEXT PRIMARY KEY NOT NULL, budget_id TEXT NOT NULL, catalog_item_id TEXT,
-      kind TEXT NOT NULL, name TEXT NOT NULL, category TEXT DEFAULT '' NOT NULL,
-      brand TEXT DEFAULT '' NOT NULL, model TEXT DEFAULT '' NOT NULL, sku TEXT DEFAULT '' NOT NULL,
-      unit TEXT DEFAULT 'un' NOT NULL, environment TEXT DEFAULT 'Geral' NOT NULL,
-      quantity REAL DEFAULT 1 NOT NULL, purchase_price_cents INTEGER DEFAULT 0 NOT NULL,
-      sale_price_cents INTEGER DEFAULT 0 NOT NULL, discount_percent REAL DEFAULT 0 NOT NULL,
-      sort_order INTEGER DEFAULT 0 NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL, updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-      FOREIGN KEY (budget_id) REFERENCES budgets(id) ON DELETE CASCADE,
-      FOREIGN KEY (catalog_item_id) REFERENCES catalog_items(id) ON DELETE SET NULL
-    )`),
-    d1.prepare("CREATE INDEX IF NOT EXISTS budget_items_budget_idx ON budget_items (budget_id, sort_order)"),
-  ]);
+let schemaReady = false;
+async function ensureSchema(db: Awaited<ReturnType<typeof getDb>>) {
+  if (schemaReady) return;
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS catalog_items (
+    id text PRIMARY KEY, kind text NOT NULL, name text NOT NULL,
+    category text NOT NULL DEFAULT '', brand text NOT NULL DEFAULT '',
+    model text NOT NULL DEFAULT '', sku text NOT NULL DEFAULT '',
+    system text NOT NULL DEFAULT 'UNIVERSAL', description text NOT NULL DEFAULT '',
+    source_url text NOT NULL DEFAULT '', unit text NOT NULL DEFAULT 'un',
+    purchase_price_cents integer NOT NULL DEFAULT 0, sale_price_cents integer NOT NULL DEFAULT 0,
+    updated_by text NOT NULL DEFAULT 'Equipe Sona',
+    created_at text NOT NULL DEFAULT to_char((now() at time zone 'utc'), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+    updated_at text NOT NULL DEFAULT to_char((now() at time zone 'utc'), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+  )`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS catalog_meta (
+    key text PRIMARY KEY, value text NOT NULL,
+    updated_at text NOT NULL DEFAULT to_char((now() at time zone 'utc'), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+  )`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS budgets (
+    id text PRIMARY KEY, code text NOT NULL UNIQUE,
+    client text NOT NULL DEFAULT 'Novo cliente', project text NOT NULL DEFAULT 'Novo projeto',
+    status text NOT NULL DEFAULT 'draft', validity_days integer NOT NULL DEFAULT 10,
+    discount_percent double precision NOT NULL DEFAULT 0, adjustment_cents integer NOT NULL DEFAULT 0,
+    notes text NOT NULL DEFAULT '', created_by text NOT NULL DEFAULT 'Equipe Sona',
+    updated_by text NOT NULL DEFAULT 'Equipe Sona',
+    created_at text NOT NULL DEFAULT to_char((now() at time zone 'utc'), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+    updated_at text NOT NULL DEFAULT to_char((now() at time zone 'utc'), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+  )`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS budget_items (
+    id text PRIMARY KEY, budget_id text NOT NULL, catalog_item_id text,
+    kind text NOT NULL, name text NOT NULL, category text NOT NULL DEFAULT '',
+    brand text NOT NULL DEFAULT '', model text NOT NULL DEFAULT '', sku text NOT NULL DEFAULT '',
+    unit text NOT NULL DEFAULT 'un', environment text NOT NULL DEFAULT 'Geral',
+    quantity double precision NOT NULL DEFAULT 1, purchase_price_cents integer NOT NULL DEFAULT 0,
+    sale_price_cents integer NOT NULL DEFAULT 0, discount_percent double precision NOT NULL DEFAULT 0,
+    sort_order integer NOT NULL DEFAULT 0,
+    created_at text NOT NULL DEFAULT to_char((now() at time zone 'utc'), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+    updated_at text NOT NULL DEFAULT to_char((now() at time zone 'utc'), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+    FOREIGN KEY (budget_id) REFERENCES budgets(id) ON DELETE CASCADE,
+    FOREIGN KEY (catalog_item_id) REFERENCES catalog_items(id) ON DELETE SET NULL
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS budget_items_budget_idx ON budget_items (budget_id, sort_order)`);
+  schemaReady = true;
 }
 
 async function seedCatalog() {
@@ -116,10 +117,10 @@ async function seedCatalog() {
     await db.insert(catalogItems).values(initialCatalog.slice(index, index + 5)).onConflictDoNothing();
   }
   await db.update(catalogItems)
-    .set({ system: "SMARTLIFE", updatedAt: sql`CURRENT_TIMESTAMP` })
+    .set({ system: "SMARTLIFE", updatedAt: new Date().toISOString() })
     .where(inArray(catalogItems.system, ["HUBITAT", "SEGURANÇA"]));
   await db.update(catalogItems)
-    .set({ system: "VETRA", updatedAt: sql`CURRENT_TIMESTAMP` })
+    .set({ system: "VETRA", updatedAt: new Date().toISOString() })
     .where(inArray(catalogItems.system, ["VERTES", "ÁUDIO/VÍDEO", "WI-FI", "UNIVERSAL"]));
   await db.update(catalogItems)
     .set({
@@ -129,7 +130,7 @@ async function seedCatalog() {
       sku: "SL-GW-ZB-PRO",
       system: "SMARTLIFE",
       description: "Central para integração de dispositivos, cenas e rotinas do ecossistema SmartLife.",
-      updatedAt: sql`CURRENT_TIMESTAMP`,
+      updatedAt: new Date().toISOString(),
     })
     .where(eq(catalogItems.id, "sona-hubitat-c8pro"));
   await db.update(catalogItems)
@@ -139,12 +140,12 @@ async function seedCatalog() {
       sku: "SV-SL-PROG",
       system: "SMARTLIFE",
       description: "Configuração de dispositivos, integrações, cenas, rotinas e comandos do ecossistema SmartLife.",
-      updatedAt: sql`CURRENT_TIMESTAMP`,
+      updatedAt: new Date().toISOString(),
     })
     .where(eq(catalogItems.id, "sv-hubitat-program"));
   await db.insert(catalogMeta)
-    .values({ key: "catalog_seed_version", value: catalogSeedVersion, updatedAt: sql`CURRENT_TIMESTAMP` })
-    .onConflictDoUpdate({ target: catalogMeta.key, set: { value: catalogSeedVersion, updatedAt: sql`CURRENT_TIMESTAMP` } });
+    .values({ key: "catalog_seed_version", value: catalogSeedVersion, updatedAt: new Date().toISOString() })
+    .onConflictDoUpdate({ target: catalogMeta.key, set: { value: catalogSeedVersion, updatedAt: new Date().toISOString() } });
 }
 
 async function createBudgetRecord(actor: string, client = "Novo cliente", project = "Novo projeto") {
@@ -187,9 +188,9 @@ export async function GET(request: Request) {
   try {
     const actor = await adminActorFrom(request);
     if (!actor) return Response.json({ error: "Acesso administrativo necessário." }, { status: 401 });
-    await ensureSchema();
-    await seedCatalog();
     const db = await getDb();
+    await ensureSchema(db);
+    await seedCatalog();
     let budgetRows = await db.select().from(budgets).orderBy(desc(budgets.updatedAt));
     if (!budgetRows.length) {
       await createBudgetRecord(actor);
@@ -236,8 +237,8 @@ export async function POST(request: Request) {
       budgetId?: string;
       lineId?: string;
     };
-    await ensureSchema();
     const db = await getDb();
+    await ensureSchema(db);
 
     if (payload.action === "upsertCatalogItem") {
       const item = payload.item ?? {};
@@ -252,7 +253,7 @@ export async function POST(request: Request) {
         description: clean(item.description, 800), sourceUrl: clean(item.sourceUrl, 500),
         unit: clean(item.unit, 12) || (kind === "service" ? "sv" : "un"),
         purchasePriceCents: moneyCents(item.purchasePrice), salePriceCents: moneyCents(item.salePrice),
-        updatedBy: actor, updatedAt: sql`CURRENT_TIMESTAMP`,
+        updatedBy: actor, updatedAt: new Date().toISOString(),
       };
       const [saved] = await db.insert(catalogItems).values(values)
         .onConflictDoUpdate({ target: catalogItems.id, set: values }).returning();
@@ -302,7 +303,7 @@ export async function POST(request: Request) {
         purchasePriceCents: catalogItem.purchasePriceCents, salePriceCents: catalogItem.salePriceCents,
         discountPercent: 0, sortOrder: orderRow?.value ?? 0,
       }).returning();
-      await db.update(budgets).set({ updatedBy: actor, updatedAt: sql`CURRENT_TIMESTAMP` }).where(eq(budgets.id, budgetId));
+      await db.update(budgets).set({ updatedBy: actor, updatedAt: new Date().toISOString() }).where(eq(budgets.id, budgetId));
       return Response.json({ line: mapBudgetLine(line) });
     }
 
@@ -317,7 +318,7 @@ export async function POST(request: Request) {
       if (patch.salePrice !== undefined) values.salePriceCents = moneyCents(patch.salePrice);
       if (patch.discountPercent !== undefined) values.discountPercent = bounded(patch.discountPercent, 0, 100, 0);
       await db.update(budgetItems).set(values).where(eq(budgetItems.id, lineId));
-      await db.update(budgets).set({ updatedBy: actor, updatedAt: sql`CURRENT_TIMESTAMP` }).where(eq(budgets.id, budgetId));
+      await db.update(budgets).set({ updatedBy: actor, updatedAt: new Date().toISOString() }).where(eq(budgets.id, budgetId));
       return Response.json({ ok: true, updatedBy: actor });
     }
 
@@ -325,13 +326,13 @@ export async function POST(request: Request) {
       const lineId = clean(payload.lineId, 80);
       if (!lineId) return Response.json({ error: "Linha inválida." }, { status: 400 });
       await db.delete(budgetItems).where(eq(budgetItems.id, lineId));
-      await db.update(budgets).set({ updatedBy: actor, updatedAt: sql`CURRENT_TIMESTAMP` }).where(eq(budgets.id, budgetId));
+      await db.update(budgets).set({ updatedBy: actor, updatedAt: new Date().toISOString() }).where(eq(budgets.id, budgetId));
       return Response.json({ ok: true });
     }
 
     if (payload.action === "clearBudget") {
       await db.delete(budgetItems).where(eq(budgetItems.budgetId, budgetId));
-      await db.update(budgets).set({ updatedBy: actor, updatedAt: sql`CURRENT_TIMESTAMP` }).where(eq(budgets.id, budgetId));
+      await db.update(budgets).set({ updatedBy: actor, updatedAt: new Date().toISOString() }).where(eq(budgets.id, budgetId));
       return Response.json({ ok: true });
     }
 

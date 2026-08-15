@@ -451,6 +451,16 @@ export default function Home() {
         <div className="sidebar__footer">
           <div className="location-dot" />
           <div><strong>Sona Goiânia</strong><small>Metropolitan Mall</small></div>
+          <button
+            type="button"
+            className="sidebar-logout"
+            title="Sair"
+            aria-label="Sair"
+            onClick={async () => {
+              try { await fetch("/api/auth", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "logout" }) }); } catch { /* ignore */ }
+              window.location.href = "/";
+            }}
+          >Sair</button>
         </div>
       </aside>
 

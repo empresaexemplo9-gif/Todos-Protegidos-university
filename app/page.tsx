@@ -1,17 +1,12 @@
 import AdminWorkspace from "./admin-workspace";
-import { isAdminEmail } from "./admin-access";
-import { requireChatGPTUser } from "./chatgpt-auth";
+import { isAuthenticated } from "./admin-access";
+import LoginGate from "./login-gate";
 
 export const dynamic = "force-dynamic";
 
-async function ProtectedWorkspace() {
-  const user = await requireChatGPTUser("/");
-  if (!(await isAdminEmail(user.email))) {
-    return <main className="client-proposal-state client-proposal-state--error"><span>!</span><strong>Acesso administrativo não autorizado</strong><p>Este login não faz parte da equipe autorizada da SONA.</p></main>;
+export default async function Page() {
+  if (!(await isAuthenticated())) {
+    return <LoginGate />;
   }
   return <AdminWorkspace />;
-}
-
-export default function Page() {
-  return <ProtectedWorkspace />;
 }

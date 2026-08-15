@@ -1,7 +1,9 @@
 import { sql } from "drizzle-orm";
-import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { doublePrecision, integer, pgTable, text } from "drizzle-orm/pg-core";
 
-export const catalogItems = sqliteTable("catalog_items", {
+const nowText = sql`to_char((now() at time zone 'utc'), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
+
+export const catalogItems = pgTable("catalog_items", {
   id: text("id").primaryKey(),
   kind: text("kind", { enum: ["equipment", "service"] }).notNull(),
   name: text("name").notNull(),
@@ -16,36 +18,36 @@ export const catalogItems = sqliteTable("catalog_items", {
   purchasePriceCents: integer("purchase_price_cents").notNull().default(0),
   salePriceCents: integer("sale_price_cents").notNull().default(0),
   updatedBy: text("updated_by").notNull().default("Equipe Sona"),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(nowText),
+  updatedAt: text("updated_at").notNull().default(nowText),
 });
 
-export const budgetLines = sqliteTable("budget_lines", {
+export const budgetLines = pgTable("budget_lines", {
   catalogItemId: text("catalog_item_id")
     .primaryKey()
     .references(() => catalogItems.id, { onDelete: "cascade" }),
-  quantity: real("quantity").notNull().default(0),
+  quantity: doublePrecision("quantity").notNull().default(0),
   updatedBy: text("updated_by").notNull().default("Equipe Sona"),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(nowText),
 });
 
-export const budgets = sqliteTable("budgets", {
+export const budgets = pgTable("budgets", {
   id: text("id").primaryKey(),
   code: text("code").notNull().unique(),
   client: text("client").notNull().default("Novo cliente"),
   project: text("project").notNull().default("Novo projeto"),
   status: text("status", { enum: ["draft", "sent", "approved"] }).notNull().default("draft"),
   validityDays: integer("validity_days").notNull().default(10),
-  discountPercent: real("discount_percent").notNull().default(0),
+  discountPercent: doublePrecision("discount_percent").notNull().default(0),
   adjustmentCents: integer("adjustment_cents").notNull().default(0),
   notes: text("notes").notNull().default(""),
   createdBy: text("created_by").notNull().default("Equipe Sona"),
   updatedBy: text("updated_by").notNull().default("Equipe Sona"),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(nowText),
+  updatedAt: text("updated_at").notNull().default(nowText),
 });
 
-export const budgetItems = sqliteTable("budget_items", {
+export const budgetItems = pgTable("budget_items", {
   id: text("id").primaryKey(),
   budgetId: text("budget_id")
     .notNull()
@@ -59,22 +61,22 @@ export const budgetItems = sqliteTable("budget_items", {
   sku: text("sku").notNull().default(""),
   unit: text("unit").notNull().default("un"),
   environment: text("environment").notNull().default("Geral"),
-  quantity: real("quantity").notNull().default(1),
+  quantity: doublePrecision("quantity").notNull().default(1),
   purchasePriceCents: integer("purchase_price_cents").notNull().default(0),
   salePriceCents: integer("sale_price_cents").notNull().default(0),
-  discountPercent: real("discount_percent").notNull().default(0),
+  discountPercent: doublePrecision("discount_percent").notNull().default(0),
   sortOrder: integer("sort_order").notNull().default(0),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(nowText),
+  updatedAt: text("updated_at").notNull().default(nowText),
 });
 
-export const catalogMeta = sqliteTable("catalog_meta", {
+export const catalogMeta = pgTable("catalog_meta", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(nowText),
 });
 
-export const proposals = sqliteTable("proposals", {
+export const proposals = pgTable("proposals", {
   id: text("id").primaryKey(),
   code: text("code").notNull().unique(),
   client: text("client").notNull().default("Novo cliente"),
@@ -89,11 +91,11 @@ export const proposals = sqliteTable("proposals", {
   acceptedAt: text("accepted_at"),
   createdBy: text("created_by").notNull().default("Equipe Sona"),
   updatedBy: text("updated_by").notNull().default("Equipe Sona"),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(nowText),
+  updatedAt: text("updated_at").notNull().default(nowText),
 });
 
-export const proposalTemplates = sqliteTable("proposal_templates", {
+export const proposalTemplates = pgTable("proposal_templates", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description").notNull().default(""),
@@ -101,6 +103,6 @@ export const proposalTemplates = sqliteTable("proposal_templates", {
   dataJson: text("data_json").notNull(),
   createdBy: text("created_by").notNull().default("Equipe Sona"),
   updatedBy: text("updated_by").notNull().default("Equipe Sona"),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(nowText),
+  updatedAt: text("updated_at").notNull().default(nowText),
 });

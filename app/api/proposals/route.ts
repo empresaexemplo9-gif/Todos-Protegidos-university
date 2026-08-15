@@ -28,24 +28,23 @@ function sanitizeDocumentHtml(value: unknown) {
     .replace(/(?:javascript|data:text\/html)\s*:/gi, "");
 }
 
-async function ensureSchema() {
-  const { env } = await import("cloudflare:workers");
-  const d1 = env.DB;
-  if (!d1) throw new Error("A base compartilhada está indisponível.");
-  await d1.batch([
-    d1.prepare(`CREATE TABLE IF NOT EXISTS proposals (
-      id TEXT PRIMARY KEY NOT NULL, code TEXT UNIQUE NOT NULL,
-      client TEXT DEFAULT 'Novo cliente' NOT NULL, project TEXT DEFAULT 'Novo projeto' NOT NULL,
-      status TEXT DEFAULT 'draft' NOT NULL, data_json TEXT NOT NULL,
-      manual_html TEXT DEFAULT '' NOT NULL, public_token TEXT UNIQUE,
-      accepted_by TEXT DEFAULT '' NOT NULL, accepted_email TEXT DEFAULT '' NOT NULL,
-      accepted_document TEXT DEFAULT '' NOT NULL, accepted_at TEXT,
-      created_by TEXT DEFAULT 'Equipe Sona' NOT NULL, updated_by TEXT DEFAULT 'Equipe Sona' NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL, updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
-    )`),
-    d1.prepare("CREATE INDEX IF NOT EXISTS proposals_status_idx ON proposals (status, updated_at)"),
-    d1.prepare("CREATE UNIQUE INDEX IF NOT EXISTS proposals_public_token_unique ON proposals (public_token)"),
-  ]);
+let schemaReady = false;
+async function ensureSchema(db: Awaited<ReturnType<typeof getDb>>) {
+  if (schemaReady) return;
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS proposals (
+    id text PRIMARY KEY, code text NOT NULL UNIQUE,
+    client text NOT NULL DEFAULT 'Novo cliente', project text NOT NULL DEFAULT 'Novo projeto',
+    status text NOT NULL DEFAULT 'draft', data_json text NOT NULL,
+    manual_html text NOT NULL DEFAULT '', public_token text UNIQUE,
+    accepted_by text NOT NULL DEFAULT '', accepted_email text NOT NULL DEFAULT '',
+    accepted_document text NOT NULL DEFAULT '', accepted_at text,
+    created_by text NOT NULL DEFAULT 'Equipe Sona', updated_by text NOT NULL DEFAULT 'Equipe Sona',
+    created_at text NOT NULL DEFAULT to_char((now() at time zone 'utc'), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+    updated_at text NOT NULL DEFAULT to_char((now() at time zone 'utc'), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS proposals_status_idx ON proposals (status, updated_at)`);
+  await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS proposals_public_token_unique ON proposals (public_token)`);
+  schemaReady = true;
 }
 
 function mapProposal(row: typeof proposals.$inferSelect, includeData = true, includePrivateAcceptance = true) {
@@ -69,8 +68,8 @@ function mapProposal(row: typeof proposals.$inferSelect, includeData = true, inc
 
 export async function GET(request: Request) {
   try {
-    await ensureSchema();
     const db = await getDb();
+    await ensureSchema(db);
     const token = clean(new URL(request.url).searchParams.get("token"), 120);
     if (token) {
       const [row] = await db.select().from(proposals).where(eq(proposals.publicToken, token));
@@ -98,8 +97,8 @@ export async function POST(request: Request) {
       manualHtml?: string;
       acceptance?: { name?: string; email?: string; document?: string; confirmed?: boolean };
     };
-    await ensureSchema();
     const db = await getDb();
+    await ensureSchema(db);
 
     if (payload.action === "accept") {
       const token = clean(payload.token, 120);
@@ -153,14 +152,14 @@ export async function POST(request: Request) {
     if (payload.action === "finalize") {
       const token = row.publicToken || `${crypto.randomUUID().replaceAll("-", "")}${crypto.randomUUID().replaceAll("-", "")}`;
       const [saved] = await db.update(proposals).set({
-        status: "finalized", publicToken: token, updatedBy: actor, updatedAt: sql`CURRENT_TIMESTAMP`,
+        status: "finalized", publicToken: token, updatedBy: actor, updatedAt: new Date().toISOString(),
       }).where(eq(proposals.id, id)).returning();
       return Response.json({ proposal: mapProposal(saved) });
     }
 
     if (payload.action === "markSent") {
       const [saved] = await db.update(proposals).set({
-        status: "sent", updatedBy: actor, updatedAt: sql`CURRENT_TIMESTAMP`,
+        status: "sent", updatedBy: actor, updatedAt: new Date().toISOString(),
       }).where(eq(proposals.id, id)).returning();
       return Response.json({ proposal: mapProposal(saved) });
     }
