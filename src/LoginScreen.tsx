@@ -26,7 +26,15 @@ export default function LoginScreen({
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = (await res.json()) as { error?: string };
+      // Se o servidor não responder em JSON (ex.: erro da hospedagem), mostra um
+      // recado claro em vez do erro cru do interpretador.
+      const raw = await res.text();
+      let data: { error?: string } = {};
+      try {
+        data = raw ? (JSON.parse(raw) as { error?: string }) : {};
+      } catch {
+        throw new Error("Servidor indisponível no momento. Tente novamente em instantes.");
+      }
       if (!res.ok) throw new Error(data.error || "Não foi possível entrar.");
       await onAuthed();
     } catch (err) {
