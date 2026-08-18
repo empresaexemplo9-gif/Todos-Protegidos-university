@@ -1376,5 +1376,22 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
 }
 
 function DefaultFloorPlan() {
-  return <div className="default-plan" aria-label="Rascunho de planta padrão"><span className="room room--living">SALA / ESTAR<small>28,4 m²</small></span><span className="room room--kitchen">COZINHA<small>12,2 m²</small></span><span className="room room--suite">SUÍTE<small>17,8 m²</small></span><span className="room room--balcony">VARANDA<small>16,4 m²</small></span><i className="door door--one" /><i className="door door--two" /></div>;
+  const rooms = [
+    ["garage", "GARAGEM", "31,8 m²"],
+    ["office", "ESCRITÓRIO", "11,2 m²"],
+    ["living", "SALA / ESTAR", "35,6 m²"],
+    ["kitchen", "COZINHA", "17,4 m²"],
+    ["service", "SERVIÇO", "7,8 m²"],
+    ["hall", "CIRCULAÇÃO", "9,5 m²"],
+    ["suite", "SUÍTE MASTER", "21,3 m²"],
+    ["bedroom-a", "QUARTO 01", "12,1 m²"],
+    ["bedroom-b", "QUARTO 02", "11,8 m²"],
+    ["balcony", "VARANDA", "24,7 m²"],
+  ] as const;
+  return <div className="default-plan default-plan--demo" aria-label="Planta residencial demonstrativa editável">
+    <div className="default-plan__title"><strong>PLANTA EXEMPLO SONA</strong><span>Use as ferramentas para inserir APs, paredes e imagens</span></div>
+    {rooms.map(([slug, label, area]) => <span key={slug} className={`room room--${slug}`}>{label}<small>{area}</small></span>)}
+    {Array.from({ length: 8 }, (_, index) => <i key={index} className={`door door--demo-${index + 1}`} />)}
+    <div className="default-plan__scale"><i /><span>5 m</span></div>
+  </div>;
 }
