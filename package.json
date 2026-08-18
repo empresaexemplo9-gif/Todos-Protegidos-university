@@ -17,6 +17,7 @@
     "iniciar": "npm run build && node server/index.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "pdfjs-dist": "^5.4.149",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
