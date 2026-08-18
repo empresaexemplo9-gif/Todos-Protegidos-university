@@ -32,7 +32,7 @@ export type Proposal = {
 
 export type ScopeTool = { id: string; code: string; label: string; color: string; category: string };
 export type ScopeMarker = { id: number; type: string; label: string; environment: string; description: string; status: "previsto" | "revisar" | "aprovado"; x: number; y: number; size: number; range: number; apModel?: string; catalogItemId?: string; catalogName?: string };
-export type PlanAsset = { id: number; name: string; src: string; x: number; y: number; width: number };
+export type PlanAsset = { id: number; name: string; src: string; x: number; y: number; width: number; rotation?: number };
 type ScopeCatalogItem = { id: string; name: string; category: string; brand: string; model: string; system: string };
 export type ScopeReport = { project: string; address: string; planImage: string | null; markers: ScopeMarker[]; tools: ScopeTool[]; assets: PlanAsset[]; items: ProposalItem[] };
 
@@ -115,8 +115,13 @@ function modelRadius(id: string, band: "2.4" | "5" | "6") {
   const m = ubiquitiAPs.find((a) => a.id === id) ?? ubiquitiAPs[2];
   return band === "2.4" ? m.r24 : band === "6" ? (m.r6 ?? m.r5) : m.r5;
 }
-// Camada de calor: desenha o sinal combinado dos APs (sinal mais forte por ponto) num canvas sobre a planta.
-function WifiHeatLayer({ aps, planWidthMeters }: { aps: ScopeMarker[]; planWidthMeters: number }) {
+// Camada de cobertura: combina os APs, respeita a escala e reduz o sinal ao atravessar paredes.
+function WifiHeatLayer({ aps, planWidthMeters, walls, band }: {
+  aps: ScopeMarker[];
+  planWidthMeters: number;
+  walls: Array<{ id: number; pts: Array<{ x: number; y: number }> }>;
+  band: "2.4" | "5" | "6";
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const cv = ref.current;
@@ -126,34 +131,91 @@ function WifiHeatLayer({ aps, planWidthMeters }: { aps: ScopeMarker[]; planWidth
       const w = host.clientWidth;
       const h = host.clientHeight;
       if (!w || !h) return;
-      cv.width = w;
-      cv.height = h;
+      const ratio = Math.min(2, window.devicePixelRatio || 1);
+      cv.width = Math.round(w * ratio);
+      cv.height = Math.round(h * ratio);
+      cv.style.width = `${w}px`;
+      cv.style.height = `${h}px`;
       const ctx = cv.getContext("2d");
       if (!ctx) return;
-      ctx.clearRect(0, 0, w, h);
+      ctx.clearRect(0, 0, cv.width, cv.height);
       if (!aps.length) return;
-      const metersPerPx = planWidthMeters / w;
-      const step = 7;
-      for (let y = 0; y < h; y += step) {
-        for (let x = 0; x < w; x += step) {
-          let best = 0;
+
+      const scale = .34;
+      const sw = Math.max(1, Math.round(w * scale));
+      const sh = Math.max(1, Math.round(h * scale));
+      const offscreen = document.createElement("canvas");
+      offscreen.width = sw;
+      offscreen.height = sh;
+      const off = offscreen.getContext("2d");
+      if (!off) return;
+      const image = off.createImageData(sw, sh);
+      const metersPerPixel = planWidthMeters / sw;
+      const attenuation = band === "2.4" ? .13 : band === "6" ? .27 : .20;
+      const segments = walls.flatMap((wall) => wall.pts.slice(1).map((point, index) => [wall.pts[index], point] as const));
+      const intersects = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number, dx: number, dy: number) => {
+        const cross = (px: number, py: number, qx: number, qy: number, rx: number, ry: number) => (qx - px) * (ry - py) - (qy - py) * (rx - px);
+        const d1 = cross(ax, ay, bx, by, cx, cy);
+        const d2 = cross(ax, ay, bx, by, dx, dy);
+        const d3 = cross(cx, cy, dx, dy, ax, ay);
+        const d4 = cross(cx, cy, dx, dy, bx, by);
+        return d1 * d2 < 0 && d3 * d4 < 0;
+      };
+      const palette = [
+        { stop: .05, rgb: [205, 49, 61] },
+        { stop: .23, rgb: [244, 125, 47] },
+        { stop: .42, rgb: [250, 202, 57] },
+        { stop: .62, rgb: [166, 220, 73] },
+        { stop: .82, rgb: [63, 190, 90] },
+        { stop: 1, rgb: [35, 161, 82] },
+      ];
+      const colorAt = (value: number) => {
+        const upperIndex = Math.max(1, palette.findIndex((entry) => value <= entry.stop));
+        const lower = palette[upperIndex - 1];
+        const upper = palette[upperIndex] ?? palette[palette.length - 1];
+        const amount = Math.max(0, Math.min(1, (value - lower.stop) / Math.max(.001, upper.stop - lower.stop)));
+        return lower.rgb.map((channel, index) => Math.round(channel + (upper.rgb[index] - channel) * amount));
+      };
+
+      for (let y = 0; y < sh; y++) {
+        for (let x = 0; x < sw; x++) {
+          let strongest = 0;
           for (const ap of aps) {
-            const radius = Math.max(1, ap.range || 10);
-            const distM = Math.hypot(x - (ap.x / 100) * w, y - (ap.y / 100) * h) * metersPerPx;
-            const signal = 1 - distM / radius;
-            if (signal > best) best = signal;
+            const apx = ap.x / 100 * sw;
+            const apy = ap.y / 100 * sh;
+            const radius = Math.max(1, ap.range || modelRadius(ap.apModel ?? "u6-pro", band));
+            const distance = Math.hypot(x - apx, y - apy) * metersPerPixel;
+            let signal = Math.max(0, 1 - Math.pow(distance / radius, 1.34));
+            if (signal > 0 && segments.length) {
+              let crossed = 0;
+              for (const [p1, p2] of segments) {
+                if (intersects(apx, apy, x, y, p1.x / 100 * sw, p1.y / 100 * sh, p2.x / 100 * sw, p2.y / 100 * sh)) crossed++;
+              }
+              signal = Math.max(0, signal - crossed * attenuation);
+            }
+            strongest = Math.max(strongest, signal);
           }
-          if (best <= 0.06) continue;
-          const color = best > 0.66 ? "46,204,113" : best > 0.42 ? "26,188,156" : best > 0.22 ? "241,196,15" : "230,126,34";
-          ctx.fillStyle = `rgba(${color},0.55)`;
-          ctx.fillRect(x, y, step, step);
+          if (strongest < .045) continue;
+          const [r, g, b] = colorAt(strongest);
+          const offset = (y * sw + x) * 4;
+          image.data[offset] = r;
+          image.data[offset + 1] = g;
+          image.data[offset + 2] = b;
+          image.data[offset + 3] = Math.round(55 + strongest * 115);
         }
       }
+      off.putImageData(image, 0, 0);
+      ctx.save();
+      ctx.scale(ratio, ratio);
+      ctx.imageSmoothingEnabled = true;
+      ctx.filter = "blur(4px)";
+      ctx.drawImage(offscreen, -5, -5, w + 10, h + 10);
+      ctx.restore();
     };
     draw();
     window.addEventListener("resize", draw);
     return () => window.removeEventListener("resize", draw);
-  }, [aps, planWidthMeters]);
+  }, [aps, band, planWidthMeters, walls]);
   return <canvas ref={ref} className="wifi-heat-canvas" aria-hidden="true" />;
 }
 
@@ -932,7 +994,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
       {scopeReport && <section className="proposal-page proposal-page--location">
         <DottedFrame />
         <div className="solution-heading"><h2>LOCAÇÃO ESTIMADA — {scopeReport.project.toLocaleUpperCase("pt-BR")}</h2><p>{scopeReport.address}</p></div>
-        <div className="proposal-location-plan"><div className="report-plan__canvas">{scopeReport.planImage ? <img src={scopeReport.planImage} alt={`Planta do projeto ${scopeReport.project}`} /> : <DefaultFloorPlan />}{scopeReport.assets.map((asset) => <img className="report-plan__asset" key={asset.id} src={asset.src} alt={asset.name} style={{ left: `${asset.x}%`, top: `${asset.y}%`, width: `${asset.width}%` }} />)}{scopeReport.markers.map((item) => { const tool = scopeReport.tools.find((entry) => entry.id === item.type) ?? scopeReport.tools[0]; return <span key={item.id} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool?.color ?? "#638c7e" }}>{item.label}</span>; })}</div></div>
+        <div className="proposal-location-plan"><div className="report-plan__canvas">{scopeReport.planImage ? <img src={scopeReport.planImage} alt={`Planta do projeto ${scopeReport.project}`} /> : <DefaultFloorPlan />}{scopeReport.assets.map((asset) => <img className="report-plan__asset" key={asset.id} src={asset.src} alt={asset.name} style={{ left: `${asset.x}%`, top: `${asset.y}%`, width: `${asset.width}%`, transform: `translate(-50%, -50%) rotate(${asset.rotation ?? 0}deg)` }} />)}{scopeReport.markers.map((item) => { const tool = scopeReport.tools.find((entry) => entry.id === item.type) ?? scopeReport.tools[0]; return <span key={item.id} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool?.color ?? "#638c7e" }}>{item.label}</span>; })}</div></div>
         <div className="report-legend">{scopeReport.tools.map((tool) => { const qty = scopeReport.markers.filter((item) => item.type === tool.id).length; return qty > 0 ? <div key={tool.id}><i style={{ background: tool.color }}>{tool.code}</i><span>{tool.label}</span><b>{qty}</b></div> : null; })}</div>
         <PageFooter number={String(2 + solutionPages.length)} />
       </section>}
@@ -983,13 +1045,13 @@ function PageFooter({ number }: { number: string }) { return <div className="pag
 
 function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void }) {
   const [tools, setTools] = useState<ScopeTool[]>(defaultScopeTools);
-  const [selectedTool, setSelectedTool] = useState("light");
+  const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [markers, setMarkers] = useState<ScopeMarker[]>([
     { id: 1, type: "light", label: "L01", environment: "Sala", description: "Circuito principal", status: "previsto", x: 28, y: 31, size: 38, range: 18 },
     { id: 2, type: "climate", label: "AR01", environment: "Sala", description: "Evaporadora", status: "aprovado", x: 67, y: 28, size: 38, range: 18 },
     { id: 3, type: "access-point", label: "AP01", environment: "Circulação", description: "Cobertura Wi-Fi principal", status: "previsto", x: 53, y: 58, size: 38, range: 9, apModel: "u6-pro" },
   ]);
-  const [selectedMarker, setSelectedMarker] = useState<number | null>(1);
+  const [selectedMarker, setSelectedMarker] = useState<number | null>(null);
   const [assets, setAssets] = useState<PlanAsset[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<number | null>(null);
   const [planImage, setPlanImage] = useState<string | null>(null);
@@ -1066,7 +1128,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
         const draft = JSON.parse(stored) as { tools?: ScopeTool[]; markers?: ScopeMarker[]; assets?: PlanAsset[]; project?: string; address?: string; detectedTools?: string[] };
         if (draft.tools?.length) setTools(draft.tools);
         if (draft.markers?.length) setMarkers(draft.markers.map((item) => ({ ...item, size: item.size || 38, range: item.range || 18 })));
-        if (draft.assets) setAssets(draft.assets);
+        if (draft.assets) setAssets(draft.assets.map((item) => ({ ...item, rotation: item.rotation ?? 0 })));
         if (draft.project) setProject(draft.project);
         if (draft.address) setAddress(draft.address);
         if (draft.detectedTools) setDetectedTools(draft.detectedTools);
@@ -1083,8 +1145,10 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const updateMarker = (id: number, patch: Partial<ScopeMarker>) => setMarkers((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
   const updateAsset = (id: number, patch: Partial<PlanAsset>) => setAssets((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
 
-  const addMarkerAt = (x: number, y: number, toolId = activeTool.id) => {
-    const tool = tools.find((entry) => entry.id === toolId) ?? activeTool;
+  const addMarkerAt = (x: number, y: number, toolId?: string) => {
+    if (!toolId) return;
+    const tool = tools.find((entry) => entry.id === toolId);
+    if (!tool) return;
     const id = Math.max(0, ...markers.map((item) => item.id)) + 1;
     const count = markers.filter((item) => item.type === tool.id).length + 1;
     const isAp = tool.id === "access-point";
@@ -1108,6 +1172,19 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     }).map((tool) => tool.id);
     setDetectedTools(found);
     setLegendStatus(found.length ? `Legenda reconhecida: ${found.length} disciplinas. O catálogo já está filtrado.` : "Planta carregada. Nenhuma sigla padrão foi encontrada; a legenda continua totalmente editável.");
+  };
+
+  const prepareForRealPlan = () => {
+    if (planImage) return;
+    setMarkers([]);
+    setAssets([]);
+    setWalls([]);
+    setWallDraft([]);
+    setCalibLine([]);
+    setSelectedMarker(null);
+    setSelectedAsset(null);
+    setSelectedTool(null);
+    resetView();
   };
 
   const loadPlan = async (file: File) => {
@@ -1135,6 +1212,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
           if (n === 1) { const content = await page.getTextContent(); legendText = content.items.map((item) => "str" in item ? item.str : "").join(" "); }
         }
         if (!pages.length) throw new Error("PDF sem páginas renderizáveis");
+        prepareForRealPlan();
         setPlanPages(pages);
         setActivePage(0);
         setPlanImage(pages[0]);
@@ -1142,6 +1220,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
         if (pages.length > 1) setLegendStatus(`PDF com ${pages.length} páginas carregado. Use as miniaturas para trocar de página.`);
       } else if (file.type.startsWith("image/")) {
         const dataUrl = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
+        prepareForRealPlan();
         setPlanPages([]);
         setActivePage(0);
         setPlanImage(dataUrl);
@@ -1164,7 +1243,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const addOverlayImages = async (files: FileList) => {
     const next = await Promise.all(Array.from(files).slice(0, 12).map(async (file, index) => ({
       id: Date.now() + index, name: file.name, src: await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); }),
-      x: 12 + (index % 4) * 8, y: 12 + (index % 3) * 9, width: 14,
+      x: 12 + (index % 4) * 8, y: 12 + (index % 3) * 9, width: 14, rotation: 0,
     })));
     setAssets((current) => [...current, ...next]);
     setSelectedAsset(next[0]?.id ?? null);
@@ -1215,7 +1294,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
         <div className="tool-strip" aria-label="Ferramentas de marcação">
           <div className="tool-strip__label"><small>LEGENDA ATIVA</small><span>{detectedTools.length ? `${detectedTools.length} tipos detectados` : "Todos os tipos"}</span></div>
           <div className="tool-strip__scroll">
-            {visibleTools.map((tool) => <button key={tool.id} draggable className={selectedTool === tool.id ? "selected" : ""} onDragStart={(event) => event.dataTransfer.setData("sona/tool", tool.id)} onClick={() => setSelectedTool(tool.id)} title={`${tool.label} — arraste para a planta`}><i style={{ background: tool.color }}>{tool.code}</i><span>{tool.label}</span></button>)}
+            {visibleTools.map((tool) => <button key={tool.id} draggable className={selectedTool === tool.id ? "selected" : ""} onDragStart={(event) => event.dataTransfer.setData("sona/tool", tool.id)} onClick={() => setSelectedTool((current) => current === tool.id ? null : tool.id)} title={`${tool.label} — clique novamente para desmarcar ou arraste para a planta`}><i style={{ background: tool.color }}>{tool.code}</i><span>{tool.label}</span></button>)}
           </div>
           {detectedTools.length > 0 && <button className="legend-reset" onClick={() => setDetectedTools([])}>Mostrar todos</button>}
         </div>
@@ -1239,17 +1318,18 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
             onPointerUp={(e) => { if (panRef.current) { panRef.current = null; try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* noop */ } } }}
             onClick={(e) => {
               if (canvasMode === "pan" || dragging || draggingAsset || resizingMarker || resizingAsset) return;
+              if (canvasMode === "marker" && !selectedTool) { setSelectedMarker(null); setSelectedAsset(null); return; }
               const point = pointFromEvent(e.clientX, e.clientY);
               if (!point) return;
               if (canvasMode === "wall") { setWallDraft((d) => [...d, point]); return; }
               if (canvasMode === "calibrate") { setCalibLine((c) => (c.length >= 2 ? [point] : [...c, point])); return; }
-              addMarkerAt(point.x, point.y);
+              addMarkerAt(point.x, point.y, selectedTool ?? undefined);
             }}
           >
-            {planImage ? <img src={planImage} alt="Planta do projeto" draggable={false} /> : <DefaultFloorPlan />}
-            {heatmap && <WifiHeatLayer aps={markers.filter((item) => item.type === "access-point")} planWidthMeters={planWidthMeters} />}
-            {assets.map((item) => <div key={item.id} className={`plan-asset ${selectedAsset === item.id ? "selected" : ""}`} style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%` }} onPointerDown={(event) => { event.stopPropagation(); setDraggingAsset(item.id); setSelectedAsset(item.id); setSelectedMarker(null); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (draggingAsset !== item.id || resizingAsset === item.id || event.buttons === 0) return; const point = pointFromEvent(event.clientX, event.clientY); if (point) updateAsset(item.id, point); }} onPointerUp={(event) => { event.stopPropagation(); setDraggingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }}><img src={item.src} alt={item.name} draggable={false} /><small>{item.name}</small><button onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); setAssets((current) => current.filter((entry) => entry.id !== item.id)); setSelectedAsset(null); }} aria-label={`Excluir ${item.name}`}>×</button><span className="resize-handle" onPointerDown={(event) => { event.stopPropagation(); setResizingAsset(item.id); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (resizingAsset !== item.id || event.buttons === 0) return; const rect = canvasRef.current?.getBoundingClientRect(); if (rect) updateAsset(item.id, { width: Math.max(5, Math.min(55, item.width + event.movementX / rect.width * 100)) }); }} onPointerUp={(event) => { event.stopPropagation(); setResizingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }} /></div>)}
-            <div className="canvas-hint">{canvasMode === "pan" ? "Arraste para mover · use o zoom" : canvasMode === "wall" ? "Clique para traçar paredes · 2 cliques finaliza" : <>Clique para inserir <b>{activeTool.code}</b></>}</div>
+            {planImage ? <img className="plan-canvas__image" src={planImage} alt="Planta completa do projeto" draggable={false} /> : <DefaultFloorPlan />}
+            {heatmap && <WifiHeatLayer aps={markers.filter((item) => item.type === "access-point")} planWidthMeters={planWidthMeters} walls={walls} band={heatBand} />}
+            {assets.map((item) => <div key={item.id} className={`plan-asset ${selectedAsset === item.id ? "selected" : ""}`} style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%`, transform: `translate(-50%, -50%) rotate(${item.rotation ?? 0}deg)` }} onPointerDown={(event) => { event.stopPropagation(); setDraggingAsset(item.id); setSelectedAsset(item.id); setSelectedMarker(null); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (draggingAsset !== item.id || resizingAsset === item.id || event.buttons === 0) return; const point = pointFromEvent(event.clientX, event.clientY); if (point) updateAsset(item.id, point); }} onPointerUp={(event) => { event.stopPropagation(); setDraggingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }}><img src={item.src} alt={item.name} draggable={false} /><small>{item.name}</small><button onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); setAssets((current) => current.filter((entry) => entry.id !== item.id)); setSelectedAsset(null); }} aria-label={`Excluir ${item.name}`}>×</button><span className="resize-handle" onPointerDown={(event) => { event.stopPropagation(); setResizingAsset(item.id); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (resizingAsset !== item.id || event.buttons === 0) return; const rect = canvasRef.current?.getBoundingClientRect(); if (rect) updateAsset(item.id, { width: Math.max(5, Math.min(95, item.width + ((event.movementX + event.movementY) / rect.width) * 100)) }); }} onPointerUp={(event) => { event.stopPropagation(); setResizingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }} /></div>)}
+            <div className="canvas-hint">{canvasMode === "pan" ? "Arraste para mover · use o zoom" : canvasMode === "wall" ? "Clique para traçar paredes · 2 cliques finaliza" : selectedTool ? <>Clique para inserir <b>{activeTool.code}</b> · clique novamente na legenda para desmarcar</> : "Nenhuma legenda selecionada · selecione uma para inserir pontos"}</div>
             {heatmap && markers.some((item) => item.type === "access-point") && <div className="wifi-legend" aria-hidden="true"><strong>Sinal · {heatBand === "2.4" ? "2,4" : heatBand} GHz</strong><span><i style={{ background: "#2ecc71" }} />Excelente</span><span><i style={{ background: "#1abc9c" }} />Bom</span><span><i style={{ background: "#f1c40f" }} />Regular</span><span><i style={{ background: "#e67e22" }} />Fraco</span></div>}
             {(walls.length > 0 || wallDraft.length > 0 || calibLine.length > 0) && <svg className="plan-walls" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{walls.map((wall) => <polyline key={wall.id} points={wall.pts.map((p) => `${p.x},${p.y}`).join(" ")} />)}{wallDraft.length > 0 && <polyline className="plan-walls__draft" points={wallDraft.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.length > 0 && <polyline className="plan-calib" points={calibLine.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.map((p, i) => <circle key={`c${i}`} className="plan-calib-node" cx={p.x} cy={p.y} r="0.9" />)}</svg>}
             {markers.map((item) => {
@@ -1291,7 +1371,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
           {marker.type === "access-point" && <><label className="field">Modelo Ubiquiti<select value={marker.apModel ?? "u6-pro"} onChange={(e) => updateMarker(marker.id, { apModel: e.target.value, range: modelRadius(e.target.value, heatBand) })}>{ubiquitiAPs.map((ap) => <option key={ap.id} value={ap.id}>{ap.name}</option>)}</select></label><label className="field">Alcance no plano (m)<input type="range" min="3" max="30" value={marker.range} onChange={(e) => updateMarker(marker.id, { range: Number(e.target.value) })} /><small>~{marker.range} m em {heatBand === "2.4" ? "2,4" : heatBand} GHz · ajuste fino</small></label></>}
           <div className="catalog-suggestions"><div><strong>ITENS COMPATÍVEIS</strong><small>Filtrados pela legenda “{tools.find((tool) => tool.id === marker.type)?.label}”</small></div>{suggestedCatalog.length ? suggestedCatalog.map((item) => <button key={item.id} className={marker.catalogItemId === item.id ? "selected" : ""} onClick={() => updateMarker(marker.id, { catalogItemId: item.id, catalogName: item.name, description: `${item.name} · ${[item.brand, item.model].filter(Boolean).join(" ")}` })}><span><b>{item.name}</b><small>{item.brand} · {item.model}</small></span><i>{marker.catalogItemId === item.id ? "✓" : "+"}</i></button>) : <p>Nenhum item compatível nesta categoria.</p>}</div>
           <button className="delete-marker" onClick={() => { setMarkers((current) => current.filter((item) => item.id !== marker.id)); setSelectedMarker(null); }}>Excluir ponto</button>
-        </> : asset ? <><div className="asset-inspector-preview"><img src={asset.src} alt={asset.name} /></div><label className="field">Nome da imagem<input value={asset.name} onChange={(event) => updateAsset(asset.id, { name: event.target.value })} /></label><label className="field">Tamanho<input type="range" min="5" max="55" value={asset.width} onChange={(event) => updateAsset(asset.id, { width: Number(event.target.value) })} /><small>{asset.width}% da largura da planta</small></label><button className="delete-marker" onClick={() => { setAssets((current) => current.filter((item) => item.id !== asset.id)); setSelectedAsset(null); }}>Excluir imagem</button></> : <div className="inspector-empty"><span>⌖</span><p>Selecione um marcador ou uma imagem para mover, editar, aumentar, diminuir ou excluir.</p></div>}
+        </> : asset ? <><div className="asset-inspector-preview"><img src={asset.src} alt={asset.name} /></div><label className="field">Nome da imagem<input value={asset.name} onChange={(event) => updateAsset(asset.id, { name: event.target.value })} /></label><label className="field">Tamanho<input type="range" min="5" max="95" value={asset.width} onChange={(event) => updateAsset(asset.id, { width: Number(event.target.value) })} /><small>{asset.width}% da largura da planta</small></label><label className="field">Rotação<input type="range" min="-180" max="180" step="1" value={asset.rotation ?? 0} onChange={(event) => updateAsset(asset.id, { rotation: Number(event.target.value) })} /><small>{asset.rotation ?? 0}°</small></label><div className="asset-rotation-actions"><button type="button" onClick={() => updateAsset(asset.id, { rotation: ((asset.rotation ?? 0) - 90 + 180) % 360 - 180 })}>↶ 90°</button><button type="button" onClick={() => updateAsset(asset.id, { rotation: ((asset.rotation ?? 0) + 90 + 180) % 360 - 180 })}>90° ↷</button><button type="button" onClick={() => updateAsset(asset.id, { rotation: 0 })}>Restaurar</button></div><button className="delete-marker" onClick={() => { setAssets((current) => current.filter((item) => item.id !== asset.id)); setSelectedAsset(null); }}>Excluir imagem</button></> : <div className="inspector-empty"><span>⌖</span><p>Selecione um marcador ou uma imagem para mover, editar, aumentar, diminuir ou excluir.</p></div>}
 
         <div className="legend-editor">
           <div className="legend-editor__head"><div><span>LEGENDA EDITÁVEL</span><p>Altere nomes, siglas e cores.</p></div><button onClick={() => { const id = `custom-${Date.now()}`; setTools((current) => [...current, { id, code: "X", label: "Novo marcador", color: "#5f6964", category: "Automação" }]); setSelectedTool(id); }}>＋</button></div>
@@ -1301,7 +1381,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
 
       <section className="scope-report" aria-hidden="true">
         <DottedFrame /><div className="word-title"><strong>ESCOPO TÉCNICO</strong><b>{project}</b></div><p className="report-address">{address}</p>
-        <div className="report-plan"><div className="report-plan__canvas">{planImage ? <img src={planImage} alt="" /> : <DefaultFloorPlan />}{assets.map((item) => <img className="report-plan__asset" key={item.id} src={item.src} alt="" style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%` }} />)}{markers.map((item) => { const tool = tools.find((entry) => entry.id === item.type) ?? tools[0]; return <span key={item.id} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool.color }}>{item.label}</span>; })}</div></div>
+        <div className="report-plan"><div className="report-plan__canvas">{planImage ? <img src={planImage} alt="" /> : <DefaultFloorPlan />}{assets.map((item) => <img className="report-plan__asset" key={item.id} src={item.src} alt="" style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%`, transform: `translate(-50%, -50%) rotate(${item.rotation ?? 0}deg)` }} />)}{markers.map((item) => { const tool = tools.find((entry) => entry.id === item.type) ?? tools[0]; return <span key={item.id} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool.color }}>{item.label}</span>; })}</div></div>
         <div className="report-legend">{totals.map(({ tool, qty }) => <div key={tool.id}><i style={{ background: tool.color }}>{tool.code}</i><span>{tool.label}</span><b>{qty}</b></div>)}</div>
         <table className="classic-table"><thead><tr><th>Item / ambiente</th><th>Quantidade</th></tr></thead><tbody>{totals.map(({ tool, qty }) => <tr key={tool.id}><td><strong>{tool.label}</strong><span>{tool.category}</span></td><td>{qty}</td></tr>)}</tbody></table><PageFooter number="1" />
       </section>
@@ -1311,5 +1391,22 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
 }
 
 function DefaultFloorPlan() {
-  return <div className="default-plan" aria-label="Rascunho de planta padrão"><span className="room room--living">SALA / ESTAR<small>28,4 m²</small></span><span className="room room--kitchen">COZINHA<small>12,2 m²</small></span><span className="room room--suite">SUÍTE<small>17,8 m²</small></span><span className="room room--balcony">VARANDA<small>16,4 m²</small></span><i className="door door--one" /><i className="door door--two" /></div>;
+  const rooms = [
+    ["garage", "GARAGEM", "31,8 m²"],
+    ["office", "ESCRITÓRIO", "11,2 m²"],
+    ["living", "SALA / ESTAR", "35,6 m²"],
+    ["kitchen", "COZINHA", "17,4 m²"],
+    ["service", "SERVIÇO", "7,8 m²"],
+    ["hall", "CIRCULAÇÃO", "9,5 m²"],
+    ["suite", "SUÍTE MASTER", "21,3 m²"],
+    ["bedroom-a", "QUARTO 01", "12,1 m²"],
+    ["bedroom-b", "QUARTO 02", "11,8 m²"],
+    ["balcony", "VARANDA", "24,7 m²"],
+  ] as const;
+  return <div className="default-plan default-plan--demo" aria-label="Planta residencial demonstrativa editável">
+    <div className="default-plan__title"><strong>PLANTA EXEMPLO SONA</strong><span>Use as ferramentas para inserir APs, paredes e imagens</span></div>
+    {rooms.map(([slug, label, area]) => <span key={slug} className={`room room--${slug}`}>{label}<small>{area}</small></span>)}
+    {Array.from({ length: 8 }, (_, index) => <i key={index} className={`door door--demo-${index + 1}`} />)}
+    <div className="default-plan__scale"><i /><span>5 m</span></div>
+  </div>;
 }
