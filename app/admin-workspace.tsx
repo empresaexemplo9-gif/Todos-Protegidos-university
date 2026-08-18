@@ -115,8 +115,13 @@ function modelRadius(id: string, band: "2.4" | "5" | "6") {
   const m = ubiquitiAPs.find((a) => a.id === id) ?? ubiquitiAPs[2];
   return band === "2.4" ? m.r24 : band === "6" ? (m.r6 ?? m.r5) : m.r5;
 }
-// Camada de calor: desenha o sinal combinado dos APs (sinal mais forte por ponto) num canvas sobre a planta.
-function WifiHeatLayer({ aps, planWidthMeters }: { aps: ScopeMarker[]; planWidthMeters: number }) {
+// Camada de cobertura: combina os APs, respeita a escala e reduz o sinal ao atravessar paredes.
+function WifiHeatLayer({ aps, planWidthMeters, walls, band }: {
+  aps: ScopeMarker[];
+  planWidthMeters: number;
+  walls: Array<{ id: number; pts: Array<{ x: number; y: number }> }>;
+  band: "2.4" | "5" | "6";
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const cv = ref.current;
@@ -126,34 +131,91 @@ function WifiHeatLayer({ aps, planWidthMeters }: { aps: ScopeMarker[]; planWidth
       const w = host.clientWidth;
       const h = host.clientHeight;
       if (!w || !h) return;
-      cv.width = w;
-      cv.height = h;
+      const ratio = Math.min(2, window.devicePixelRatio || 1);
+      cv.width = Math.round(w * ratio);
+      cv.height = Math.round(h * ratio);
+      cv.style.width = `${w}px`;
+      cv.style.height = `${h}px`;
       const ctx = cv.getContext("2d");
       if (!ctx) return;
-      ctx.clearRect(0, 0, w, h);
+      ctx.clearRect(0, 0, cv.width, cv.height);
       if (!aps.length) return;
-      const metersPerPx = planWidthMeters / w;
-      const step = 7;
-      for (let y = 0; y < h; y += step) {
-        for (let x = 0; x < w; x += step) {
-          let best = 0;
+
+      const scale = .34;
+      const sw = Math.max(1, Math.round(w * scale));
+      const sh = Math.max(1, Math.round(h * scale));
+      const offscreen = document.createElement("canvas");
+      offscreen.width = sw;
+      offscreen.height = sh;
+      const off = offscreen.getContext("2d");
+      if (!off) return;
+      const image = off.createImageData(sw, sh);
+      const metersPerPixel = planWidthMeters / sw;
+      const attenuation = band === "2.4" ? .13 : band === "6" ? .27 : .20;
+      const segments = walls.flatMap((wall) => wall.pts.slice(1).map((point, index) => [wall.pts[index], point] as const));
+      const intersects = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number, dx: number, dy: number) => {
+        const cross = (px: number, py: number, qx: number, qy: number, rx: number, ry: number) => (qx - px) * (ry - py) - (qy - py) * (rx - px);
+        const d1 = cross(ax, ay, bx, by, cx, cy);
+        const d2 = cross(ax, ay, bx, by, dx, dy);
+        const d3 = cross(cx, cy, dx, dy, ax, ay);
+        const d4 = cross(cx, cy, dx, dy, bx, by);
+        return d1 * d2 < 0 && d3 * d4 < 0;
+      };
+      const palette = [
+        { stop: .05, rgb: [205, 49, 61] },
+        { stop: .23, rgb: [244, 125, 47] },
+        { stop: .42, rgb: [250, 202, 57] },
+        { stop: .62, rgb: [166, 220, 73] },
+        { stop: .82, rgb: [63, 190, 90] },
+        { stop: 1, rgb: [35, 161, 82] },
+      ];
+      const colorAt = (value: number) => {
+        const upperIndex = Math.max(1, palette.findIndex((entry) => value <= entry.stop));
+        const lower = palette[upperIndex - 1];
+        const upper = palette[upperIndex] ?? palette[palette.length - 1];
+        const amount = Math.max(0, Math.min(1, (value - lower.stop) / Math.max(.001, upper.stop - lower.stop)));
+        return lower.rgb.map((channel, index) => Math.round(channel + (upper.rgb[index] - channel) * amount));
+      };
+
+      for (let y = 0; y < sh; y++) {
+        for (let x = 0; x < sw; x++) {
+          let strongest = 0;
           for (const ap of aps) {
-            const radius = Math.max(1, ap.range || 10);
-            const distM = Math.hypot(x - (ap.x / 100) * w, y - (ap.y / 100) * h) * metersPerPx;
-            const signal = 1 - distM / radius;
-            if (signal > best) best = signal;
+            const apx = ap.x / 100 * sw;
+            const apy = ap.y / 100 * sh;
+            const radius = Math.max(1, ap.range || modelRadius(ap.apModel ?? "u6-pro", band));
+            const distance = Math.hypot(x - apx, y - apy) * metersPerPixel;
+            let signal = Math.max(0, 1 - Math.pow(distance / radius, 1.34));
+            if (signal > 0 && segments.length) {
+              let crossed = 0;
+              for (const [p1, p2] of segments) {
+                if (intersects(apx, apy, x, y, p1.x / 100 * sw, p1.y / 100 * sh, p2.x / 100 * sw, p2.y / 100 * sh)) crossed++;
+              }
+              signal = Math.max(0, signal - crossed * attenuation);
+            }
+            strongest = Math.max(strongest, signal);
           }
-          if (best <= 0.06) continue;
-          const color = best > 0.66 ? "46,204,113" : best > 0.42 ? "26,188,156" : best > 0.22 ? "241,196,15" : "230,126,34";
-          ctx.fillStyle = `rgba(${color},0.55)`;
-          ctx.fillRect(x, y, step, step);
+          if (strongest < .045) continue;
+          const [r, g, b] = colorAt(strongest);
+          const offset = (y * sw + x) * 4;
+          image.data[offset] = r;
+          image.data[offset + 1] = g;
+          image.data[offset + 2] = b;
+          image.data[offset + 3] = Math.round(55 + strongest * 115);
         }
       }
+      off.putImageData(image, 0, 0);
+      ctx.save();
+      ctx.scale(ratio, ratio);
+      ctx.imageSmoothingEnabled = true;
+      ctx.filter = "blur(4px)";
+      ctx.drawImage(offscreen, -5, -5, w + 10, h + 10);
+      ctx.restore();
     };
     draw();
     window.addEventListener("resize", draw);
     return () => window.removeEventListener("resize", draw);
-  }, [aps, planWidthMeters]);
+  }, [aps, band, planWidthMeters, walls]);
   return <canvas ref={ref} className="wifi-heat-canvas" aria-hidden="true" />;
 }
 
@@ -1250,7 +1312,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
             }}
           >
             {planImage ? <img className="plan-canvas__image" src={planImage} alt="Planta completa do projeto" draggable={false} /> : <DefaultFloorPlan />}
-            {heatmap && <WifiHeatLayer aps={markers.filter((item) => item.type === "access-point")} planWidthMeters={planWidthMeters} />}
+            {heatmap && <WifiHeatLayer aps={markers.filter((item) => item.type === "access-point")} planWidthMeters={planWidthMeters} walls={walls} band={heatBand} />}
             {assets.map((item) => <div key={item.id} className={`plan-asset ${selectedAsset === item.id ? "selected" : ""}`} style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%` }} onPointerDown={(event) => { event.stopPropagation(); setDraggingAsset(item.id); setSelectedAsset(item.id); setSelectedMarker(null); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (draggingAsset !== item.id || resizingAsset === item.id || event.buttons === 0) return; const point = pointFromEvent(event.clientX, event.clientY); if (point) updateAsset(item.id, point); }} onPointerUp={(event) => { event.stopPropagation(); setDraggingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }}><img src={item.src} alt={item.name} draggable={false} /><small>{item.name}</small><button onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); setAssets((current) => current.filter((entry) => entry.id !== item.id)); setSelectedAsset(null); }} aria-label={`Excluir ${item.name}`}>×</button><span className="resize-handle" onPointerDown={(event) => { event.stopPropagation(); setResizingAsset(item.id); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (resizingAsset !== item.id || event.buttons === 0) return; const rect = canvasRef.current?.getBoundingClientRect(); if (rect) updateAsset(item.id, { width: Math.max(5, Math.min(95, item.width + ((event.movementX + event.movementY) / rect.width) * 100)) }); }} onPointerUp={(event) => { event.stopPropagation(); setResizingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }} /></div>)}
             <div className="canvas-hint">{canvasMode === "pan" ? "Arraste para mover · use o zoom" : canvasMode === "wall" ? "Clique para traçar paredes · 2 cliques finaliza" : selectedTool ? <>Clique para inserir <b>{activeTool.code}</b> · clique novamente na legenda para desmarcar</> : "Nenhuma legenda selecionada · selecione uma para inserir pontos"}</div>
             {heatmap && markers.some((item) => item.type === "access-point") && <div className="wifi-legend" aria-hidden="true"><strong>Sinal · {heatBand === "2.4" ? "2,4" : heatBand} GHz</strong><span><i style={{ background: "#2ecc71" }} />Excelente</span><span><i style={{ background: "#1abc9c" }} />Bom</span><span><i style={{ background: "#f1c40f" }} />Regular</span><span><i style={{ background: "#e67e22" }} />Fraco</span></div>}
