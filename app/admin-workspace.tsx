@@ -1174,6 +1174,19 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     setLegendStatus(found.length ? `Legenda reconhecida: ${found.length} disciplinas. O catálogo já está filtrado.` : "Planta carregada. Nenhuma sigla padrão foi encontrada; a legenda continua totalmente editável.");
   };
 
+  const prepareForRealPlan = () => {
+    if (planImage) return;
+    setMarkers([]);
+    setAssets([]);
+    setWalls([]);
+    setWallDraft([]);
+    setCalibLine([]);
+    setSelectedMarker(null);
+    setSelectedAsset(null);
+    setSelectedTool(null);
+    resetView();
+  };
+
   const loadPlan = async (file: File) => {
     setAnalyzing(true);
     setLegendStatus("Lendo planta e procurando a legenda…");
@@ -1199,6 +1212,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
           if (n === 1) { const content = await page.getTextContent(); legendText = content.items.map((item) => "str" in item ? item.str : "").join(" "); }
         }
         if (!pages.length) throw new Error("PDF sem páginas renderizáveis");
+        prepareForRealPlan();
         setPlanPages(pages);
         setActivePage(0);
         setPlanImage(pages[0]);
@@ -1206,6 +1220,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
         if (pages.length > 1) setLegendStatus(`PDF com ${pages.length} páginas carregado. Use as miniaturas para trocar de página.`);
       } else if (file.type.startsWith("image/")) {
         const dataUrl = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
+        prepareForRealPlan();
         setPlanPages([]);
         setActivePage(0);
         setPlanImage(dataUrl);
