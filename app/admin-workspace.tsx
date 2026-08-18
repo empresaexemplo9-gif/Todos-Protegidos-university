@@ -877,7 +877,17 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
   }, {}));
   const allItemImages = proposal.items.flatMap((item) => itemImages[item.id] ?? []);
   const coverImages = productImages.length > 0 ? productImages : allItemImages;
-  const detailsPage = 2 + solutionGroups.length + (scopeReport ? 1 : 0);
+  const solutionPages = solutionGroups.flatMap(([title, items]) => {
+    const hasImages = items.some((item) => (itemImages[item.id] ?? []).length > 0);
+    const itemsPerPage = hasImages ? 6 : 10;
+    return Array.from({ length: Math.ceil(items.length / itemsPerPage) }, (_, pageIndex) => ({
+      title,
+      items: items.slice(pageIndex * itemsPerPage, (pageIndex + 1) * itemsPerPage),
+      pageIndex,
+      pageCount: Math.ceil(items.length / itemsPerPage),
+    }));
+  });
+  const detailsPage = 2 + solutionPages.length + (scopeReport ? 1 : 0);
   const contactPage = detailsPage + 1;
   return (
     <article className="proposal-document" id="proposal-print">
@@ -900,11 +910,11 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
         <PageFooter number="1" />
       </section>
 
-      {solutionGroups.map(([title, items], index) => {
+      {solutionPages.map(({ title, items, pageIndex, pageCount }, index) => {
         const hasSectionImages = items.some((item) => (itemImages[item.id] ?? []).length > 0);
-        return <section className="proposal-page proposal-page--solution" key={title}>
+        return <section className="proposal-page proposal-page--solution" key={`${title}-${pageIndex}`}>
           <DottedFrame />
-          <div className="solution-heading"><h2>{title.toLocaleUpperCase("pt-BR")}</h2><p>{proposalSectionCopy(title)}</p></div>
+          <div className="solution-heading"><h2>{title.toLocaleUpperCase("pt-BR")}{pageIndex > 0 ? " — CONTINUAÇÃO" : ""}</h2><p>{pageIndex === 0 ? proposalSectionCopy(title) : `Continuação dos itens desta solução · página ${pageIndex + 1} de ${pageCount}.`}</p></div>
           <table className={`classic-table classic-table--solution ${hasSectionImages ? "classic-table--with-images" : ""}`}>
             <thead><tr>{hasSectionImages && <th aria-label="Imagem" />}<th>Item</th><th>Quantidade</th></tr></thead>
             <tbody>{items.map((item) => <tr key={item.id}>
@@ -924,7 +934,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
         <div className="solution-heading"><h2>LOCAÇÃO ESTIMADA — {scopeReport.project.toLocaleUpperCase("pt-BR")}</h2><p>{scopeReport.address}</p></div>
         <div className="proposal-location-plan"><div className="report-plan__canvas">{scopeReport.planImage ? <img src={scopeReport.planImage} alt={`Planta do projeto ${scopeReport.project}`} /> : <DefaultFloorPlan />}{scopeReport.assets.map((asset) => <img className="report-plan__asset" key={asset.id} src={asset.src} alt={asset.name} style={{ left: `${asset.x}%`, top: `${asset.y}%`, width: `${asset.width}%` }} />)}{scopeReport.markers.map((item) => { const tool = scopeReport.tools.find((entry) => entry.id === item.type) ?? scopeReport.tools[0]; return <span key={item.id} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool?.color ?? "#638c7e" }}>{item.label}</span>; })}</div></div>
         <div className="report-legend">{scopeReport.tools.map((tool) => { const qty = scopeReport.markers.filter((item) => item.type === tool.id).length; return qty > 0 ? <div key={tool.id}><i style={{ background: tool.color }}>{tool.code}</i><span>{tool.label}</span><b>{qty}</b></div> : null; })}</div>
-        <PageFooter number={String(2 + solutionGroups.length)} />
+        <PageFooter number={String(2 + solutionPages.length)} />
       </section>}
 
       <section className="proposal-page proposal-page--details">
