@@ -983,13 +983,13 @@ function PageFooter({ number }: { number: string }) { return <div className="pag
 
 function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void }) {
   const [tools, setTools] = useState<ScopeTool[]>(defaultScopeTools);
-  const [selectedTool, setSelectedTool] = useState("light");
+  const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [markers, setMarkers] = useState<ScopeMarker[]>([
     { id: 1, type: "light", label: "L01", environment: "Sala", description: "Circuito principal", status: "previsto", x: 28, y: 31, size: 38, range: 18 },
     { id: 2, type: "climate", label: "AR01", environment: "Sala", description: "Evaporadora", status: "aprovado", x: 67, y: 28, size: 38, range: 18 },
     { id: 3, type: "access-point", label: "AP01", environment: "Circulação", description: "Cobertura Wi-Fi principal", status: "previsto", x: 53, y: 58, size: 38, range: 9, apModel: "u6-pro" },
   ]);
-  const [selectedMarker, setSelectedMarker] = useState<number | null>(1);
+  const [selectedMarker, setSelectedMarker] = useState<number | null>(null);
   const [assets, setAssets] = useState<PlanAsset[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<number | null>(null);
   const [planImage, setPlanImage] = useState<string | null>(null);
@@ -1083,8 +1083,10 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const updateMarker = (id: number, patch: Partial<ScopeMarker>) => setMarkers((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
   const updateAsset = (id: number, patch: Partial<PlanAsset>) => setAssets((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
 
-  const addMarkerAt = (x: number, y: number, toolId = activeTool.id) => {
-    const tool = tools.find((entry) => entry.id === toolId) ?? activeTool;
+  const addMarkerAt = (x: number, y: number, toolId?: string) => {
+    if (!toolId) return;
+    const tool = tools.find((entry) => entry.id === toolId);
+    if (!tool) return;
     const id = Math.max(0, ...markers.map((item) => item.id)) + 1;
     const count = markers.filter((item) => item.type === tool.id).length + 1;
     const isAp = tool.id === "access-point";
@@ -1215,7 +1217,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
         <div className="tool-strip" aria-label="Ferramentas de marcação">
           <div className="tool-strip__label"><small>LEGENDA ATIVA</small><span>{detectedTools.length ? `${detectedTools.length} tipos detectados` : "Todos os tipos"}</span></div>
           <div className="tool-strip__scroll">
-            {visibleTools.map((tool) => <button key={tool.id} draggable className={selectedTool === tool.id ? "selected" : ""} onDragStart={(event) => event.dataTransfer.setData("sona/tool", tool.id)} onClick={() => setSelectedTool(tool.id)} title={`${tool.label} — arraste para a planta`}><i style={{ background: tool.color }}>{tool.code}</i><span>{tool.label}</span></button>)}
+            {visibleTools.map((tool) => <button key={tool.id} draggable className={selectedTool === tool.id ? "selected" : ""} onDragStart={(event) => event.dataTransfer.setData("sona/tool", tool.id)} onClick={() => setSelectedTool((current) => current === tool.id ? null : tool.id)} title={`${tool.label} — clique novamente para desmarcar ou arraste para a planta`}><i style={{ background: tool.color }}>{tool.code}</i><span>{tool.label}</span></button>)}
           </div>
           {detectedTools.length > 0 && <button className="legend-reset" onClick={() => setDetectedTools([])}>Mostrar todos</button>}
         </div>
@@ -1239,17 +1241,18 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
             onPointerUp={(e) => { if (panRef.current) { panRef.current = null; try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* noop */ } } }}
             onClick={(e) => {
               if (canvasMode === "pan" || dragging || draggingAsset || resizingMarker || resizingAsset) return;
+              if (canvasMode === "marker" && !selectedTool) { setSelectedMarker(null); setSelectedAsset(null); return; }
               const point = pointFromEvent(e.clientX, e.clientY);
               if (!point) return;
               if (canvasMode === "wall") { setWallDraft((d) => [...d, point]); return; }
               if (canvasMode === "calibrate") { setCalibLine((c) => (c.length >= 2 ? [point] : [...c, point])); return; }
-              addMarkerAt(point.x, point.y);
+              addMarkerAt(point.x, point.y, selectedTool ?? undefined);
             }}
           >
-            {planImage ? <img src={planImage} alt="Planta do projeto" draggable={false} /> : <DefaultFloorPlan />}
+            {planImage ? <img className="plan-canvas__image" src={planImage} alt="Planta completa do projeto" draggable={false} /> : <DefaultFloorPlan />}
             {heatmap && <WifiHeatLayer aps={markers.filter((item) => item.type === "access-point")} planWidthMeters={planWidthMeters} />}
-            {assets.map((item) => <div key={item.id} className={`plan-asset ${selectedAsset === item.id ? "selected" : ""}`} style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%` }} onPointerDown={(event) => { event.stopPropagation(); setDraggingAsset(item.id); setSelectedAsset(item.id); setSelectedMarker(null); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (draggingAsset !== item.id || resizingAsset === item.id || event.buttons === 0) return; const point = pointFromEvent(event.clientX, event.clientY); if (point) updateAsset(item.id, point); }} onPointerUp={(event) => { event.stopPropagation(); setDraggingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }}><img src={item.src} alt={item.name} draggable={false} /><small>{item.name}</small><button onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); setAssets((current) => current.filter((entry) => entry.id !== item.id)); setSelectedAsset(null); }} aria-label={`Excluir ${item.name}`}>×</button><span className="resize-handle" onPointerDown={(event) => { event.stopPropagation(); setResizingAsset(item.id); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (resizingAsset !== item.id || event.buttons === 0) return; const rect = canvasRef.current?.getBoundingClientRect(); if (rect) updateAsset(item.id, { width: Math.max(5, Math.min(55, item.width + event.movementX / rect.width * 100)) }); }} onPointerUp={(event) => { event.stopPropagation(); setResizingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }} /></div>)}
-            <div className="canvas-hint">{canvasMode === "pan" ? "Arraste para mover · use o zoom" : canvasMode === "wall" ? "Clique para traçar paredes · 2 cliques finaliza" : <>Clique para inserir <b>{activeTool.code}</b></>}</div>
+            {assets.map((item) => <div key={item.id} className={`plan-asset ${selectedAsset === item.id ? "selected" : ""}`} style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%` }} onPointerDown={(event) => { event.stopPropagation(); setDraggingAsset(item.id); setSelectedAsset(item.id); setSelectedMarker(null); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (draggingAsset !== item.id || resizingAsset === item.id || event.buttons === 0) return; const point = pointFromEvent(event.clientX, event.clientY); if (point) updateAsset(item.id, point); }} onPointerUp={(event) => { event.stopPropagation(); setDraggingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }}><img src={item.src} alt={item.name} draggable={false} /><small>{item.name}</small><button onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); setAssets((current) => current.filter((entry) => entry.id !== item.id)); setSelectedAsset(null); }} aria-label={`Excluir ${item.name}`}>×</button><span className="resize-handle" onPointerDown={(event) => { event.stopPropagation(); setResizingAsset(item.id); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (resizingAsset !== item.id || event.buttons === 0) return; const rect = canvasRef.current?.getBoundingClientRect(); if (rect) updateAsset(item.id, { width: Math.max(5, Math.min(95, item.width + ((event.movementX + event.movementY) / rect.width) * 100)) }); }} onPointerUp={(event) => { event.stopPropagation(); setResizingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }} /></div>)}
+            <div className="canvas-hint">{canvasMode === "pan" ? "Arraste para mover · use o zoom" : canvasMode === "wall" ? "Clique para traçar paredes · 2 cliques finaliza" : selectedTool ? <>Clique para inserir <b>{activeTool.code}</b> · clique novamente na legenda para desmarcar</> : "Nenhuma legenda selecionada · selecione uma para inserir pontos"}</div>
             {heatmap && markers.some((item) => item.type === "access-point") && <div className="wifi-legend" aria-hidden="true"><strong>Sinal · {heatBand === "2.4" ? "2,4" : heatBand} GHz</strong><span><i style={{ background: "#2ecc71" }} />Excelente</span><span><i style={{ background: "#1abc9c" }} />Bom</span><span><i style={{ background: "#f1c40f" }} />Regular</span><span><i style={{ background: "#e67e22" }} />Fraco</span></div>}
             {(walls.length > 0 || wallDraft.length > 0 || calibLine.length > 0) && <svg className="plan-walls" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{walls.map((wall) => <polyline key={wall.id} points={wall.pts.map((p) => `${p.x},${p.y}`).join(" ")} />)}{wallDraft.length > 0 && <polyline className="plan-walls__draft" points={wallDraft.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.length > 0 && <polyline className="plan-calib" points={calibLine.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.map((p, i) => <circle key={`c${i}`} className="plan-calib-node" cx={p.x} cy={p.y} r="0.9" />)}</svg>}
             {markers.map((item) => {
