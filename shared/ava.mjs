@@ -69,7 +69,7 @@ export function normalizeAvaConfig(input, prev = {}) {
       name: clean(map.name, 160), sku: clean(map.sku, 160), brand: clean(map.brand, 160),
       model: clean(map.model, 160), category: clean(map.category, 160), unit: clean(map.unit, 160),
       purchasePrice: clean(map.purchasePrice, 160), salePrice: clean(map.salePrice, 160),
-      description: clean(map.description, 160),
+      description: clean(map.description, 160), image: clean(map.image, 160),
     },
   };
 }
@@ -123,11 +123,16 @@ export async function avaFetchRecords(config, { sample = false } = {}) {
   return records;
 }
 
-export function mapAvaRecord(record, map, actor, now) {
+export function mapAvaRecord(record, map, actor, now, baseUrl = "") {
   const get = (path) => (path ? getByPath(record, path) : "");
   const name = clean(String(get(map.name) ?? ""), 120);
   if (!name) return null;
   const sku = clean(String(get(map.sku) ?? ""), 60);
+  const rawImage = clean(String(get(map.image) ?? ""), 800);
+  let imageUrl = rawImage;
+  if (rawImage && !/^https?:|^data:/i.test(rawImage) && baseUrl) {
+    try { imageUrl = new URL(rawImage, baseUrl).toString(); } catch { imageUrl = rawImage; }
+  }
   const slug = name
     .toLowerCase()
     .normalize("NFD")
@@ -146,6 +151,7 @@ export function mapAvaRecord(record, map, actor, now) {
     system: "AVA",
     description: clean(String(get(map.description) ?? ""), 800),
     sourceUrl: "",
+    imageUrl,
     unit: clean(String(get(map.unit) ?? ""), 12) || "un",
     purchasePrice: map.purchasePrice ? avaNumber(get(map.purchasePrice)) : 0,
     salePrice: map.salePrice ? avaNumber(get(map.salePrice)) : 0,

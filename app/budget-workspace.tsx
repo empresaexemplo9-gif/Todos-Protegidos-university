@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import CatalogImport from "./catalog-import";
+import AvaIntegration from "../src/AvaIntegration";
 
 type CatalogKind = "equipment" | "service";
 type BudgetStatus = "draft" | "sent" | "approved";
@@ -21,6 +22,7 @@ type CatalogItem = {
   unit: string;
   purchasePrice: number;
   salePrice: number;
+  imageUrl: string;
   updatedBy: string;
   updatedAt: string;
 };
@@ -101,6 +103,7 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
   const [confirmPrompt, setConfirmPrompt] = useState<{ message: string; resolve: (ok: boolean) => void } | null>(null);
   const askConfirm = (message: string) => new Promise<boolean>((resolve) => setConfirmPrompt({ message, resolve }));
   const [importOpen, setImportOpen] = useState(false);
+  const [avaOpen, setAvaOpen] = useState(false);
 
   const showNotice = (message: string) => {
     setNotice(message);
@@ -282,6 +285,7 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
     unit: catalogKind === "equipment" ? "un" : "sv",
     purchasePrice: 0,
     salePrice: 0,
+    imageUrl: "",
   });
 
   const saveCatalogEditor = async () => {
@@ -430,12 +434,12 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
               <div className="catalog-tabs"><button className={catalogKind === "equipment" ? "active" : ""} onClick={() => { setCatalogKind("equipment"); setCategoryFilter(""); setSystemFilter(""); }}>Equipamentos</button><button className={catalogKind === "service" ? "active" : ""} onClick={() => { setCatalogKind("service"); setCategoryFilter(""); setSystemFilter(""); }}>Serviços</button></div>
               <label className="catalog-search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar produto, marca, modelo ou código" /></label>
               <div className="catalog-filters"><select value={systemFilter} onChange={(event) => setSystemFilter(event.target.value)}><option value="">Todos os sistemas</option>{systems.map((system) => <option key={system}>{system}</option>)}</select><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="">Todas as categorias</option>{categories.map((category) => <option key={category}>{category}</option>)}</select></div>
-              <button className="btn btn--ghost" onClick={() => setImportOpen(true)}>⇪ Importar CSV</button><button className="btn btn--dark" onClick={() => openCatalogEditor()}>＋ Cadastrar</button>
+              <button className="btn btn--green" onClick={() => setAvaOpen(true)}>⤓ Importar do AVA</button><button className="btn btn--ghost" onClick={() => setImportOpen(true)}>⇪ CSV</button><button className="btn btn--dark" onClick={() => openCatalogEditor()}>＋ Cadastrar</button>
             </div>
             <div className="ava-table-wrap"><table className="ava-table ava-table--catalog"><thead><tr><th>Produto / serviço</th><th>Sistema</th><th>Compra</th><th>Venda</th><th>Margem</th><th>Ações</th></tr></thead><tbody>
               {filteredCatalog.map((item) => {
                 const margin = item.salePrice > 0 ? ((item.salePrice - item.purchasePrice) / item.salePrice) * 100 : 0;
-                return <tr key={item.id}><td><div className="ava-product"><span className="ava-product__visual" style={{ backgroundPosition: catalogVisual(item) }} /><div><strong>{item.name}</strong><small>{[item.brand, item.model, item.category].filter(Boolean).join(" · ")}</small><em>{item.sku || "Sem código"}</em></div></div></td><td><span className="system-tag">{item.system}</span></td><td>{brl.format(item.purchasePrice)}</td><td><strong className="ava-sale-price">{brl.format(item.salePrice)}</strong></td><td><span className={margin < 20 ? "ava-margin ava-margin--low" : "ava-margin"}>{margin.toFixed(1)}%</span></td><td><div className="ava-catalog-actions"><button className="btn btn--dark" onClick={() => void addToBudget(item)} disabled={syncing === `add-${item.id}`}>{syncing === `add-${item.id}` ? "Adicionando…" : "＋ Incluir"}</button><button onClick={() => openCatalogEditor(item)} title="Editar">✎</button><button onClick={() => void deleteCatalogItem(item)} title="Excluir">×</button></div></td></tr>;
+                return <tr key={item.id}><td><div className="ava-product">{item.imageUrl ? <img className="ava-product__photo" src={item.imageUrl} alt={item.name} loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <span className="ava-product__visual" style={{ backgroundPosition: catalogVisual(item) }} />}<div><strong>{item.name}</strong><small>{[item.brand, item.model, item.category].filter(Boolean).join(" · ")}</small><em>{item.sku || "Sem código"}</em></div></div></td><td><span className="system-tag">{item.system}</span></td><td>{brl.format(item.purchasePrice)}</td><td><strong className="ava-sale-price">{brl.format(item.salePrice)}</strong></td><td><span className={margin < 20 ? "ava-margin ava-margin--low" : "ava-margin"}>{margin.toFixed(1)}%</span></td><td><div className="ava-catalog-actions"><button className="btn btn--dark" onClick={() => void addToBudget(item)} disabled={syncing === `add-${item.id}`}>{syncing === `add-${item.id}` ? "Adicionando…" : "＋ Incluir"}</button><button onClick={() => openCatalogEditor(item)} title="Editar">✎</button><button onClick={() => void deleteCatalogItem(item)} title="Excluir">×</button></div></td></tr>;
               })}
               {!filteredCatalog.length && <tr><td colSpan={6}><div className="catalog-empty"><span>⌕</span><strong>Nenhum item encontrado</strong><p>Altere os filtros ou cadastre um novo item.</p></div></td></tr>}
             </tbody></table></div>
@@ -460,6 +464,8 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
           <label className="field">Valor de venda (R$)<input type="number" min="0" step="0.01" value={editor.salePrice ?? 0} onChange={(event) => setEditor({ ...editor, salePrice: Number(event.target.value) })} /></label>
           <label className="field field--full">Descrição / observações<textarea rows={3} value={editor.description ?? ""} onChange={(event) => setEditor({ ...editor, description: event.target.value })} /></label>
           <label className="field field--full">Link da ficha ou fonte<input type="url" value={editor.sourceUrl ?? ""} onChange={(event) => setEditor({ ...editor, sourceUrl: event.target.value })} placeholder="https://" /></label>
+          <label className="field field--full">Imagem do produto (URL)<input type="url" value={editor.imageUrl ?? ""} onChange={(event) => setEditor({ ...editor, imageUrl: event.target.value })} placeholder="https://" /></label>
+          {editor.imageUrl && <div className="catalog-image-preview field--full"><img src={editor.imageUrl} alt="Prévia do produto" onError={(event) => { event.currentTarget.style.display = "none"; }} /></div>}
         </div></div>
         <div className="catalog-dialog__footer"><button className="btn btn--ghost" onClick={() => setEditor(null)}>Cancelar</button><button className="btn btn--dark" onClick={() => void saveCatalogEditor()} disabled={saving}>{saving ? "Salvando…" : "Salvar no catálogo"}</button></div>
       </section></div>}
@@ -467,6 +473,7 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
       {confirmPrompt && <div className="catalog-dialog-backdrop" onMouseDown={(e) => { if (e.currentTarget === e.target) { confirmPrompt.resolve(false); setConfirmPrompt(null); } }}><section className="confirm-dialog" role="dialog" aria-modal="true"><p>{confirmPrompt.message}</p><div className="confirm-dialog__actions"><button className="btn btn--ghost" onClick={() => { confirmPrompt.resolve(false); setConfirmPrompt(null); }}>Cancelar</button><button className="btn btn--dark" onClick={() => { confirmPrompt.resolve(true); setConfirmPrompt(null); }}>Confirmar</button></div></section></div>}
 
       {importOpen && <CatalogImport onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); void loadData(true, activeId); showNotice("Catálogo atualizado a partir do arquivo"); }} />}
+      {avaOpen && <AvaIntegration onClose={() => { setAvaOpen(false); void loadData(true, activeId); }} />}
 
       {notice && <div className="toast"><span>✓</span>{notice}</div>}
     </div>

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 type Header = { name: string; value: string; filled?: boolean };
 type Mapping = {
   name: string; sku: string; brand: string; model: string; category: string;
-  unit: string; purchasePrice: string; salePrice: string; description: string;
+  unit: string; purchasePrice: string; salePrice: string; description: string; image: string;
 };
 type AvaConfig = {
   url: string; method: "GET" | "POST"; body: string; headers: Header[];
@@ -16,7 +16,7 @@ type ApiResp = {
   fields?: string[]; count?: number; created?: number; updated?: number; skipped?: number; fetched?: number;
 };
 
-const emptyMap: Mapping = { name: "", sku: "", brand: "", model: "", category: "", unit: "", purchasePrice: "", salePrice: "", description: "" };
+const emptyMap: Mapping = { name: "", sku: "", brand: "", model: "", category: "", unit: "", purchasePrice: "", salePrice: "", description: "", image: "" };
 const emptyConfig: AvaConfig = {
   url: "", method: "GET", body: "", headers: [{ name: "Authorization", value: "" }],
   listPath: "", pageParam: "", pageSizeParam: "", pageSize: 0, pageStart: 1, maxPages: 50, map: { ...emptyMap },
@@ -24,7 +24,7 @@ const emptyConfig: AvaConfig = {
 
 const mapLabels: Array<[keyof Mapping, string]> = [
   ["name", "Nome do produto *"], ["sku", "Código / SKU"], ["brand", "Marca"], ["model", "Modelo"],
-  ["category", "Categoria"], ["unit", "Unidade"], ["purchasePrice", "Preço de compra"], ["salePrice", "Preço de venda"], ["description", "Descrição"],
+  ["category", "Categoria"], ["unit", "Unidade"], ["purchasePrice", "Preço de compra"], ["salePrice", "Preço de venda"], ["description", "Descrição"], ["image", "Imagem (URL do produto)"],
 ];
 
 export default function AvaIntegration({ onClose }: { onClose: () => void }) {

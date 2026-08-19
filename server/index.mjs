@@ -76,7 +76,7 @@ const mapCatalogItem = (i) => ({
   id: i.id, kind: i.kind, name: i.name, category: i.category, brand: i.brand,
   model: i.model, sku: i.sku, system: i.system, description: i.description,
   sourceUrl: i.sourceUrl, unit: i.unit, purchasePrice: i.purchasePrice,
-  salePrice: i.salePrice, updatedBy: i.updatedBy, updatedAt: i.updatedAt,
+  salePrice: i.salePrice, imageUrl: i.imageUrl || "", updatedBy: i.updatedBy, updatedAt: i.updatedAt,
 });
 const mapLine = (l) => ({
   id: l.id, budgetId: l.budgetId, catalogItemId: l.catalogItemId, kind: l.kind,
@@ -119,7 +119,7 @@ function seedCatalog(data) {
       id: item.id, kind: item.kind, name: item.name, category: item.category, brand: item.brand,
       model: item.model, sku: item.sku, system: item.system, description: item.description,
       sourceUrl: item.sourceUrl, unit: item.unit, purchasePrice: item.purchasePrice || 0,
-      salePrice: item.salePrice || 0, updatedBy: item.updatedBy || "Equipe Sona",
+      salePrice: item.salePrice || 0, imageUrl: item.imageUrl || "", updatedBy: item.updatedBy || "Equipe Sona",
       createdAt: now, updatedAt: now,
     });
   }
@@ -367,7 +367,7 @@ async function budgetApi(req, res) {
         description: clean(item.description, 800), sourceUrl: clean(item.sourceUrl, 500),
         unit: clean(item.unit, 12) || (kind === "service" ? "sv" : "un"),
         purchasePrice: money(item.purchasePrice), salePrice: money(item.salePrice),
-        updatedBy: actor.email, updatedAt: now,
+        imageUrl: clean(item.imageUrl, 800), updatedBy: actor.email, updatedAt: now,
       };
       const existing = data.catalogItems.find((c) => c.id === itemId);
       let saved;
@@ -411,7 +411,7 @@ async function budgetApi(req, res) {
           description: clean(raw?.description, 800), sourceUrl: "",
           unit: clean(raw?.unit, 12) || (kind === "service" ? "sv" : "un"),
           purchasePrice: money(raw?.purchasePrice), salePrice: money(raw?.salePrice),
-          updatedBy: actor.email, updatedAt: now,
+          imageUrl: clean(raw?.imageUrl || raw?.image, 800), updatedBy: actor.email, updatedAt: now,
         };
         const existing = data.catalogItems.find((c) => c.id === id) || (sku ? data.catalogItems.find((c) => c.sku && c.sku === sku) : null);
         if (existing) { Object.assign(existing, values); updated++; }
@@ -528,7 +528,7 @@ async function integracaoAvaApi(req, res) {
         const now = new Date().toISOString();
         let created = 0, updated = 0, skipped = 0;
         for (const record of records) {
-          const item = mapAvaRecord(record, config.map, actor.email, now);
+          const item = mapAvaRecord(record, config.map, actor.email, now, config.url);
           if (!item) { skipped++; continue; }
           const existing = data.catalogItems.find((c) => c.id === item.id);
           if (existing) { Object.assign(existing, item); updated++; }

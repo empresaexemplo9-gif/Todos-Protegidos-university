@@ -53,7 +53,7 @@ export default async function handler(req, res) {
           const now = new Date().toISOString();
           let created = 0, updated = 0, skipped = 0;
           for (const record of records) {
-            const item = mapAvaRecord(record, config.map, actor.email, now);
+            const item = mapAvaRecord(record, config.map, actor.email, now, config.url);
             if (!item) { skipped++; continue; }
             const existing = await findCatalogItem(item.id);
             await upsertCatalogItem(item);
