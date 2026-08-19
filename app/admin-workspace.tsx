@@ -43,7 +43,7 @@ export type ScopeTool = { id: string; code: string; label: string; color: string
 export type ScopeMarker = { id: number; type: string; label: string; environment: string; description: string; status: "previsto" | "revisar" | "aprovado"; x: number; y: number; size: number; range: number; apModel?: string; catalogItemId?: string; catalogName?: string };
 export type PlanAsset = { id: number; name: string; src: string; x: number; y: number; width: number; rotation?: number };
 type ScopeCatalogItem = { id: string; name: string; category: string; brand: string; model: string; system: string; sku?: string; unit?: string; description?: string; salePrice?: number; purchasePrice?: number; imageUrl?: string };
-export type ScopeReport = { client: string; project: string; address: string; planImage: string | null; markers: ScopeMarker[]; tools: ScopeTool[]; assets: PlanAsset[]; items: ProposalItem[]; itemImages: Record<number, string[]>; productImages: string[] };
+export type ScopeReport = { client: string; project: string; address: string; planImage: string | null; markers: ScopeMarker[]; tools: ScopeTool[]; assets: PlanAsset[]; items: ProposalItem[]; itemImages: Record<number, string[]>; productImages: string[]; markerImages: Record<number, string> };
 
 export type ProposalBundle = {
   proposal: Proposal;
@@ -1135,7 +1135,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
       {scopeReport && <section className="proposal-page proposal-page--location">
         <DottedFrame />
         <div className="solution-heading"><h2>LOCAÇÃO ESTIMADA — {scopeReport.project.toLocaleUpperCase("pt-BR")}</h2><p>{scopeReport.address}</p></div>
-        <div className="proposal-location-plan"><div className="report-plan__canvas">{scopeReport.planImage ? <img src={scopeReport.planImage} alt={`Planta do projeto ${scopeReport.project}`} /> : <DefaultFloorPlan />}{scopeReport.assets.map((asset) => <img className="report-plan__asset" key={asset.id} src={asset.src} alt={asset.name} style={{ left: `${asset.x}%`, top: `${asset.y}%`, width: `${asset.width}%`, transform: `translate(-50%, -50%) rotate(${asset.rotation ?? 0}deg)` }} />)}{scopeReport.markers.map((item) => { const tool = scopeReport.tools.find((entry) => entry.id === item.type) ?? scopeReport.tools[0]; return <span key={item.id} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool?.color ?? "#638c7e" }}>{item.label}</span>; })}</div></div>
+        <div className="proposal-location-plan"><div className="report-plan__canvas">{scopeReport.planImage ? <img src={scopeReport.planImage} alt={`Planta do projeto ${scopeReport.project}`} /> : <DefaultFloorPlan />}{scopeReport.assets.map((asset) => <img className="report-plan__asset" key={asset.id} src={asset.src} alt={asset.name} style={{ left: `${asset.x}%`, top: `${asset.y}%`, width: `${asset.width}%`, transform: `translate(-50%, -50%) rotate(${asset.rotation ?? 0}deg)` }} />)}{scopeReport.markers.map((item) => { const tool = scopeReport.tools.find((entry) => entry.id === item.type) ?? scopeReport.tools[0]; const photo = scopeReport.markerImages?.[item.id]; if (photo) return <img className="report-plan__speaker" key={item.id} src={photo} alt={item.label} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size }} />; return <span key={item.id} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool?.color ?? "#638c7e" }}>{item.label}</span>; })}</div></div>
         <div className="report-legend">{scopeReport.tools.map((tool) => { const qty = scopeReport.markers.filter((item) => item.type === tool.id).length; return qty > 0 ? <div key={tool.id}><i style={{ background: tool.color }}>{tool.code}</i><span>{tool.label}</span><b>{qty}</b></div> : null; })}</div>
         <PageFooter number={String(2 + solutionPages.length)} />
       </section>}
@@ -1462,7 +1462,14 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     const itemImages: Record<number, string[]> = {};
     entries.forEach((item, index) => { if (item.imageUrl) itemImages[index + 1] = [item.imageUrl]; });
     const productImages = Array.from(new Set(entries.map((item) => item.imageUrl).filter(Boolean))).slice(0, 3);
-    onGenerate({ items, client, project, address, planImage, markers, tools, assets, itemImages, productImages });
+    // Fotos das caixas de sonorização por marcador, para a planta da proposta.
+    const markerImages: Record<number, string> = {};
+    markers.forEach((point) => {
+      if (point.type !== "audio" || !point.catalogItemId) return;
+      const ci = catalogItems.find((entry) => entry.id === point.catalogItemId);
+      if (ci?.imageUrl) markerImages[point.id] = ci.imageUrl;
+    });
+    onGenerate({ items, client, project, address, planImage, markers, tools, assets, itemImages, productImages, markerImages });
   };
 
   return (
