@@ -42,8 +42,8 @@ export type Proposal = {
 export type ScopeTool = { id: string; code: string; label: string; color: string; category: string };
 export type ScopeMarker = { id: number; type: string; label: string; environment: string; description: string; status: "previsto" | "revisar" | "aprovado"; x: number; y: number; size: number; range: number; apModel?: string; catalogItemId?: string; catalogName?: string };
 export type PlanAsset = { id: number; name: string; src: string; x: number; y: number; width: number; rotation?: number };
-type ScopeCatalogItem = { id: string; name: string; category: string; brand: string; model: string; system: string };
-export type ScopeReport = { project: string; address: string; planImage: string | null; markers: ScopeMarker[]; tools: ScopeTool[]; assets: PlanAsset[]; items: ProposalItem[] };
+type ScopeCatalogItem = { id: string; name: string; category: string; brand: string; model: string; system: string; sku?: string; unit?: string; description?: string; salePrice?: number; purchasePrice?: number; imageUrl?: string };
+export type ScopeReport = { client: string; project: string; address: string; planImage: string | null; markers: ScopeMarker[]; tools: ScopeTool[]; assets: PlanAsset[]; items: ProposalItem[]; itemImages: Record<number, string[]>; productImages: string[] };
 
 export type ProposalBundle = {
   proposal: Proposal;
@@ -657,8 +657,10 @@ export default function Home() {
         ) : section === "scope" ? (
           <ScopeEditor onGenerate={(report) => {
             Object.values(itemImages).flat().forEach((src) => { if (src.startsWith("blob:")) URL.revokeObjectURL(src); });
-            setItemImages({});
+            setItemImages(report.itemImages ?? {});
+            setProductImages(report.productImages ?? []);
             patchProposal("items", report.items);
+            patchProposal("client", report.client);
             patchProposal("project", report.project);
             patchProposal("address", report.address);
             setScopeReport(report);
@@ -1207,6 +1209,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const [draggingAsset, setDraggingAsset] = useState<number | null>(null);
   const [resizingMarker, setResizingMarker] = useState<number | null>(null);
   const [resizingAsset, setResizingAsset] = useState<number | null>(null);
+  const [client, setClient] = useState("Cliente / Empreendimento");
   const [project, setProject] = useState("Residência Família Almeida");
   const [address, setAddress] = useState("Goiânia — GO");
   const [catalogItems, setCatalogItems] = useState<ScopeCatalogItem[]>([]);
@@ -1279,11 +1282,12 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     const stored = window.localStorage.getItem("sona-scope-draft");
     const timer = window.setTimeout(() => { if (stored) {
       try {
-        const draft = JSON.parse(stored) as { tools?: ScopeTool[]; markers?: ScopeMarker[]; assets?: PlanAsset[]; walls?: Array<{ id: number; pts: Array<{ x: number; y: number }>; material?: WallMaterial }>; project?: string; address?: string; detectedTools?: string[] };
+        const draft = JSON.parse(stored) as { tools?: ScopeTool[]; markers?: ScopeMarker[]; assets?: PlanAsset[]; walls?: Array<{ id: number; pts: Array<{ x: number; y: number }>; material?: WallMaterial }>; client?: string; project?: string; address?: string; detectedTools?: string[] };
         if (draft.tools?.length) setTools(draft.tools);
         if (draft.markers?.length) setMarkers(draft.markers.map((item) => ({ ...item, size: item.size || 38, range: item.range || 18 })));
         if (draft.assets) setAssets(draft.assets.map((item) => ({ ...item, rotation: item.rotation ?? 0 })));
         if (draft.walls?.length) setWalls(draft.walls.map((wall) => ({ ...wall, material: wall.material ?? "drywall" })));
+        if (draft.client) setClient(draft.client);
         if (draft.project) setProject(draft.project);
         if (draft.address) setAddress(draft.address);
         if (draft.detectedTools) setDetectedTools(draft.detectedTools);
@@ -1408,7 +1412,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   };
 
   const saveScope = () => {
-    window.localStorage.setItem("sona-scope-draft", JSON.stringify({ tools, markers, assets, walls, project, address, detectedTools }));
+    window.localStorage.setItem("sona-scope-draft", JSON.stringify({ tools, markers, assets, walls, client, project, address, detectedTools }));
     setToast("Planejamento salvo neste dispositivo");
     window.setTimeout(() => setToast(""), 2400);
   };
@@ -1422,15 +1426,30 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   };
 
   const generateItems = () => {
-    const grouped = new Map<string, { category: string; description: string; qty: number }>();
+    const grouped = new Map<string, { category: string; description: string; qty: number; unit: string; unitPrice: number; imageUrl: string }>();
     markers.forEach((point) => {
       const tool = tools.find((entry) => entry.id === point.type) ?? tools[0];
       const key = point.catalogItemId ?? point.type;
-      const current = grouped.get(key) ?? { category: tool.category, description: point.catalogName ?? tool.label, qty: 0 };
+      const catalogItem = point.catalogItemId ? catalogItems.find((entry) => entry.id === point.catalogItemId) : undefined;
+      const label = catalogItem
+        ? [catalogItem.name, [catalogItem.brand, catalogItem.model].filter(Boolean).join(" ")].filter(Boolean).join(" · ")
+        : (point.catalogName ?? tool.label);
+      const current = grouped.get(key) ?? {
+        category: catalogItem?.category || tool.category,
+        description: label,
+        qty: 0,
+        unit: catalogItem?.unit || "un",
+        unitPrice: catalogItem?.salePrice ?? 0,
+        imageUrl: catalogItem?.imageUrl || "",
+      };
       grouped.set(key, { ...current, qty: current.qty + 1 });
     });
-    const items = Array.from(grouped.values()).map((item, index) => ({ id: index + 1, ...item, unit: "pt", unitPrice: 0 }));
-    onGenerate({ items, project, address, planImage, markers, tools, assets });
+    const entries = Array.from(grouped.values());
+    const items = entries.map((item, index) => ({ id: index + 1, category: item.category, description: item.description, qty: item.qty, unit: item.unit, unitPrice: item.unitPrice }));
+    const itemImages: Record<number, string[]> = {};
+    entries.forEach((item, index) => { if (item.imageUrl) itemImages[index + 1] = [item.imageUrl]; });
+    const productImages = Array.from(new Set(entries.map((item) => item.imageUrl).filter(Boolean))).slice(0, 3);
+    onGenerate({ items, client, project, address, planImage, markers, tools, assets, itemImages, productImages });
   };
 
   return (
@@ -1442,6 +1461,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
         </div>
 
         <div className="scope-meta">
+          <label>Cliente<input value={client} onChange={(e) => setClient(e.target.value)} /></label>
           <label>Projeto<input value={project} onChange={(e) => setProject(e.target.value)} /></label>
           <label>Local<input value={address} onChange={(e) => setAddress(e.target.value)} /></label>
           <div><small>PONTOS</small><strong>{markers.length}</strong></div>
