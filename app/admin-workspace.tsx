@@ -12,6 +12,14 @@ export type ProposalItem = {
   unitPrice: number;
 };
 
+export type ProposalExtraPage = {
+  id: number;
+  title: string;
+  subtitle: string;
+  body: string;
+  images: string[];
+};
+
 export type Proposal = {
   code: string;
   client: string;
@@ -28,6 +36,7 @@ export type Proposal = {
   exclusions: string;
   notes: string;
   items: ProposalItem[];
+  extraPages: ProposalExtraPage[];
 };
 
 export type ScopeTool = { id: string; code: string; label: string; color: string; category: string };
@@ -263,6 +272,7 @@ const initialProposal: Proposal = {
     { id: 4, category: "Som ambiente", description: "Caixa de embutir ELAC IC-C81", qty: 6, unit: "un", unitPrice: 0 },
     { id: 5, category: "Redes Wi-Fi", description: "Access Point UniFi U6+", qty: 3, unit: "un", unitPrice: 0 },
   ],
+  extraPages: [],
 };
 
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -447,7 +457,7 @@ export default function Home() {
 
   const openSavedProposal = (record: SavedProposal) => {
     const bundle = record.data;
-    setProposal(bundle?.proposal ?? initialProposal);
+    setProposal({ ...initialProposal, ...(bundle?.proposal ?? {}), extraPages: bundle?.proposal?.extraPages ?? [] });
     setProductImages(bundle?.productImages ?? []);
     setItemImages(bundle?.itemImages ?? {});
     setScopeReport(bundle?.scopeReport ?? null);
@@ -756,6 +766,21 @@ function ProposalBuilder({
   onAutomaticMode: () => void;
   status: ProposalStatus;
 }) {
+  const extraPages = proposal.extraPages ?? [];
+  const addExtraPage = () => patchProposal("extraPages", [...extraPages, { id: Math.max(0, ...extraPages.map((page) => page.id)) + 1, title: "Nova página", subtitle: "", body: "", images: [] }]);
+  const updateExtraPage = (id: number, patch: Partial<ProposalExtraPage>) => patchProposal("extraPages", extraPages.map((page) => page.id === id ? { ...page, ...patch } : page));
+  const removeExtraPage = (id: number) => patchProposal("extraPages", extraPages.filter((page) => page.id !== id));
+  const addExtraPageImages = async (id: number, files: FileList) => {
+    const uploaded = await Promise.all(Array.from(files).slice(0, 4).map(imageFileToDataUrl));
+    const current = extraPages.find((page) => page.id === id)?.images ?? [];
+    updateExtraPage(id, { images: [...current, ...uploaded].slice(0, 4) });
+  };
+  const removeExtraPageImage = (id: number, imageIndex: number) => {
+    const current = [...(extraPages.find((page) => page.id === id)?.images ?? [])];
+    const [removed] = current.splice(imageIndex, 1);
+    if (removed?.startsWith("blob:")) URL.revokeObjectURL(removed);
+    updateExtraPage(id, { images: current });
+  };
   return (
     <div className="builder-layout">
       <section className={`editor-panel ${wordMode ? "editor-panel--word" : ""}`}>
@@ -845,6 +870,29 @@ function ProposalBuilder({
             <label className="field">Prazo de execução<input value={proposal.deadline} onChange={(e) => patchProposal("deadline", e.target.value)} /></label>
             <label className="field field--full">Condição de pagamento<input value={proposal.payment} onChange={(e) => patchProposal("payment", e.target.value)} /></label>
             <label className="field field--full">Observações<textarea rows={3} value={proposal.notes} onChange={(e) => patchProposal("notes", e.target.value)} /></label>
+          </div>
+        </div>
+
+        <div className="form-card">
+          <div className="form-card__head"><span>06</span><div><h3>Páginas adicionais</h3><p>Inclua quantas páginas livres quiser — cada uma vira uma folha da proposta.</p></div><button className="mini-add" onClick={addExtraPage}>＋ Adicionar página</button></div>
+          <div className="extra-pages">
+            {extraPages.map((page, index) => (
+              <div className="extra-page-card" key={page.id}>
+                <div className="extra-page-card__head"><span>Página {index + 1}</span><button className="remove" onClick={() => removeExtraPage(page.id)} aria-label={`Remover página ${index + 1}`}>×</button></div>
+                <div className="form-grid">
+                  <label className="field">Título<input value={page.title} onChange={(e) => updateExtraPage(page.id, { title: e.target.value })} /></label>
+                  <label className="field">Subtítulo <small>opcional</small><input value={page.subtitle} onChange={(e) => updateExtraPage(page.id, { subtitle: e.target.value })} /></label>
+                  <label className="field field--full">Conteúdo <small>um parágrafo por linha</small><textarea rows={5} value={page.body} onChange={(e) => updateExtraPage(page.id, { body: e.target.value })} /></label>
+                  <label className="media-upload field--full">
+                    <input type="file" accept="image/*" multiple onChange={(e) => e.target.files && addExtraPageImages(page.id, e.target.files)} />
+                    <span>＋</span><div><strong>Adicionar imagens da página</strong><small>PNG ou JPG · até 4 · opcionais</small></div>
+                    {page.images.length > 0 && <em>{page.images.length} adicionada{page.images.length > 1 ? "s" : ""}</em>}
+                  </label>
+                  {page.images.length > 0 && <div className="cover-image-thumbs field--full">{page.images.map((src, imageIndex) => <span key={src}><img src={src} alt={`Imagem ${imageIndex + 1} da página ${page.title}`} /><button type="button" onClick={() => removeExtraPageImage(page.id, imageIndex)} aria-label={`Remover imagem ${imageIndex + 1}`}>×</button></span>)}</div>}
+                </div>
+              </div>
+            ))}
+            {extraPages.length === 0 && <button className="empty-items" onClick={addExtraPage}>＋ Crie a primeira página adicional</button>}
           </div>
         </div>
       </section>
@@ -949,7 +997,9 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
       pageCount: Math.ceil(items.length / itemsPerPage),
     }));
   });
-  const detailsPage = 2 + solutionPages.length + (scopeReport ? 1 : 0);
+  const extraPages = proposal.extraPages ?? [];
+  const afterLocationPage = 2 + solutionPages.length + (scopeReport ? 1 : 0);
+  const detailsPage = afterLocationPage + extraPages.length;
   const contactPage = detailsPage + 1;
   return (
     <article className="proposal-document" id="proposal-print">
@@ -998,6 +1048,16 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
         <div className="report-legend">{scopeReport.tools.map((tool) => { const qty = scopeReport.markers.filter((item) => item.type === tool.id).length; return qty > 0 ? <div key={tool.id}><i style={{ background: tool.color }}>{tool.code}</i><span>{tool.label}</span><b>{qty}</b></div> : null; })}</div>
         <PageFooter number={String(2 + solutionPages.length)} />
       </section>}
+
+      {extraPages.map((page, index) => (
+        <section className="proposal-page proposal-page--extra" key={page.id}>
+          <DottedFrame />
+          <div className="solution-heading"><h2>{(page.title || "Página adicional").toLocaleUpperCase("pt-BR")}</h2>{page.subtitle && <p>{page.subtitle}</p>}</div>
+          {page.body && <div className="extra-page-body">{page.body.split("\n").filter(Boolean).map((paragraph, paragraphIndex) => <p key={paragraphIndex}>{paragraph}</p>)}</div>}
+          {page.images.length > 0 && <div className={`product-gallery product-gallery--${Math.min(4, page.images.length)}`}>{page.images.map((src, imageIndex) => <img key={imageIndex} src={src} alt={`Imagem ${imageIndex + 1} de ${page.title}`} />)}</div>}
+          <PageFooter number={String(afterLocationPage + index)} />
+        </section>
+      ))}
 
       <section className="proposal-page proposal-page--details">
         <DottedFrame />
