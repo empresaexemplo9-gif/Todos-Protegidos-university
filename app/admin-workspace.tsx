@@ -1224,6 +1224,8 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const [walls, setWalls] = useState<Array<{ id: number; pts: Array<{ x: number; y: number }>; material: WallMaterial }>>([]);
   const [wallDraft, setWallDraft] = useState<Array<{ x: number; y: number }>>([]);
   const [wallMaterial, setWallMaterial] = useState<WallMaterial>("drywall");
+  const [selectedWall, setSelectedWall] = useState<number | null>(null);
+  const [draggingVertex, setDraggingVertex] = useState<{ wallId: number; index: number } | null>(null);
   const [planPages, setPlanPages] = useState<string[]>([]);
   const [activePage, setActivePage] = useState(0);
   const [calibLine, setCalibLine] = useState<Array<{ x: number; y: number }>>([]);
@@ -1232,6 +1234,9 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const clampZoom = (z: number) => Math.min(6, Math.max(0.3, z));
   const resetView = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
   const finishWall = () => { if (wallDraft.length >= 2) setWalls((w) => [...w, { id: Date.now(), pts: wallDraft, material: wallMaterial }]); setWallDraft([]); };
+  const updateWall = (id: number, patch: Partial<{ material: WallMaterial }>) => setWalls((current) => current.map((wall) => wall.id === id ? { ...wall, ...patch } : wall));
+  const removeWall = (id: number) => { setWalls((current) => current.filter((wall) => wall.id !== id)); setSelectedWall(null); };
+  const moveVertex = (id: number, index: number, point: { x: number; y: number }) => setWalls((current) => current.map((wall) => wall.id === id ? { ...wall, pts: wall.pts.map((pt, i) => i === index ? point : pt) } : wall));
   const applyCalibration = (meters: number) => {
     const el = canvasRef.current;
     if (calibLine.length < 2 || !el || !(meters > 0)) return;
@@ -1286,6 +1291,8 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     } }, 0);
     return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => { if (canvasMode !== "wall") { setSelectedWall(null); setDraggingVertex(null); } }, [canvasMode]);
 
   // Ao trocar a faixa, recalcula o alcance dos APs que têm modelo Ubiquiti definido.
   useEffect(() => {
@@ -1467,11 +1474,11 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
             onPointerMove={(e) => { if (!panRef.current) return; setPan({ x: panRef.current.px + (e.clientX - panRef.current.sx), y: panRef.current.py + (e.clientY - panRef.current.sy) }); }}
             onPointerUp={(e) => { if (panRef.current) { panRef.current = null; try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* noop */ } } }}
             onClick={(e) => {
-              if (canvasMode === "pan" || dragging || draggingAsset || resizingMarker || resizingAsset) return;
+              if (canvasMode === "pan" || dragging || draggingAsset || resizingMarker || resizingAsset || draggingVertex) return;
               if (canvasMode === "marker" && !selectedTool) { setSelectedMarker(null); setSelectedAsset(null); return; }
               const point = pointFromEvent(e.clientX, e.clientY);
               if (!point) return;
-              if (canvasMode === "wall") { setWallDraft((d) => [...d, point]); return; }
+              if (canvasMode === "wall") { if (selectedWall !== null) { setSelectedWall(null); return; } setWallDraft((d) => [...d, point]); return; }
               if (canvasMode === "calibrate") { setCalibLine((c) => (c.length >= 2 ? [point] : [...c, point])); return; }
               addMarkerAt(point.x, point.y, selectedTool ?? undefined);
             }}
@@ -1479,9 +1486,13 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
             {planImage ? <img className="plan-canvas__image" src={planImage} alt="Planta completa do projeto" draggable={false} /> : <DefaultFloorPlan />}
             {heatmap && <WifiHeatLayer aps={markers.filter((item) => item.type === "access-point")} planWidthMeters={planWidthMeters} walls={walls} band={heatBand} />}
             {assets.map((item) => <div key={item.id} className={`plan-asset ${selectedAsset === item.id ? "selected" : ""}`} style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%`, transform: `translate(-50%, -50%) rotate(${item.rotation ?? 0}deg)` }} onPointerDown={(event) => { event.stopPropagation(); setDraggingAsset(item.id); setSelectedAsset(item.id); setSelectedMarker(null); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (draggingAsset !== item.id || resizingAsset === item.id || event.buttons === 0) return; const point = pointFromEvent(event.clientX, event.clientY); if (point) updateAsset(item.id, point); }} onPointerUp={(event) => { event.stopPropagation(); setDraggingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }}><img src={item.src} alt={item.name} draggable={false} /><small>{item.name}</small><button onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); setAssets((current) => current.filter((entry) => entry.id !== item.id)); setSelectedAsset(null); }} aria-label={`Excluir ${item.name}`}>×</button><span className="resize-handle" onPointerDown={(event) => { event.stopPropagation(); setResizingAsset(item.id); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (resizingAsset !== item.id || event.buttons === 0) return; const rect = canvasRef.current?.getBoundingClientRect(); if (rect) updateAsset(item.id, { width: Math.max(5, Math.min(95, item.width + ((event.movementX + event.movementY) / rect.width) * 100)) }); }} onPointerUp={(event) => { event.stopPropagation(); setResizingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }} /></div>)}
-            <div className="canvas-hint">{canvasMode === "pan" ? "Arraste para mover · use o zoom" : canvasMode === "wall" ? `Clique para traçar paredes · 2 cliques finaliza · material: ${wallMaterials.find((m) => m.id === wallMaterial)?.label ?? ""}` : selectedTool ? <>Clique para inserir <b>{activeTool.code}</b> · clique novamente na legenda para desmarcar</> : "Nenhuma legenda selecionada · selecione uma para inserir pontos"}</div>
+            <div className="canvas-hint">{canvasMode === "pan" ? "Arraste para mover · use o zoom" : canvasMode === "wall" ? (selectedWall !== null ? "Parede selecionada · troque o material ou arraste os pontos" : `Clique para traçar · 2 cliques finaliza · clique numa parede para editar · material: ${wallMaterials.find((m) => m.id === wallMaterial)?.label ?? ""}`) : selectedTool ? <>Clique para inserir <b>{activeTool.code}</b> · clique novamente na legenda para desmarcar</> : "Nenhuma legenda selecionada · selecione uma para inserir pontos"}</div>
             {heatmap && markers.some((item) => item.type === "access-point") && <div className="wifi-legend" aria-hidden="true"><strong>Sinal em dBm · {heatBand === "2.4" ? "2,4" : heatBand} GHz</strong><span><i style={{ background: "#23a152" }} />Excelente <b>≥ −55</b></span><span><i style={{ background: "#a6dc49" }} />Bom <b>−65</b></span><span><i style={{ background: "#faca39" }} />Regular <b>−73</b></span><span><i style={{ background: "#f47d2f" }} />Fraco <b>−80</b></span><span><i style={{ background: "#cd313d" }} />Ruim <b>&lt; −83</b></span></div>}
-            {(walls.length > 0 || wallDraft.length > 0 || calibLine.length > 0) && <svg className="plan-walls" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{walls.map((wall) => <polyline key={wall.id} points={wall.pts.map((p) => `${p.x},${p.y}`).join(" ")} style={{ stroke: wallColor(wall.material) }} />)}{wallDraft.length > 0 && <polyline className="plan-walls__draft" points={wallDraft.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.length > 0 && <polyline className="plan-calib" points={calibLine.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.map((p, i) => <circle key={`c${i}`} className="plan-calib-node" cx={p.x} cy={p.y} r="0.9" />)}</svg>}
+            {(walls.length > 0 || wallDraft.length > 0 || calibLine.length > 0) && <svg className="plan-walls" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{walls.map((wall) => { const pointsStr = wall.pts.map((p) => `${p.x},${p.y}`).join(" "); const isSel = selectedWall === wall.id; return <g key={wall.id}>
+              <polyline className={`plan-wall ${isSel ? "plan-wall--selected" : ""}`} points={pointsStr} style={{ stroke: wallColor(wall.material) }} />
+              {canvasMode === "wall" && <polyline className="plan-wall-hit" points={pointsStr} style={{ pointerEvents: "stroke" }} onClick={(event) => { event.stopPropagation(); setWallDraft([]); setSelectedWall(wall.id); }} />}
+              {canvasMode === "wall" && isSel && wall.pts.map((pt, index) => <circle key={index} className="plan-wall-node" cx={pt.x} cy={pt.y} r="1.1" style={{ pointerEvents: "auto" }} onClick={(event) => event.stopPropagation()} onPointerDown={(event) => { event.stopPropagation(); setDraggingVertex({ wallId: wall.id, index }); try { (event.currentTarget as SVGCircleElement).setPointerCapture(event.pointerId); } catch { /* noop */ } }} onPointerMove={(event) => { if (!draggingVertex || draggingVertex.wallId !== wall.id || draggingVertex.index !== index || event.buttons === 0) return; const point = pointFromEvent(event.clientX, event.clientY); if (point) moveVertex(wall.id, index, point); }} onPointerUp={(event) => { event.stopPropagation(); setDraggingVertex(null); try { (event.currentTarget as SVGCircleElement).releasePointerCapture(event.pointerId); } catch { /* noop */ } }} />)}
+            </g>; })}{wallDraft.length > 0 && <polyline className="plan-walls__draft" points={wallDraft.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.length > 0 && <polyline className="plan-calib" points={calibLine.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.map((p, i) => <circle key={`c${i}`} className="plan-calib-node" cx={p.x} cy={p.y} r="0.9" />)}</svg>}
             {markers.map((item) => {
               const tool = tools.find((entry) => entry.id === item.type) ?? tools[0];
               return <button
@@ -1498,6 +1509,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
           </div>
           {planPages.length > 1 && <div className="plan-pages">{planPages.map((src, i) => <button key={i} className={activePage === i ? "active" : ""} onClick={() => { setActivePage(i); setPlanImage(src); }} title={`Página ${i + 1}`}><img src={src} alt={`Página ${i + 1}`} /><span>{i + 1}</span></button>)}</div>}
           {canvasMode === "calibrate" && <div className="calib-panel">{calibLine.length < 2 ? <span>Trace uma medida conhecida na planta ({calibLine.length}/2)</span> : <><label>Distância real<input type="number" min="0.1" step="0.1" value={calibMeters} onChange={(e) => setCalibMeters(e.target.value)} autoFocus /><span>m</span></label><button className="calib-apply" onClick={() => applyCalibration(Number(calibMeters))}>Aplicar</button></>}<button className="calib-cancel" onClick={() => { setCalibLine([]); setCalibMeters(""); }}>Limpar</button></div>}
+          {canvasMode === "wall" && selectedWall !== null && (() => { const wall = walls.find((entry) => entry.id === selectedWall); if (!wall) return null; return <div className="wall-panel"><span className="wall-panel__dot" style={{ background: wallColor(wall.material) }} /><label>Material<select value={wall.material} onChange={(event) => updateWall(wall.id, { material: event.target.value as WallMaterial })}>{wallMaterials.map((material) => <option key={material.id} value={material.id}>{material.label} · {material.db} dB</option>)}</select></label><span className="wall-panel__hint">Arraste os pontos para ajustar</span><button className="wall-panel__delete" onClick={() => removeWall(wall.id)}>Excluir parede</button><button className="calib-cancel" onClick={() => setSelectedWall(null)}>OK</button></div>; })()}
         </div>
 
         <div className="quant-card">
