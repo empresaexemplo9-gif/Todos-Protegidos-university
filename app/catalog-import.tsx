@@ -17,6 +17,7 @@ const FIELDS: Array<{ key: string; label: string; required?: boolean }> = [
   { key: "purchasePrice", label: "Preço de compra" },
   { key: "salePrice", label: "Preço de venda" },
   { key: "description", label: "Descrição" },
+  { key: "imageUrl", label: "Imagem (URL da foto)" },
 ];
 
 // Leitor de CSV tolerante: detecta separador ( , ; ou tab ), respeita aspas e quebras dentro do campo.
@@ -60,6 +61,7 @@ function parseCsv(text: string): { headers: string[]; rows: Row[] } {
 // Adivinha o campo pela nomenclatura da coluna (ordem importa: preço antes de nome).
 function guessField(header: string): string {
   const n = header.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  if (/(imagem|image|foto|photo|thumbnail|url)/.test(n)) return "imageUrl";
   if (/(descric|observ|detalhe)/.test(n)) return "description";
   if (/(compra|custo|entrada)/.test(n)) return "purchasePrice";
   if (/(venda|preco|valor|saida)/.test(n)) return "salePrice";
@@ -138,6 +140,7 @@ export default function CatalogImport({ onClose, onDone }: { onClose: () => void
             system: value(row, "system"),
             unit: value(row, "unit"),
             description: value(row, "description"),
+            imageUrl: value(row, "imageUrl"),
             purchasePrice: parseNumber(value(row, "purchasePrice")),
             salePrice: parseNumber(value(row, "salePrice")),
           };
@@ -168,7 +171,7 @@ export default function CatalogImport({ onClose, onDone }: { onClose: () => void
           <div>
             <span className="eyebrow">INTEGRAÇÃO · IMPORTAR DO AVA</span>
             <h3>Importar catálogo por planilha</h3>
-            <p>Exporte os produtos/preços do AVA em CSV e traga tudo pro catálogo. Itens com o mesmo código (SKU) são atualizados.</p>
+            <p>Traga tudo pro catálogo de uma vez por planilha CSV — inclusive uma coluna com a <b>URL da imagem real</b> de cada produto. Itens com o mesmo código (SKU) são atualizados.</p>
           </div>
           <button onClick={onClose} aria-label="Fechar">×</button>
         </div>
