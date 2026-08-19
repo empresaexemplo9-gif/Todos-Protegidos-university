@@ -926,9 +926,29 @@ function ProposalBuilder({
 }
 
 function WordToolbar({ editorRef }: { editorRef: React.RefObject<HTMLElement | null> }) {
+  const savedRange = useRef<Range | null>(null);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+
   const command = (name: string, value?: string) => {
     editorRef.current?.focus();
     document.execCommand(name, false, value);
+  };
+  const styled = (name: string, value: string) => {
+    editorRef.current?.focus();
+    document.execCommand("styleWithCSS", false, "true");
+    document.execCommand(name, false, value);
+    document.execCommand("styleWithCSS", false, "false");
+  };
+  const saveSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0 && editorRef.current?.contains(selection.anchorNode)) {
+      savedRange.current = selection.getRangeAt(0).cloneRange();
+    }
+  };
+  const restoreSelection = () => {
+    const selection = window.getSelection();
+    if (savedRange.current && selection) { selection.removeAllRanges(); selection.addRange(savedRange.current); }
   };
   const resizeImage = (delta: number) => {
     const image = editorRef.current?.querySelector<HTMLImageElement>("img[data-word-selected]");
@@ -937,15 +957,56 @@ function WordToolbar({ editorRef }: { editorRef: React.RefObject<HTMLElement | n
     image.style.width = `${Math.min(100, Math.max(20, current + delta))}%`;
     image.style.height = "auto";
   };
+  const insertImageFromFile = async (files: FileList | null) => {
+    if (!files || !files[0]) return;
+    const dataUrl = await imageFileToDataUrl(files[0]);
+    editorRef.current?.focus();
+    restoreSelection();
+    document.execCommand("insertImage", false, dataUrl);
+  };
+  const applyColor = (name: "foreColor" | "hiliteColor", value: string) => { restoreSelection(); styled(name, value); };
+  const applyLink = () => {
+    const url = linkUrl.trim();
+    if (url) { editorRef.current?.focus(); restoreSelection(); document.execCommand("createLink", false, /^https?:|^mailto:/.test(url) ? url : `https://${url}`); }
+    setLinkOpen(false); setLinkUrl("");
+  };
+  const addPage = () => {
+    const doc = editorRef.current;
+    if (!doc) return;
+    const section = document.createElement("section");
+    section.className = "proposal-page proposal-page--extra";
+    section.innerHTML = '<div class="solution-heading"><h2>NOVA PÁGINA</h2></div><p>Escreva o conteúdo desta página…</p>';
+    doc.appendChild(section);
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return <div className="word-toolbar" role="toolbar" aria-label="Ferramentas de edição do documento" onMouseDown={(event) => event.preventDefault()}>
     <div className="word-toolbar__brand"><b>W</b><span>Documento</span></div>
-    <select aria-label="Estilo do texto" defaultValue="p" onChange={(event) => command("formatBlock", event.target.value)} onMouseDown={(event) => event.stopPropagation()}><option value="p">Texto normal</option><option value="h2">Título</option><option value="h3">Subtítulo</option></select>
+    <select aria-label="Estilo do parágrafo" defaultValue="p" onChange={(event) => command("formatBlock", event.target.value)} onMouseDown={(event) => event.stopPropagation()}><option value="p">Texto normal</option><option value="h2">Título</option><option value="h3">Subtítulo</option><option value="blockquote">Citação</option></select>
+    <select aria-label="Fonte" defaultValue="" onChange={(event) => event.target.value && styled("fontName", event.target.value)} onMouseDown={(event) => event.stopPropagation()}><option value="">Fonte padrão</option><option value='Georgia, "Times New Roman", serif'>Serifada</option><option value='"Segoe UI", system-ui, sans-serif'>Moderna</option><option value='"Courier New", monospace'>Mono</option></select>
+    <select aria-label="Tamanho do texto" defaultValue="3" onChange={(event) => styled("fontSize", event.target.value)} onMouseDown={(event) => event.stopPropagation()}><option value="1">Mínimo</option><option value="2">Pequeno</option><option value="3">Normal</option><option value="4">Médio</option><option value="5">Grande</option><option value="6">Enorme</option><option value="7">Máximo</option></select>
     <div className="word-toolbar__group"><button onClick={() => command("undo")} title="Desfazer">↶</button><button onClick={() => command("redo")} title="Refazer">↷</button></div>
-    <div className="word-toolbar__group"><button onClick={() => command("bold")} title="Negrito"><b>B</b></button><button onClick={() => command("italic")} title="Itálico"><i>I</i></button><button onClick={() => command("underline")} title="Sublinhado"><u>U</u></button></div>
-    <div className="word-toolbar__group"><button onClick={() => command("justifyLeft")} title="Alinhar à esquerda">≡</button><button onClick={() => command("justifyCenter")} title="Centralizar">≣</button><button onClick={() => command("justifyRight")} title="Alinhar à direita">≡</button></div>
-    <div className="word-toolbar__group"><button onClick={() => command("insertUnorderedList")} title="Lista">•☰</button><button onClick={() => command("insertOrderedList")} title="Lista numerada">1☰</button></div>
+    <div className="word-toolbar__group"><button onClick={() => command("bold")} title="Negrito"><b>B</b></button><button onClick={() => command("italic")} title="Itálico"><i>I</i></button><button onClick={() => command("underline")} title="Sublinhado"><u>U</u></button><button onClick={() => command("strikeThrough")} title="Tachado"><s>S</s></button></div>
+    <div className="word-toolbar__group word-toolbar__colors">
+      <label title="Cor do texto"><span style={{ color: "#1e654c" }}>A</span><input type="color" defaultValue="#1e654c" onMouseDown={saveSelection} onChange={(event) => applyColor("foreColor", event.target.value)} /></label>
+      <label title="Cor de destaque"><span className="word-toolbar__marker">▉</span><input type="color" defaultValue="#ffef9f" onMouseDown={saveSelection} onChange={(event) => applyColor("hiliteColor", event.target.value)} /></label>
+    </div>
+    <div className="word-toolbar__group"><button onClick={() => command("justifyLeft")} title="Alinhar à esquerda">⯇</button><button onClick={() => command("justifyCenter")} title="Centralizar">≡</button><button onClick={() => command("justifyRight")} title="Alinhar à direita">⯈</button><button onClick={() => command("justifyFull")} title="Justificar">☰</button></div>
+    <div className="word-toolbar__group"><button onClick={() => command("insertUnorderedList")} title="Lista">•☰</button><button onClick={() => command("insertOrderedList")} title="Lista numerada">1☰</button><button onClick={() => command("outdent")} title="Diminuir recuo">⇤</button><button onClick={() => command("indent")} title="Aumentar recuo">⇥</button></div>
+    <div className="word-toolbar__group">
+      <label className="word-toolbar__file" title="Inserir imagem" onMouseDown={saveSelection}><span>🖼</span><input type="file" accept="image/*" onChange={(event) => { void insertImageFromFile(event.target.files); event.target.value = ""; }} /></label>
+      <button onClick={() => { saveSelection(); setLinkOpen((open) => !open); }} title="Inserir link" className={linkOpen ? "is-active" : ""}>🔗</button>
+      <button onClick={() => command("insertHorizontalRule")} title="Linha divisória">―</button>
+      <button onClick={() => command("removeFormat")} title="Limpar formatação">⌫</button>
+    </div>
     <div className="word-toolbar__group word-toolbar__images"><button onClick={() => resizeImage(-10)} title="Diminuir imagem">Imagem −</button><button onClick={() => resizeImage(10)} title="Aumentar imagem">Imagem +</button></div>
-    <span className="word-toolbar__hint">Selecione texto para formatar · clique numa imagem antes de redimensionar</span>
+    <button className="word-toolbar__page" onClick={addPage} title="Adicionar nova página">＋ Página</button>
+    {linkOpen && <div className="word-toolbar__link" onMouseDown={(event) => event.stopPropagation()}>
+      <input autoFocus value={linkUrl} placeholder="https://…" onChange={(event) => setLinkUrl(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") applyLink(); if (event.key === "Escape") { setLinkOpen(false); setLinkUrl(""); } }} />
+      <button onClick={applyLink}>Aplicar</button>
+      <button className="word-toolbar__link-cancel" onClick={() => { setLinkOpen(false); setLinkUrl(""); }}>×</button>
+    </div>}
+    <span className="word-toolbar__hint">Selecione o texto para formatar · clique numa imagem antes de redimensionar</span>
   </div>;
 }
 
