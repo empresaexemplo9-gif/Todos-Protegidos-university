@@ -1282,6 +1282,12 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     if (!term) return suggestedCatalog;
     return catalogItems.filter((item) => [item.name, item.brand, item.model, item.sku, item.category].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR").includes(term)).slice(0, 12);
   }, [quickSearch, suggestedCatalog, catalogItems]);
+  const linkedIds = useMemo(() => new Set(catalogItems.map((item) => item.id)), [catalogItems]);
+  const scopeGaps = useMemo(() => {
+    const unlinked = markers.filter((point) => !point.catalogItemId);
+    const noPrice = markers.filter((point) => point.catalogItemId && !((catalogItems.find((entry) => entry.id === point.catalogItemId)?.salePrice ?? 0) > 0));
+    return { unlinked, noPrice };
+  }, [markers, catalogItems]);
 
   useEffect(() => {
     void fetch("/api/budget").then((response) => response.json()).then((data: { catalogItems?: ScopeCatalogItem[] }) => setCatalogItems(data.catalogItems ?? [])).catch(() => setCatalogItems([]));
@@ -1474,6 +1480,14 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
           <div><small>DISCIPLINAS</small><strong>{totals.length}</strong></div>
         </div>
 
+        {markers.length > 0 && (scopeGaps.unlinked.length > 0 || scopeGaps.noPrice.length > 0) && <div className="scope-warning">
+          <span>!</span>
+          <p><strong>Revise antes de gerar a proposta</strong><small>{[scopeGaps.unlinked.length ? `${scopeGaps.unlinked.length} ponto(s) sem item do catálogo` : "", scopeGaps.noPrice.length ? `${scopeGaps.noPrice.length} sem preço de venda` : ""].filter(Boolean).join(" · ")} — entram na proposta sem imagem e/ou valor.</small></p>
+          {scopeGaps.unlinked.length > 0
+            ? <button onClick={() => { setCanvasMode("marker"); setSelectedMarker(scopeGaps.unlinked[0].id); }}>Revisar ponto →</button>
+            : <button onClick={() => { setCanvasMode("marker"); setSelectedMarker(scopeGaps.noPrice[0].id); }}>Revisar ponto →</button>}
+        </div>}
+
         <div className="tool-strip" aria-label="Ferramentas de marcação">
           <div className="tool-strip__label"><small>LEGENDA ATIVA</small><span>{detectedTools.length ? `${detectedTools.length} tipos detectados` : "Todos os tipos"}</span></div>
           <div className="tool-strip__scroll">
@@ -1530,7 +1544,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
                 onPointerMove={(e) => { if (dragging !== item.id || resizingMarker === item.id || e.buttons === 0) return; const point = pointFromEvent(e.clientX, e.clientY); if (point) updateMarker(item.id, point); }}
                 onPointerUp={(e) => { e.stopPropagation(); setDragging(null); e.currentTarget.releasePointerCapture(e.pointerId); }}
                 title={`${tool.label} · ${item.environment}`}
-              >{item.label}<span className="resize-handle" onPointerDown={(event) => { event.stopPropagation(); setDragging(null); setResizingMarker(item.id); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (resizingMarker !== item.id || event.buttons === 0) return; updateMarker(item.id, { size: Math.max(26, Math.min(90, item.size + event.movementX)) }); }} onPointerUp={(event) => { event.stopPropagation(); setResizingMarker(null); event.currentTarget.releasePointerCapture(event.pointerId); }} /></button>;
+              >{item.label}{item.catalogItemId && linkedIds.has(item.catalogItemId) && <i className="scope-marker__linked" aria-hidden="true">✓</i>}<span className="resize-handle" onPointerDown={(event) => { event.stopPropagation(); setDragging(null); setResizingMarker(item.id); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (resizingMarker !== item.id || event.buttons === 0) return; updateMarker(item.id, { size: Math.max(26, Math.min(90, item.size + event.movementX)) }); }} onPointerUp={(event) => { event.stopPropagation(); setResizingMarker(null); event.currentTarget.releasePointerCapture(event.pointerId); }} /></button>;
             })}
           </div>
           {planPages.length > 1 && <div className="plan-pages">{planPages.map((src, i) => <button key={i} className={activePage === i ? "active" : ""} onClick={() => { setActivePage(i); setPlanImage(src); }} title={`Página ${i + 1}`}><img src={src} alt={`Página ${i + 1}`} /><span>{i + 1}</span></button>)}</div>}
