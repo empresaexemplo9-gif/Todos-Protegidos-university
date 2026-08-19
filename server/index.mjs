@@ -108,7 +108,7 @@ function mapProposal(row, includeData = true, includePrivate = true) {
   };
 }
 /* ------------------------------ seed do catálogo ------------------------------ */
-const CATALOG_SEED_VERSION = "2026-08-19-estoque-real-v1";
+const CATALOG_SEED_VERSION = "2026-08-19-estoque-real-v2";
 function seedCatalog(data) {
   if (data.meta.catalogSeedVersion === CATALOG_SEED_VERSION && data.catalogItems.length) return;
   const now = new Date().toISOString();
