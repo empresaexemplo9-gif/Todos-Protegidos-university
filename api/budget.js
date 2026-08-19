@@ -5,7 +5,7 @@ import { getActor } from "../lib/auth.js";
 import { json, failure, readBody, clean, money, bounded } from "../lib/http.js";
 import {
   seedCatalog, listCatalogItems, findCatalogItem, findCatalogItemBySku, upsertCatalogItem,
-  deleteCatalogItem, listBudgetsWithItems, countBudgets, findBudget, createBudget, updateBudget,
+  deleteCatalogItem, clearCatalogItems, listBudgetsWithItems, countBudgets, findBudget, createBudget, updateBudget,
   touchBudget, deleteBudget, countBudgetItems, insertBudgetItem, updateBudgetItem,
   deleteBudgetItem, clearBudgetItems, mapCatalogItem, mapLine,
 } from "../lib/repo.js";
@@ -43,6 +43,7 @@ export default async function handler(req, res) {
           description: clean(item.description, 800), sourceUrl: clean(item.sourceUrl, 500),
           unit: clean(item.unit, 12) || (kind === "service" ? "sv" : "un"),
           purchasePrice: money(item.purchasePrice), salePrice: money(item.salePrice),
+          imageUrl: clean(item.imageUrl, 800),
           updatedBy: actor.email, updatedAt: now,
         });
         return json(res, 200, { item: mapCatalogItem(saved) });
@@ -53,6 +54,13 @@ export default async function handler(req, res) {
         if (!itemId) return json(res, 400, { error: "Item inválido." });
         await deleteCatalogItem(itemId);
         return json(res, 200, { ok: true });
+      }
+
+      if (action === "resetCatalog") {
+        if (actor.role !== "owner") return json(res, 403, { error: "Apenas o dono pode restaurar o catálogo." });
+        await clearCatalogItems();
+        await seedCatalog();
+        return json(res, 200, { ok: true, count: (await listCatalogItems()).length });
       }
 
       if (action === "createBudget") {
@@ -85,6 +93,7 @@ export default async function handler(req, res) {
             description: clean(raw?.description, 800), sourceUrl: "",
             unit: clean(raw?.unit, 12) || (kind === "service" ? "sv" : "un"),
             purchasePrice: money(raw?.purchasePrice), salePrice: money(raw?.salePrice),
+            imageUrl: clean(raw?.imageUrl || raw?.image, 800),
             updatedBy: actor.email, updatedAt: now,
           });
           if (existing) updated++; else created++;

@@ -108,7 +108,7 @@ function mapProposal(row, includeData = true, includePrivate = true) {
   };
 }
 /* ------------------------------ seed do catálogo ------------------------------ */
-const CATALOG_SEED_VERSION = "2026-08-12-internal-v1";
+const CATALOG_SEED_VERSION = "2026-08-19-estoque-real-v1";
 function seedCatalog(data) {
   if (data.meta.catalogSeedVersion === CATALOG_SEED_VERSION && data.catalogItems.length) return;
   const now = new Date().toISOString();
@@ -387,6 +387,14 @@ async function budgetApi(req, res) {
       data.catalogItems = data.catalogItems.filter((c) => c.id !== itemId);
       await saveData(data);
       return json(res, 200, { ok: true });
+    }
+    if (action === "resetCatalog") {
+      if (actor.role !== "owner") return json(res, 403, { error: "Apenas o dono pode restaurar o catálogo." });
+      data.catalogItems = [];
+      data.meta.catalogSeedVersion = "";
+      seedCatalog(data);
+      await saveData(data);
+      return json(res, 200, { ok: true, count: data.catalogItems.length });
     }
     if (action === "createBudget") {
       const b = createBudget(data, actor.email, clean(body.budget?.client, 120) || "Novo cliente", clean(body.budget?.project, 120) || "Novo projeto");

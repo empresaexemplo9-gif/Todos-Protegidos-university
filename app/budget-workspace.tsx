@@ -337,6 +337,17 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
     }
   };
 
+  const restoreCatalog = async () => {
+    if (!(await askConfirm("Restaurar o catálogo com os produtos reais do estoque? Isso remove os itens atuais e recria a lista padrão (preços = custo; imagens a adicionar)."))) return;
+    try {
+      await post({ action: "resetCatalog" });
+      await loadData(true, activeId);
+      showNotice("Catálogo restaurado com os produtos do estoque");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não foi possível restaurar o catálogo.");
+    }
+  };
+
   const filteredCatalog = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("pt-BR");
     return catalogItems.filter((item) => {
@@ -447,7 +458,7 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
               <div className="catalog-tabs"><button className={catalogKind === "equipment" ? "active" : ""} onClick={() => { setCatalogKind("equipment"); setCategoryFilter(""); setSystemFilter(""); }}>Equipamentos</button><button className={catalogKind === "service" ? "active" : ""} onClick={() => { setCatalogKind("service"); setCategoryFilter(""); setSystemFilter(""); }}>Serviços</button></div>
               <label className="catalog-search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar produto, marca, modelo ou código" /></label>
               <div className="catalog-filters"><select value={systemFilter} onChange={(event) => setSystemFilter(event.target.value)}><option value="">Todos os sistemas</option>{systems.map((system) => <option key={system}>{system}</option>)}</select><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="">Todas as categorias</option>{categories.map((category) => <option key={category}>{category}</option>)}</select></div>
-              <button className="btn btn--green" onClick={() => setAvaOpen(true)}>⤓ Importar do AVA</button><button className="btn btn--ghost" onClick={() => setImportOpen(true)}>⇪ CSV</button><button className="btn btn--dark" onClick={() => openCatalogEditor()}>＋ Cadastrar</button>
+              <button className="btn btn--green" onClick={() => setAvaOpen(true)}>⤓ Importar do AVA</button><button className="btn btn--ghost" onClick={() => setImportOpen(true)}>⇪ CSV</button><button className="btn btn--ghost" onClick={() => void restoreCatalog()} title="Zerar e recriar o catálogo com os produtos reais do estoque">↻ Restaurar</button><button className="btn btn--dark" onClick={() => openCatalogEditor()}>＋ Cadastrar</button>
             </div>
             <div className="ava-table-wrap"><table className="ava-table ava-table--catalog"><thead><tr><th>Produto / serviço</th><th>Sistema</th><th>Compra</th><th>Venda</th><th>Margem</th><th>Ações</th></tr></thead><tbody>
               {filteredCatalog.map((item) => {
