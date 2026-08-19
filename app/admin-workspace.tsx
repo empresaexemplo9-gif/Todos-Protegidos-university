@@ -124,11 +124,35 @@ function modelRadius(id: string, band: "2.4" | "5" | "6") {
   const m = ubiquitiAPs.find((a) => a.id === id) ?? ubiquitiAPs[2];
   return band === "2.4" ? m.r24 : band === "6" ? (m.r6 ?? m.r5) : m.r5;
 }
-// Camada de cobertura: combina os APs, respeita a escala e reduz o sinal ao atravessar paredes.
+
+// Materiais de parede com atenuação real (dB), referência 5 GHz — mesma ordem de grandeza
+// que a Ubiquiti usa no UniFi Design Center ao desenhar paredes por material.
+export type WallMaterial = "drywall" | "glass" | "wood" | "brick" | "concrete" | "metal";
+export const wallMaterials: Array<{ id: WallMaterial; label: string; db: number; color: string }> = [
+  { id: "drywall", label: "Gesso / drywall", db: 3, color: "#8f9ba4" },
+  { id: "wood", label: "Madeira", db: 4, color: "#b98a4e" },
+  { id: "glass", label: "Vidro", db: 6, color: "#3fb0d4" },
+  { id: "brick", label: "Tijolo / alvenaria", db: 9, color: "#c56a4a" },
+  { id: "concrete", label: "Concreto", db: 14, color: "#5f676c" },
+  { id: "metal", label: "Metal / laje", db: 25, color: "#33393f" },
+];
+const wallDb = (id: WallMaterial) => (wallMaterials.find((m) => m.id === id) ?? wallMaterials[0]).db;
+const wallColor = (id: WallMaterial) => (wallMaterials.find((m) => m.id === id) ?? wallMaterials[0]).color;
+// Faixas mais altas atravessam obstáculos com mais perda.
+const bandWallFactor = (band: "2.4" | "5" | "6") => (band === "2.4" ? 0.8 : band === "6" ? 1.15 : 1);
+// Expoente de perda de percurso (log-distância) por faixa, típico de ambiente residencial.
+const pathLossExp = (band: "2.4" | "5" | "6") => (band === "2.4" ? 2.9 : band === "6" ? 3.25 : 3.1);
+// dBm de referência para as cores (padrão de leitura Wi-Fi da Ubiquiti).
+const RSSI_EDGE = -73; // borda útil de cobertura, ancorada ao alcance do modelo
+const RSSI_MIN = -86;  // abaixo disso o sinal é desprezível
+const RSSI_MAX = -46;  // muito próximo do AP
+
+// Camada de cobertura: modelo de RF em dBm que combina os APs, respeita a escala e
+// reduz o sinal em dB reais ao atravessar cada parede conforme o material.
 function WifiHeatLayer({ aps, planWidthMeters, walls, band }: {
   aps: ScopeMarker[];
   planWidthMeters: number;
-  walls: Array<{ id: number; pts: Array<{ x: number; y: number }> }>;
+  walls: Array<{ id: number; pts: Array<{ x: number; y: number }>; material: WallMaterial }>;
   band: "2.4" | "5" | "6";
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -160,8 +184,9 @@ function WifiHeatLayer({ aps, planWidthMeters, walls, band }: {
       if (!off) return;
       const image = off.createImageData(sw, sh);
       const metersPerPixel = planWidthMeters / sw;
-      const attenuation = band === "2.4" ? .13 : band === "6" ? .27 : .20;
-      const segments = walls.flatMap((wall) => wall.pts.slice(1).map((point, index) => [wall.pts[index], point] as const));
+      const wallFactor = bandWallFactor(band);
+      const exponent = pathLossExp(band);
+      const segments = walls.flatMap((wall) => wall.pts.slice(1).map((point, index) => ({ a: wall.pts[index], b: point, db: wallDb(wall.material) })));
       const intersects = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number, dx: number, dy: number) => {
         const cross = (px: number, py: number, qx: number, qy: number, rx: number, ry: number) => (qx - px) * (ry - py) - (qy - py) * (rx - px);
         const d1 = cross(ax, ay, bx, by, cx, cy);
@@ -188,29 +213,31 @@ function WifiHeatLayer({ aps, planWidthMeters, walls, band }: {
 
       for (let y = 0; y < sh; y++) {
         for (let x = 0; x < sw; x++) {
-          let strongest = 0;
+          let bestRssi = -Infinity;
           for (const ap of aps) {
             const apx = ap.x / 100 * sw;
             const apy = ap.y / 100 * sh;
             const radius = Math.max(1, ap.range || modelRadius(ap.apModel ?? "u6-pro", band));
-            const distance = Math.hypot(x - apx, y - apy) * metersPerPixel;
-            let signal = Math.max(0, 1 - Math.pow(distance / radius, 1.34));
-            if (signal > 0 && segments.length) {
-              let crossed = 0;
-              for (const [p1, p2] of segments) {
-                if (intersects(apx, apy, x, y, p1.x / 100 * sw, p1.y / 100 * sh, p2.x / 100 * sw, p2.y / 100 * sh)) crossed++;
+            const distance = Math.max(0.5, Math.hypot(x - apx, y - apy) * metersPerPixel);
+            // Perda log-distância ancorada ao alcance do modelo: no raio, RSSI = borda útil.
+            let rssi = Math.min(RSSI_MAX, RSSI_EDGE + 10 * exponent * Math.log10(radius / distance));
+            if (segments.length) {
+              let loss = 0;
+              for (const seg of segments) {
+                if (intersects(apx, apy, x, y, seg.a.x / 100 * sw, seg.a.y / 100 * sh, seg.b.x / 100 * sw, seg.b.y / 100 * sh)) loss += seg.db;
               }
-              signal = Math.max(0, signal - crossed * attenuation);
+              rssi -= loss * wallFactor;
             }
-            strongest = Math.max(strongest, signal);
+            if (rssi > bestRssi) bestRssi = rssi;
           }
-          if (strongest < .045) continue;
-          const [r, g, b] = colorAt(strongest);
+          if (bestRssi < RSSI_MIN) continue;
+          const value = Math.max(0, Math.min(1, (bestRssi - RSSI_MIN) / (RSSI_MAX - RSSI_MIN)));
+          const [r, g, b] = colorAt(value);
           const offset = (y * sw + x) * 4;
           image.data[offset] = r;
           image.data[offset + 1] = g;
           image.data[offset + 2] = b;
-          image.data[offset + 3] = Math.round(55 + strongest * 115);
+          image.data[offset + 3] = Math.round(45 + value * 165);
         }
       }
       off.putImageData(image, 0, 0);
@@ -1194,8 +1221,9 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [canvasMode, setCanvasMode] = useState<"marker" | "pan" | "wall" | "calibrate">("marker");
-  const [walls, setWalls] = useState<Array<{ id: number; pts: Array<{ x: number; y: number }> }>>([]);
+  const [walls, setWalls] = useState<Array<{ id: number; pts: Array<{ x: number; y: number }>; material: WallMaterial }>>([]);
   const [wallDraft, setWallDraft] = useState<Array<{ x: number; y: number }>>([]);
+  const [wallMaterial, setWallMaterial] = useState<WallMaterial>("drywall");
   const [planPages, setPlanPages] = useState<string[]>([]);
   const [activePage, setActivePage] = useState(0);
   const [calibLine, setCalibLine] = useState<Array<{ x: number; y: number }>>([]);
@@ -1203,7 +1231,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const panRef = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null);
   const clampZoom = (z: number) => Math.min(6, Math.max(0.3, z));
   const resetView = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
-  const finishWall = () => { if (wallDraft.length >= 2) setWalls((w) => [...w, { id: Date.now(), pts: wallDraft }]); setWallDraft([]); };
+  const finishWall = () => { if (wallDraft.length >= 2) setWalls((w) => [...w, { id: Date.now(), pts: wallDraft, material: wallMaterial }]); setWallDraft([]); };
   const applyCalibration = (meters: number) => {
     const el = canvasRef.current;
     if (calibLine.length < 2 || !el || !(meters > 0)) return;
@@ -1246,10 +1274,11 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     const stored = window.localStorage.getItem("sona-scope-draft");
     const timer = window.setTimeout(() => { if (stored) {
       try {
-        const draft = JSON.parse(stored) as { tools?: ScopeTool[]; markers?: ScopeMarker[]; assets?: PlanAsset[]; project?: string; address?: string; detectedTools?: string[] };
+        const draft = JSON.parse(stored) as { tools?: ScopeTool[]; markers?: ScopeMarker[]; assets?: PlanAsset[]; walls?: Array<{ id: number; pts: Array<{ x: number; y: number }>; material?: WallMaterial }>; project?: string; address?: string; detectedTools?: string[] };
         if (draft.tools?.length) setTools(draft.tools);
         if (draft.markers?.length) setMarkers(draft.markers.map((item) => ({ ...item, size: item.size || 38, range: item.range || 18 })));
         if (draft.assets) setAssets(draft.assets.map((item) => ({ ...item, rotation: item.rotation ?? 0 })));
+        if (draft.walls?.length) setWalls(draft.walls.map((wall) => ({ ...wall, material: wall.material ?? "drywall" })));
         if (draft.project) setProject(draft.project);
         if (draft.address) setAddress(draft.address);
         if (draft.detectedTools) setDetectedTools(draft.detectedTools);
@@ -1372,7 +1401,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   };
 
   const saveScope = () => {
-    window.localStorage.setItem("sona-scope-draft", JSON.stringify({ tools, markers, assets, project, address, detectedTools }));
+    window.localStorage.setItem("sona-scope-draft", JSON.stringify({ tools, markers, assets, walls, project, address, detectedTools }));
     setToast("Planejamento salvo neste dispositivo");
     window.setTimeout(() => setToast(""), 2400);
   };
@@ -1424,7 +1453,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
 
         <div className="plan-card">
           <div className="plan-card__bar">
-            <div><span className="live-dot" /> PLANTA DE MARCAÇÃO</div><div className="plan-bar-actions"><div className="plan-modes"><button className={canvasMode === "marker" ? "active" : ""} onClick={() => setCanvasMode("marker")} title="Inserir pontos">✛ Marcar</button><button className={canvasMode === "pan" ? "active" : ""} onClick={() => setCanvasMode("pan")} title="Arrastar a planta">✋ Mover</button><button className={canvasMode === "wall" ? "active" : ""} onClick={() => setCanvasMode("wall")} title="Desenhar paredes — 2 cliques finaliza, clique direito cancela">▟ Parede</button><button className={canvasMode === "calibrate" ? "active" : ""} onClick={() => { setCanvasMode("calibrate"); setCalibLine([]); }} title="Calibrar escala: trace uma medida conhecida na planta">📏 Escala</button></div><div className="plan-zoom"><button onClick={() => setZoom((z) => clampZoom(z / 1.2))} title="Diminuir">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom((z) => clampZoom(z * 1.2))} title="Aumentar">＋</button><button onClick={resetView} title="Ajustar à tela">⤢</button>{walls.length > 0 && <button onClick={() => { setWalls([]); setWallDraft([]); }} title="Limpar paredes">🗑</button>}</div><button className={heatmap ? "active" : ""} onClick={() => setHeatmap((value) => !value)}>◉ Mapa de calor</button><select value={heatBand} onChange={(event) => setHeatBand(event.target.value as "2.4" | "5" | "6")}><option value="2.4">2,4 GHz</option><option value="5">5 GHz</option><option value="6">6 GHz</option></select><label className="plan-scale">Escala<input type="number" min="1" max="80" value={planWidthMeters} onChange={(event) => setPlanWidthMeters(Math.max(1, Number(event.target.value) || 1))} title="Largura real da planta, em metros" /><span>m</span></label><label className="plan-upload"><input type="file" accept="image/*" multiple onChange={(e) => e.target.files && void addOverlayImages(e.target.files)} />＋ Imagens</label><label className="plan-upload"><input type="file" accept="image/*,.pdf,application/pdf" onChange={(e) => e.target.files?.[0] && void loadPlan(e.target.files[0])} />{planImage ? "Trocar planta" : "＋ Carregar planta/PDF"}</label></div>
+            <div><span className="live-dot" /> PLANTA DE MARCAÇÃO</div><div className="plan-bar-actions"><div className="plan-modes"><button className={canvasMode === "marker" ? "active" : ""} onClick={() => setCanvasMode("marker")} title="Inserir pontos">✛ Marcar</button><button className={canvasMode === "pan" ? "active" : ""} onClick={() => setCanvasMode("pan")} title="Arrastar a planta">✋ Mover</button><button className={canvasMode === "wall" ? "active" : ""} onClick={() => setCanvasMode("wall")} title="Desenhar paredes — 2 cliques finaliza, clique direito cancela">▟ Parede</button><button className={canvasMode === "calibrate" ? "active" : ""} onClick={() => { setCanvasMode("calibrate"); setCalibLine([]); }} title="Calibrar escala: trace uma medida conhecida na planta">📏 Escala</button></div>{canvasMode === "wall" && <select className="wall-material" value={wallMaterial} onChange={(event) => setWallMaterial(event.target.value as WallMaterial)} title="Material da parede — define a atenuação real do sinal em dB">{wallMaterials.map((material) => <option key={material.id} value={material.id}>{material.label} · {material.db} dB</option>)}</select>}<div className="plan-zoom"><button onClick={() => setZoom((z) => clampZoom(z / 1.2))} title="Diminuir">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom((z) => clampZoom(z * 1.2))} title="Aumentar">＋</button><button onClick={resetView} title="Ajustar à tela">⤢</button>{walls.length > 0 && <button onClick={() => { setWalls([]); setWallDraft([]); }} title="Limpar paredes">🗑</button>}</div><button className={heatmap ? "active" : ""} onClick={() => setHeatmap((value) => !value)}>◉ Mapa de calor</button><select value={heatBand} onChange={(event) => setHeatBand(event.target.value as "2.4" | "5" | "6")}><option value="2.4">2,4 GHz</option><option value="5">5 GHz</option><option value="6">6 GHz</option></select><label className="plan-scale">Escala<input type="number" min="1" max="80" value={planWidthMeters} onChange={(event) => setPlanWidthMeters(Math.max(1, Number(event.target.value) || 1))} title="Largura real da planta, em metros" /><span>m</span></label><label className="plan-upload"><input type="file" accept="image/*" multiple onChange={(e) => e.target.files && void addOverlayImages(e.target.files)} />＋ Imagens</label><label className="plan-upload"><input type="file" accept="image/*,.pdf,application/pdf" onChange={(e) => e.target.files?.[0] && void loadPlan(e.target.files[0])} />{planImage ? "Trocar planta" : "＋ Carregar planta/PDF"}</label></div>
           </div>
           <div
             className={`plan-canvas plan-canvas--mode-${canvasMode} ${planImage ? "plan-canvas--image" : ""}`}
@@ -1450,9 +1479,9 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
             {planImage ? <img className="plan-canvas__image" src={planImage} alt="Planta completa do projeto" draggable={false} /> : <DefaultFloorPlan />}
             {heatmap && <WifiHeatLayer aps={markers.filter((item) => item.type === "access-point")} planWidthMeters={planWidthMeters} walls={walls} band={heatBand} />}
             {assets.map((item) => <div key={item.id} className={`plan-asset ${selectedAsset === item.id ? "selected" : ""}`} style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%`, transform: `translate(-50%, -50%) rotate(${item.rotation ?? 0}deg)` }} onPointerDown={(event) => { event.stopPropagation(); setDraggingAsset(item.id); setSelectedAsset(item.id); setSelectedMarker(null); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (draggingAsset !== item.id || resizingAsset === item.id || event.buttons === 0) return; const point = pointFromEvent(event.clientX, event.clientY); if (point) updateAsset(item.id, point); }} onPointerUp={(event) => { event.stopPropagation(); setDraggingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }}><img src={item.src} alt={item.name} draggable={false} /><small>{item.name}</small><button onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); setAssets((current) => current.filter((entry) => entry.id !== item.id)); setSelectedAsset(null); }} aria-label={`Excluir ${item.name}`}>×</button><span className="resize-handle" onPointerDown={(event) => { event.stopPropagation(); setResizingAsset(item.id); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (resizingAsset !== item.id || event.buttons === 0) return; const rect = canvasRef.current?.getBoundingClientRect(); if (rect) updateAsset(item.id, { width: Math.max(5, Math.min(95, item.width + ((event.movementX + event.movementY) / rect.width) * 100)) }); }} onPointerUp={(event) => { event.stopPropagation(); setResizingAsset(null); event.currentTarget.releasePointerCapture(event.pointerId); }} /></div>)}
-            <div className="canvas-hint">{canvasMode === "pan" ? "Arraste para mover · use o zoom" : canvasMode === "wall" ? "Clique para traçar paredes · 2 cliques finaliza" : selectedTool ? <>Clique para inserir <b>{activeTool.code}</b> · clique novamente na legenda para desmarcar</> : "Nenhuma legenda selecionada · selecione uma para inserir pontos"}</div>
-            {heatmap && markers.some((item) => item.type === "access-point") && <div className="wifi-legend" aria-hidden="true"><strong>Sinal · {heatBand === "2.4" ? "2,4" : heatBand} GHz</strong><span><i style={{ background: "#2ecc71" }} />Excelente</span><span><i style={{ background: "#1abc9c" }} />Bom</span><span><i style={{ background: "#f1c40f" }} />Regular</span><span><i style={{ background: "#e67e22" }} />Fraco</span></div>}
-            {(walls.length > 0 || wallDraft.length > 0 || calibLine.length > 0) && <svg className="plan-walls" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{walls.map((wall) => <polyline key={wall.id} points={wall.pts.map((p) => `${p.x},${p.y}`).join(" ")} />)}{wallDraft.length > 0 && <polyline className="plan-walls__draft" points={wallDraft.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.length > 0 && <polyline className="plan-calib" points={calibLine.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.map((p, i) => <circle key={`c${i}`} className="plan-calib-node" cx={p.x} cy={p.y} r="0.9" />)}</svg>}
+            <div className="canvas-hint">{canvasMode === "pan" ? "Arraste para mover · use o zoom" : canvasMode === "wall" ? `Clique para traçar paredes · 2 cliques finaliza · material: ${wallMaterials.find((m) => m.id === wallMaterial)?.label ?? ""}` : selectedTool ? <>Clique para inserir <b>{activeTool.code}</b> · clique novamente na legenda para desmarcar</> : "Nenhuma legenda selecionada · selecione uma para inserir pontos"}</div>
+            {heatmap && markers.some((item) => item.type === "access-point") && <div className="wifi-legend" aria-hidden="true"><strong>Sinal em dBm · {heatBand === "2.4" ? "2,4" : heatBand} GHz</strong><span><i style={{ background: "#23a152" }} />Excelente <b>≥ −55</b></span><span><i style={{ background: "#a6dc49" }} />Bom <b>−65</b></span><span><i style={{ background: "#faca39" }} />Regular <b>−73</b></span><span><i style={{ background: "#f47d2f" }} />Fraco <b>−80</b></span><span><i style={{ background: "#cd313d" }} />Ruim <b>&lt; −83</b></span></div>}
+            {(walls.length > 0 || wallDraft.length > 0 || calibLine.length > 0) && <svg className="plan-walls" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{walls.map((wall) => <polyline key={wall.id} points={wall.pts.map((p) => `${p.x},${p.y}`).join(" ")} style={{ stroke: wallColor(wall.material) }} />)}{wallDraft.length > 0 && <polyline className="plan-walls__draft" points={wallDraft.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.length > 0 && <polyline className="plan-calib" points={calibLine.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.map((p, i) => <circle key={`c${i}`} className="plan-calib-node" cx={p.x} cy={p.y} r="0.9" />)}</svg>}
             {markers.map((item) => {
               const tool = tools.find((entry) => entry.id === item.type) ?? tools[0];
               return <button
