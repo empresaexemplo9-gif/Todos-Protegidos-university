@@ -71,6 +71,29 @@ export type BudgetTransfer = {
   discountPercent: number;
 };
 
+async function catalogImageToDataUrl(file: File) {
+  const raw = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+  if (file.size <= 90_000 || file.type === "image/svg+xml") return raw;
+  return new Promise<string>((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const scale = Math.min(1, 900 / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/webp", 0.72));
+    };
+    image.onerror = () => resolve(raw);
+    image.src = raw;
+  });
+}
+
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const dateTime = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -327,16 +350,6 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
 
   const systems = useMemo(() => Array.from(new Set(catalogItems.filter((item) => item.kind === catalogKind).map((item) => item.system))).sort(), [catalogItems, catalogKind]);
   const categories = useMemo(() => Array.from(new Set(catalogItems.filter((item) => item.kind === catalogKind).map((item) => item.category))).sort(), [catalogItems, catalogKind]);
-  const catalogVisual = (item: CatalogItem) => {
-    if (item.kind === "service") return "100% 100%";
-    const value = `${item.category} ${item.name}`.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    if (/seguranca|fechadura|acesso|camera|sensor/.test(value)) return "0% 100%";
-    if (/rede|wi-fi|wifi|switch|roteador|access point/.test(value)) return "100% 0%";
-    if (/energia|condicionador|rack|infraestrutura/.test(value)) return "50% 100%";
-    if (/audio|som|cinema|receiver|caixa|subwoofer|video/.test(value)) return "50% 0%";
-    return "0% 0%";
-  };
-
   const sendToProposal = () => {
     if (!activeBudget) return;
     const items = activeBudget.items.map((item, index) => ({
@@ -439,7 +452,7 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
             <div className="ava-table-wrap"><table className="ava-table ava-table--catalog"><thead><tr><th>Produto / serviço</th><th>Sistema</th><th>Compra</th><th>Venda</th><th>Margem</th><th>Ações</th></tr></thead><tbody>
               {filteredCatalog.map((item) => {
                 const margin = item.salePrice > 0 ? ((item.salePrice - item.purchasePrice) / item.salePrice) * 100 : 0;
-                return <tr key={item.id}><td><div className="ava-product">{item.imageUrl ? <img className="ava-product__photo" src={item.imageUrl} alt={item.name} loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <span className="ava-product__visual" style={{ backgroundPosition: catalogVisual(item) }} />}<div><strong>{item.name}</strong><small>{[item.brand, item.model, item.category].filter(Boolean).join(" · ")}</small><em>{item.sku || "Sem código"}</em></div></div></td><td><span className="system-tag">{item.system}</span></td><td>{brl.format(item.purchasePrice)}</td><td><strong className="ava-sale-price">{brl.format(item.salePrice)}</strong></td><td><span className={margin < 20 ? "ava-margin ava-margin--low" : "ava-margin"}>{margin.toFixed(1)}%</span></td><td><div className="ava-catalog-actions"><button className="btn btn--dark" onClick={() => void addToBudget(item)} disabled={syncing === `add-${item.id}`}>{syncing === `add-${item.id}` ? "Adicionando…" : "＋ Incluir"}</button><button onClick={() => openCatalogEditor(item)} title="Editar">✎</button><button onClick={() => void deleteCatalogItem(item)} title="Excluir">×</button></div></td></tr>;
+                return <tr key={item.id}><td><div className="ava-product">{item.imageUrl ? <img className="ava-product__photo" src={item.imageUrl} alt={item.name} loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <span className="ava-product__ph" aria-hidden="true">{(item.sku || item.name || "?").replace(/[^A-Za-z0-9]/g, "").slice(0, 3).toUpperCase() || "•"}</span>}<div><strong>{item.name}</strong><small>{[item.brand, item.model, item.category].filter(Boolean).join(" · ")}</small><em>{item.sku || "Sem código"}</em></div></div></td><td><span className="system-tag">{item.system}</span></td><td>{brl.format(item.purchasePrice)}</td><td><strong className="ava-sale-price">{brl.format(item.salePrice)}</strong></td><td><span className={margin < 20 ? "ava-margin ava-margin--low" : "ava-margin"}>{margin.toFixed(1)}%</span></td><td><div className="ava-catalog-actions"><button className="btn btn--dark" onClick={() => void addToBudget(item)} disabled={syncing === `add-${item.id}`}>{syncing === `add-${item.id}` ? "Adicionando…" : "＋ Incluir"}</button><button onClick={() => openCatalogEditor(item)} title="Editar">✎</button><button onClick={() => void deleteCatalogItem(item)} title="Excluir">×</button></div></td></tr>;
               })}
               {!filteredCatalog.length && <tr><td colSpan={6}><div className="catalog-empty"><span>⌕</span><strong>Nenhum item encontrado</strong><p>Altere os filtros ou cadastre um novo item.</p></div></td></tr>}
             </tbody></table></div>
@@ -464,8 +477,8 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
           <label className="field">Valor de venda (R$)<input type="number" min="0" step="0.01" value={editor.salePrice ?? 0} onChange={(event) => setEditor({ ...editor, salePrice: Number(event.target.value) })} /></label>
           <label className="field field--full">Descrição / observações<textarea rows={3} value={editor.description ?? ""} onChange={(event) => setEditor({ ...editor, description: event.target.value })} /></label>
           <label className="field field--full">Link da ficha ou fonte<input type="url" value={editor.sourceUrl ?? ""} onChange={(event) => setEditor({ ...editor, sourceUrl: event.target.value })} placeholder="https://" /></label>
-          <label className="field field--full">Imagem do produto (URL)<input type="url" value={editor.imageUrl ?? ""} onChange={(event) => setEditor({ ...editor, imageUrl: event.target.value })} placeholder="https://" /></label>
-          {editor.imageUrl && <div className="catalog-image-preview field--full"><img src={editor.imageUrl} alt="Prévia do produto" onError={(event) => { event.currentTarget.style.display = "none"; }} /></div>}
+          <label className="field field--full">Imagem real do produto<div className="catalog-image-input"><input type="url" value={editor.imageUrl ?? ""} onChange={(event) => setEditor({ ...editor, imageUrl: event.target.value })} placeholder="Cole a URL https:// da foto ou envie um arquivo →" /><label className="catalog-image-file">⇪ Enviar foto<input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void catalogImageToDataUrl(file).then((url) => setEditor((current) => current ? { ...current, imageUrl: url } : current)); event.target.value = ""; }} /></label></div></label>
+          {editor.imageUrl && <div className="catalog-image-preview field--full"><img src={editor.imageUrl} alt="Prévia do produto" onError={(event) => { event.currentTarget.style.display = "none"; }} /><button type="button" onClick={() => setEditor({ ...editor, imageUrl: "" })}>Remover imagem</button></div>}
         </div></div>
         <div className="catalog-dialog__footer"><button className="btn btn--ghost" onClick={() => setEditor(null)}>Cancelar</button><button className="btn btn--dark" onClick={() => void saveCatalogEditor()} disabled={saving}>{saving ? "Salvando…" : "Salvar no catálogo"}</button></div>
       </section></div>}
