@@ -1229,6 +1229,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const [wallMaterial, setWallMaterial] = useState<WallMaterial>("drywall");
   const [selectedWall, setSelectedWall] = useState<number | null>(null);
   const [draggingVertex, setDraggingVertex] = useState<{ wallId: number; index: number } | null>(null);
+  const [quickSearch, setQuickSearch] = useState("");
   const [planPages, setPlanPages] = useState<string[]>([]);
   const [activePage, setActivePage] = useState(0);
   const [calibLine, setCalibLine] = useState<Array<{ x: number; y: number }>>([]);
@@ -1276,6 +1277,11 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
       });
     }).slice(0, 8);
   }, [activeTool, catalogItems, marker?.type, tools]);
+  const quickCatalog = useMemo(() => {
+    const term = quickSearch.trim().toLocaleLowerCase("pt-BR");
+    if (!term) return suggestedCatalog;
+    return catalogItems.filter((item) => [item.name, item.brand, item.model, item.sku, item.category].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR").includes(term)).slice(0, 12);
+  }, [quickSearch, suggestedCatalog, catalogItems]);
 
   useEffect(() => {
     void fetch("/api/budget").then((response) => response.json()).then((data: { catalogItems?: ScopeCatalogItem[] }) => setCatalogItems(data.catalogItems ?? [])).catch(() => setCatalogItems([]));
@@ -1530,6 +1536,18 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
           {planPages.length > 1 && <div className="plan-pages">{planPages.map((src, i) => <button key={i} className={activePage === i ? "active" : ""} onClick={() => { setActivePage(i); setPlanImage(src); }} title={`Página ${i + 1}`}><img src={src} alt={`Página ${i + 1}`} /><span>{i + 1}</span></button>)}</div>}
           {canvasMode === "calibrate" && <div className="calib-panel">{calibLine.length < 2 ? <span>Trace uma medida conhecida na planta ({calibLine.length}/2)</span> : <><label>Distância real<input type="number" min="0.1" step="0.1" value={calibMeters} onChange={(e) => setCalibMeters(e.target.value)} autoFocus /><span>m</span></label><button className="calib-apply" onClick={() => applyCalibration(Number(calibMeters))}>Aplicar</button></>}<button className="calib-cancel" onClick={() => { setCalibLine([]); setCalibMeters(""); }}>Limpar</button></div>}
           {canvasMode === "wall" && selectedWall !== null && (() => { const wall = walls.find((entry) => entry.id === selectedWall); if (!wall) return null; return <div className="wall-panel"><span className="wall-panel__dot" style={{ background: wallColor(wall.material) }} /><label>Material<select value={wall.material} onChange={(event) => updateWall(wall.id, { material: event.target.value as WallMaterial })}>{wallMaterials.map((material) => <option key={material.id} value={material.id}>{material.label} · {material.db} dB</option>)}</select></label><span className="wall-panel__hint">Arraste os pontos para ajustar</span><button className="wall-panel__delete" onClick={() => removeWall(wall.id)}>Excluir parede</button><button className="calib-cancel" onClick={() => setSelectedWall(null)}>OK</button></div>; })()}
+          {canvasMode === "marker" && marker && <div className="quickpick" onPointerDown={(event) => event.stopPropagation()}>
+            <div className="quickpick__head"><strong>Ligar {marker.label} ao catálogo</strong><button onClick={() => setSelectedMarker(null)} aria-label="Fechar">×</button></div>
+            <input className="quickpick__search" value={quickSearch} onChange={(event) => setQuickSearch(event.target.value)} placeholder="Buscar equipamento, marca, código…" />
+            <div className="quickpick__list">
+              {quickCatalog.length ? quickCatalog.map((item) => { const linked = marker.catalogItemId === item.id; return <button key={item.id} className={linked ? "linked" : ""} onClick={() => updateMarker(marker.id, { catalogItemId: item.id, catalogName: item.name, description: `${item.name} · ${[item.brand, item.model].filter(Boolean).join(" ")}`.trim() })}>
+                {item.imageUrl ? <img src={item.imageUrl} alt={item.name} onError={(event) => { event.currentTarget.style.visibility = "hidden"; }} /> : <span className="quickpick__ph">{item.name.slice(0, 1).toUpperCase()}</span>}
+                <span className="quickpick__info"><b>{item.name}</b><small>{[item.brand, item.model].filter(Boolean).join(" · ") || item.category}</small></span>
+                <span className="quickpick__price">{item.salePrice ? brl.format(item.salePrice) : "—"}<i>{linked ? "✓" : "+"}</i></span>
+              </button>; }) : <p className="quickpick__empty">Nenhum item. Cadastre no catálogo ou importe do AVA.</p>}
+            </div>
+            {marker.catalogItemId && <button className="quickpick__unlink" onClick={() => updateMarker(marker.id, { catalogItemId: undefined, catalogName: undefined })}>Desvincular item</button>}
+          </div>}
         </div>
 
         <div className="quant-card">
