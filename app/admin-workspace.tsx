@@ -524,13 +524,14 @@ export default function Home() {
     if (!record?.publicToken) return;
     const url = `${window.location.origin}/proposta?token=${record.publicToken}`;
     setBusy("sending");
+    const canShare = typeof navigator.share === "function";
     try {
-      if (navigator.share) await navigator.share({ title: `Proposta ${proposal.code}`, text: `Proposta SONA para ${proposal.client}`, url });
+      if (canShare) await navigator.share({ title: `Proposta ${proposal.code}`, text: `Proposta SONA para ${proposal.client}`, url });
       else await navigator.clipboard.writeText(url);
       await fetch("/api/proposals", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "markSent", id: proposalId }) });
       setProposalStatus("sent");
       await refreshProposals();
-      showNotice(navigator.share ? "Proposta preparada para envio" : "Link do cliente copiado");
+      showNotice(canShare ? "Proposta preparada para envio" : "Link do cliente copiado");
       setConfirmOpen(false);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
