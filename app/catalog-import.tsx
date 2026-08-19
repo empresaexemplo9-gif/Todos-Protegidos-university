@@ -95,6 +95,7 @@ export default function CatalogImport({ onClose, onDone }: { onClose: () => void
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState("");
   const [result, setResult] = useState<ImportResult | null>(null);
 
   const onFile = async (file: File) => {
@@ -147,18 +148,29 @@ export default function CatalogImport({ onClose, onDone }: { onClose: () => void
         })
         .filter((item) => item.name.trim());
       if (!items.length) { setError("Nenhuma linha com o nome preenchido."); setBusy(false); return; }
-      const response = await fetch("/api/budget", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "importCatalog", items }),
-      });
-      const data = (await response.json()) as ImportResult & { error?: string };
-      if (!response.ok) throw new Error(data.error || "Não foi possível importar.");
-      setResult({ created: data.created ?? 0, updated: data.updated ?? 0, skipped: data.skipped ?? 0 });
+      // Envia em lotes: CSV com imagens embutidas (data URL) fica grande demais para um POST só.
+      const BATCH = 20;
+      const totals = { created: 0, updated: 0, skipped: 0 };
+      for (let i = 0; i < items.length; i += BATCH) {
+        const slice = items.slice(i, i + BATCH);
+        setProgress(`${Math.min(i + slice.length, items.length)}/${items.length}`);
+        const response = await fetch("/api/budget", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ action: "importCatalog", items: slice }),
+        });
+        const data = (await response.json()) as ImportResult & { error?: string };
+        if (!response.ok) throw new Error(data.error || "Não foi possível importar.");
+        totals.created += data.created ?? 0;
+        totals.updated += data.updated ?? 0;
+        totals.skipped += data.skipped ?? 0;
+      }
+      setResult(totals);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao importar.");
     } finally {
       setBusy(false);
+      setProgress("");
     }
   };
 
@@ -236,7 +248,7 @@ export default function CatalogImport({ onClose, onDone }: { onClose: () => void
           ) : (
             <>
               <button className="btn btn--ghost" onClick={onClose}>Cancelar</button>
-              <button className="btn btn--dark" onClick={() => void run()} disabled={busy || !rows.length}>{busy ? "Importando…" : `Importar ${rows.length || ""} itens`}</button>
+              <button className="btn btn--dark" onClick={() => void run()} disabled={busy || !rows.length}>{busy ? `Importando… ${progress}` : `Importar ${rows.length || ""} itens`}</button>
             </>
           )}
         </div>
