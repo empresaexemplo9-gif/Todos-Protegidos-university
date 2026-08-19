@@ -1536,16 +1536,23 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
             </g>; })}{wallDraft.length > 0 && <polyline className="plan-walls__draft" points={wallDraft.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.length > 0 && <polyline className="plan-calib" points={calibLine.map((p) => `${p.x},${p.y}`).join(" ")} />}{calibLine.map((p, i) => <circle key={`c${i}`} className="plan-calib-node" cx={p.x} cy={p.y} r="0.9" />)}</svg>}
             {markers.map((item) => {
               const tool = tools.find((entry) => entry.id === item.type) ?? tools[0];
+              const catItem = item.catalogItemId ? catalogItems.find((entry) => entry.id === item.catalogItemId) : undefined;
+              // Só na sonorização (áudio): quando o ponto está ligado a uma caixa do catálogo,
+              // o marcador mostra a foto real do equipamento (de frente) para demonstrar a distribuição.
+              const photo = item.type === "audio" && catItem?.imageUrl ? catItem.imageUrl : "";
               return <button
                 key={item.id}
-                className={`scope-marker ${selectedMarker === item.id ? "selected" : ""}`}
-                style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool.color }}
+                className={`scope-marker ${photo ? "scope-marker--photo" : ""} ${selectedMarker === item.id ? "selected" : ""}`}
+                style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, ...(photo ? {} : { background: tool.color }) }}
                 onClick={(e) => { e.stopPropagation(); setSelectedMarker(item.id); setSelectedAsset(null); }}
                 onPointerDown={(e) => { e.stopPropagation(); if (resizingMarker === item.id) return; setDragging(item.id); e.currentTarget.setPointerCapture(e.pointerId); setSelectedMarker(item.id); setSelectedAsset(null); }}
                 onPointerMove={(e) => { if (dragging !== item.id || resizingMarker === item.id || e.buttons === 0) return; const point = pointFromEvent(e.clientX, e.clientY); if (point) updateMarker(item.id, point); }}
                 onPointerUp={(e) => { e.stopPropagation(); setDragging(null); e.currentTarget.releasePointerCapture(e.pointerId); }}
-                title={`${tool.label} · ${item.environment}`}
-              >{item.label}{item.catalogItemId && linkedIds.has(item.catalogItemId) && <i className="scope-marker__linked" aria-hidden="true">✓</i>}<span className="resize-handle" onPointerDown={(event) => { event.stopPropagation(); setDragging(null); setResizingMarker(item.id); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (resizingMarker !== item.id || event.buttons === 0) return; updateMarker(item.id, { size: Math.max(26, Math.min(90, item.size + event.movementX)) }); }} onPointerUp={(event) => { event.stopPropagation(); setResizingMarker(null); event.currentTarget.releasePointerCapture(event.pointerId); }} /></button>;
+                title={`${tool.label} · ${item.environment}${catItem ? " · " + catItem.name : ""}`}
+              >{photo
+                  ? <><img className="scope-marker__photo" src={photo} alt={catItem?.name ?? item.label} draggable={false} onError={(event) => { event.currentTarget.style.display = "none"; }} /><span className="scope-marker__cap">{item.label}</span></>
+                  : <>{item.label}{item.catalogItemId && linkedIds.has(item.catalogItemId) && <i className="scope-marker__linked" aria-hidden="true">✓</i>}</>}
+                <span className="resize-handle" onPointerDown={(event) => { event.stopPropagation(); setDragging(null); setResizingMarker(item.id); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (resizingMarker !== item.id || event.buttons === 0) return; updateMarker(item.id, { size: Math.max(26, Math.min(90, item.size + event.movementX)) }); }} onPointerUp={(event) => { event.stopPropagation(); setResizingMarker(null); event.currentTarget.releasePointerCapture(event.pointerId); }} /></button>;
             })}
           </div>
           {planPages.length > 1 && <div className="plan-pages">{planPages.map((src, i) => <button key={i} className={activePage === i ? "active" : ""} onClick={() => { setActivePage(i); setPlanImage(src); }} title={`Página ${i + 1}`}><img src={src} alt={`Página ${i + 1}`} /><span>{i + 1}</span></button>)}</div>}
