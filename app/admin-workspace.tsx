@@ -946,6 +946,8 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
   const selectedImageRef = useRef<HTMLImageElement | null>(null);
   const resizeRef = useRef<{ image: HTMLImageElement; parentWidth: number; pointerId: number; startWidth: number; startX: number; startY: number } | null>(null);
   const [handlePosition, setHandlePosition] = useState<ImageHandlePosition | null>(null);
+  // Keep the same prop reference while editing so React does not restore the original HTML after each handle movement.
+  const documentHtml = useMemo(() => ({ __html: html }), [html]);
 
   const placeHandle = (image = selectedImageRef.current) => {
     const stage = stageRef.current;
@@ -1025,7 +1027,7 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
         event.preventDefault();
         document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
       }}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={documentHtml}
     />
     {handlePosition && <>
       <button
