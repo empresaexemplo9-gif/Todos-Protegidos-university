@@ -933,26 +933,108 @@ function ProposalBuilder({
           <div><span className={`proposal-state proposal-state--${status}`}>{proposalStatusLabel[status]}</span><button onClick={onExport} title="Baixar dados">⇩</button><button onClick={onPrint} className="toolbar-primary">Gerar PDF</button></div>
         </div>
         {wordMode && <WordToolbar editorRef={manualEditorRef} />}
-        {wordMode ? <article
-          ref={manualEditorRef}
-          className="proposal-document proposal-document--editable"
-          id="proposal-print"
-          contentEditable
-          suppressContentEditableWarning
-          spellCheck
-          onClick={(event) => {
-            manualEditorRef.current?.querySelectorAll("[data-word-selected]").forEach((node) => node.removeAttribute("data-word-selected"));
-            if (event.target instanceof HTMLImageElement) event.target.setAttribute("data-word-selected", "true");
-          }}
-          onPaste={(event) => {
-            event.preventDefault();
-            document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
-          }}
-          dangerouslySetInnerHTML={{ __html: manualHtml }}
-        /> : <div ref={generatedPreviewRef}><ProposalSheet proposal={proposal} subtotal={subtotal} total={total} productImages={productImages} itemImages={itemImages} scopeReport={scopeReport} /></div>}
+        {wordMode ? <EditableProposalDocument editorRef={manualEditorRef} html={manualHtml} /> : <div ref={generatedPreviewRef}><ProposalSheet proposal={proposal} subtotal={subtotal} total={total} productImages={productImages} itemImages={itemImages} scopeReport={scopeReport} /></div>}
       </aside>
     </div>
   );
+}
+
+type ImageHandlePosition = { left: number; top: number };
+
+function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObject<HTMLElement | null>; html: string }) {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const selectedImageRef = useRef<HTMLImageElement | null>(null);
+  const resizeRef = useRef<{ image: HTMLImageElement; parentWidth: number; startWidth: number; startX: number; startY: number } | null>(null);
+  const [handlePosition, setHandlePosition] = useState<ImageHandlePosition | null>(null);
+
+  const placeHandle = (image = selectedImageRef.current) => {
+    const stage = stageRef.current;
+    if (!stage || !image?.isConnected) {
+      setHandlePosition(null);
+      return;
+    }
+    const stageRect = stage.getBoundingClientRect();
+    const imageRect = image.getBoundingClientRect();
+    setHandlePosition({ left: imageRect.right - stageRect.left, top: imageRect.bottom - stageRect.top });
+  };
+
+  const selectImage = (image: HTMLImageElement | null) => {
+    editorRef.current?.querySelectorAll("[data-word-selected]").forEach((node) => node.removeAttribute("data-word-selected"));
+    selectedImageRef.current = image;
+    if (image) {
+      image.setAttribute("data-word-selected", "true");
+      placeHandle(image);
+    } else {
+      setHandlePosition(null);
+    }
+  };
+
+  useEffect(() => {
+    selectImage(null);
+  }, [html]);
+
+  useEffect(() => {
+    const update = () => placeHandle();
+    const observer = new MutationObserver(update);
+    if (editorRef.current) observer.observe(editorRef.current, { attributes: true, subtree: true, attributeFilter: ["style"] });
+    window.addEventListener("resize", update);
+    return () => { observer.disconnect(); window.removeEventListener("resize", update); };
+  }, []);
+
+  return <div className="word-editor-stage" ref={stageRef}>
+    <article
+      ref={editorRef}
+      className="proposal-document proposal-document--editable"
+      id="proposal-print"
+      contentEditable
+      suppressContentEditableWarning
+      spellCheck
+      onClick={(event) => selectImage(event.target instanceof HTMLImageElement ? event.target : null)}
+      onKeyUp={() => placeHandle()}
+      onLoadCapture={(event) => { if (event.target === selectedImageRef.current) placeHandle(); }}
+      onPaste={(event) => {
+        event.preventDefault();
+        document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
+      }}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+    {handlePosition && <button
+      type="button"
+      className="word-image-resize-handle"
+      style={{ left: handlePosition.left, top: handlePosition.top }}
+      aria-label="Redimensionar imagem selecionada"
+      title="Arraste para aumentar ou diminuir a imagem"
+      onPointerDown={(event) => {
+        const image = selectedImageRef.current;
+        const parent = image?.parentElement;
+        if (!image || !parent) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const parentWidth = parent.getBoundingClientRect().width;
+        resizeRef.current = { image, parentWidth, startWidth: image.getBoundingClientRect().width, startX: event.clientX, startY: event.clientY };
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        const resize = resizeRef.current;
+        if (!resize || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+        const deltaX = event.clientX - resize.startX;
+        const deltaY = event.clientY - resize.startY;
+        const delta = Math.abs(deltaX) >= Math.abs(deltaY) ? deltaX : deltaY;
+        const width = Math.min(resize.parentWidth, Math.max(40, resize.startWidth + delta));
+        resize.image.style.width = `${(width / resize.parentWidth) * 100}%`;
+        resize.image.style.height = "auto";
+        resize.image.style.maxWidth = "none";
+        resize.image.style.maxHeight = "none";
+        placeHandle(resize.image);
+      }}
+      onPointerUp={(event) => {
+        resizeRef.current = null;
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+        placeHandle();
+      }}
+      onPointerCancel={() => { resizeRef.current = null; placeHandle(); }}
+    />}
+  </div>;
 }
 
 function WordToolbar({ editorRef }: { editorRef: React.RefObject<HTMLElement | null> }) {
@@ -1036,7 +1118,7 @@ function WordToolbar({ editorRef }: { editorRef: React.RefObject<HTMLElement | n
       <button onClick={applyLink}>Aplicar</button>
       <button className="word-toolbar__link-cancel" onClick={() => { setLinkOpen(false); setLinkUrl(""); }}>×</button>
     </div>}
-    <span className="word-toolbar__hint">Selecione o texto para formatar · clique numa imagem antes de redimensionar</span>
+    <span className="word-toolbar__hint">Clique na imagem e arraste o puxador do canto para redimensionar</span>
   </div>;
 }
 
