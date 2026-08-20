@@ -43,7 +43,7 @@ export type ScopeTool = { id: string; code: string; label: string; color: string
 export type ScopeMarker = { id: number; type: string; label: string; environment: string; description: string; status: "previsto" | "revisar" | "aprovado"; x: number; y: number; size: number; range: number; apModel?: string; catalogItemId?: string; catalogName?: string };
 export type PlanAsset = { id: number; name: string; src: string; x: number; y: number; width: number; rotation?: number };
 type ScopeCatalogItem = { id: string; name: string; category: string; brand: string; model: string; system: string; sku?: string; unit?: string; description?: string; salePrice?: number; purchasePrice?: number; imageUrl?: string };
-export type ScopeReport = { client: string; project: string; address: string; planImage: string | null; markers: ScopeMarker[]; tools: ScopeTool[]; assets: PlanAsset[]; items: ProposalItem[]; itemImages: Record<number, string[]>; productImages: string[]; markerImages: Record<number, string> };
+export type ScopeReport = { client: string; project: string; address: string; planImage: string | null; markers: ScopeMarker[]; tools: ScopeTool[]; assets: PlanAsset[]; items: ProposalItem[]; itemImages: Record<number, string[]>; productImages: string[]; markerImages: Record<number, string>; equipmentLegend: { image: string; name: string; qty: number }[] };
 
 export type ProposalBundle = {
   proposal: Proposal;
@@ -1236,7 +1236,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
       {scopeReport && <section className="proposal-page proposal-page--location">
         <DottedFrame />
         <div className="solution-heading"><h2>LOCAÇÃO ESTIMADA — {scopeReport.project.toLocaleUpperCase("pt-BR")}</h2><p>{scopeReport.address}</p></div>
-        <div className="proposal-location-plan"><div className="report-plan__canvas">{scopeReport.planImage ? <img src={scopeReport.planImage} alt={`Planta do projeto ${scopeReport.project}`} /> : <DefaultFloorPlan />}{scopeReport.assets.map((asset) => <img className="report-plan__asset" key={asset.id} src={asset.src} alt={asset.name} style={{ left: `${asset.x}%`, top: `${asset.y}%`, width: `${asset.width}%`, transform: `translate(-50%, -50%) rotate(${asset.rotation ?? 0}deg)` }} />)}{scopeReport.markers.map((item) => { const tool = scopeReport.tools.find((entry) => entry.id === item.type) ?? scopeReport.tools[0]; const photo = scopeReport.markerImages?.[item.id]; if (photo) return <img className="report-plan__speaker" key={item.id} src={photo} alt={item.label} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size }} />; return <span key={item.id} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool?.color ?? "#638c7e" }}>{item.label}</span>; })}</div></div>
+        <div className="proposal-location-plan"><div className="report-plan__canvas">{scopeReport.planImage ? <img src={scopeReport.planImage} alt={`Planta do projeto ${scopeReport.project}`} /> : <DefaultFloorPlan />}{scopeReport.assets.map((asset) => <img className="report-plan__asset" key={asset.id} src={asset.src} alt={asset.name} style={{ left: `${asset.x}%`, top: `${asset.y}%`, width: `${asset.width}%`, transform: `translate(-50%, -50%) rotate(${asset.rotation ?? 0}deg)` }} />)}{scopeReport.markers.map((item) => { const tool = scopeReport.tools.find((entry) => entry.id === item.type) ?? scopeReport.tools[0]; const photo = scopeReport.markerImages?.[item.id]; if (photo) return <img className="report-plan__speaker" key={item.id} src={photo} alt={item.label} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size }} />; return <span key={item.id} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool?.color ?? "#638c7e" }}>{item.label}</span>; })}</div>{(scopeReport.equipmentLegend?.length ?? 0) > 0 && <aside className="plan-equipment"><span className="plan-equipment__title">Equipamentos</span>{scopeReport.equipmentLegend.map((eq, legendIndex) => <div className="plan-equipment__item" key={legendIndex}><img src={eq.image} alt={eq.name} /><div><strong>{eq.name}</strong><b>{String(eq.qty).padStart(2, "0")} un</b></div></div>)}</aside>}</div>
         <div className="report-legend">{scopeReport.tools.map((tool) => { const qty = scopeReport.markers.filter((item) => item.type === tool.id).length; return qty > 0 ? <div key={tool.id}><i style={{ background: tool.color }}>{tool.code}</i><span>{tool.label}</span><b>{qty}</b></div> : null; })}</div>
         <PageFooter number={String(2 + solutionPages.length)} />
       </section>}
@@ -1565,12 +1565,19 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     const productImages = Array.from(new Set(entries.map((item) => item.imageUrl).filter(Boolean))).slice(0, 3);
     // Fotos das caixas de sonorização por marcador, para a planta da proposta.
     const markerImages: Record<number, string> = {};
+    // Legenda de equipamentos usados na planta (modelo + foto + quantidade), como no padrão da proposta.
+    const legendMap = new Map<string, { image: string; name: string; qty: number }>();
     markers.forEach((point) => {
       if (point.type !== "audio" || !point.catalogItemId) return;
       const ci = catalogItems.find((entry) => entry.id === point.catalogItemId);
-      if (ci?.imageUrl) markerImages[point.id] = ci.imageUrl;
+      if (!ci?.imageUrl) return;
+      markerImages[point.id] = ci.imageUrl;
+      const name = [ci.name, [ci.brand, ci.model].filter(Boolean).join(" ")].filter(Boolean).join(" · ") || ci.name;
+      const current = legendMap.get(ci.id) ?? { image: ci.imageUrl, name, qty: 0 };
+      legendMap.set(ci.id, { ...current, qty: current.qty + 1 });
     });
-    onGenerate({ items, client, project, address, planImage, markers, tools, assets, itemImages, productImages, markerImages });
+    const equipmentLegend = Array.from(legendMap.values());
+    onGenerate({ items, client, project, address, planImage, markers, tools, assets, itemImages, productImages, markerImages, equipmentLegend });
   };
 
   return (
