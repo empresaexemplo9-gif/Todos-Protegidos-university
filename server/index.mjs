@@ -21,6 +21,7 @@ import {
   parseCookies,
   SESSION_COOKIE,
 } from "./auth.mjs";
+import { generateProposalImage, OpenAIImageError } from "../shared/openai-image.mjs";
 
 const PORT = Number(process.env.PORT) || 4317;
 const distDir = join(root, "dist");
@@ -58,18 +59,6 @@ const publicUser = (u) => (u ? { id: u.id, name: u.name, email: u.email, role: u
 const sessionCookie = (token) =>
   `${SESSION_COOKIE}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${30 * 24 * 3600}`;
 const clearCookie = `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`;
-
-// Login compartilhado padrão: admin / sona01 (dono). Pode trocar a senha e
-// criar outros acessos depois, pela tela de Acessos.
-function ensureDefaultAdmin(data) {
-  if (data.users.length > 0) return false;
-  const { salt, hash } = hashPassword("sona01");
-  data.users.push({
-    id: randomUUID(), name: "Administrador", email: "admin", role: "owner",
-    salt, hash, active: true, createdBy: "seed", createdAt: new Date().toISOString(),
-  });
-  return true;
-}
 
 /* ------------------------------ mapeadores ------------------------------ */
 const mapCatalogItem = (i) => ({
@@ -149,7 +138,6 @@ function createBudget(data, actor, client = "Novo cliente", project = "Novo proj
 /* ------------------------------ APIs de autenticação ------------------------------ */
 async function authSession(req, res) {
   const data = await getData();
-  if (ensureDefaultAdmin(data)) await saveData(data);
   const actor = await getActor(req);
   return json(res, 200, { user: publicUser(actor), needsSetup: data.users.length === 0 });
 }
@@ -175,7 +163,6 @@ async function authLogin(req, res) {
   const email = clean(body.email, 180).toLowerCase();
   const password = typeof body.password === "string" ? body.password : "";
   const data = await getData();
-  if (ensureDefaultAdmin(data)) await saveData(data);
   const user = data.users.find((u) => u.email === email && u.active);
   if (!user || !verifyPassword(password, user.salt, user.hash))
     return json(res, 401, { error: "E-mail ou senha inválidos." });
@@ -555,6 +542,31 @@ async function integracaoAvaApi(req, res) {
   return json(res, 405, { error: "Método não suportado." });
 }
 
+/* ------------------------------ Geração de imagem com OpenAI ------------------------------ */
+async function aiImageApi(req, res) {
+  const actor = await getActor(req);
+  if (!actor) return json(res, 401, { error: "Acesso restrito." });
+
+  if (req.method === "GET") {
+    return json(res, 200, {
+      configured: Boolean((process.env.OPENAI_API_KEY || "").trim()),
+      model: process.env.OPENAI_IMAGE_MODEL || "gpt-image-2",
+    });
+  }
+  if (req.method !== "POST") return json(res, 405, { error: "Método não suportado." });
+
+  try {
+    const body = await readBody(req);
+    return json(res, 200, await generateProposalImage(body.prompt));
+  } catch (error) {
+    if (error instanceof OpenAIImageError) {
+      return json(res, error.status, { error: error.message, code: error.code });
+    }
+    console.error("Unexpected AI image error", error);
+    return json(res, 500, { error: "Erro interno ao gerar a imagem." });
+  }
+}
+
 /* ------------------------------ arquivos estáticos (SPA) ------------------------------ */
 const MIME = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".mjs": "text/javascript",
@@ -606,6 +618,7 @@ const server = createServer(async (req, res) => {
       if (p === "/api/proposals") return await proposalsApi(req, res, url);
       if (p === "/api/budget") return await budgetApi(req, res);
       if (p === "/api/integracao/ava") return await integracaoAvaApi(req, res);
+      if (p === "/api/ai/image") return await aiImageApi(req, res);
       return json(res, 404, { error: "Rota não encontrada." });
     }
     if (req.method !== "GET" && req.method !== "HEAD")

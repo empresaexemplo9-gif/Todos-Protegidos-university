@@ -6,9 +6,8 @@ COMO ABRIR
 1. Dê dois cliques em "Iniciar.cmd".
    (Na primeira vez ele prepara o app; nas próximas abre em segundos.)
 2. O navegador abre sozinho em http://localhost:4317
-3. Entre com:
-      Login: admin
-      Senha: sona01
+3. No primeiro acesso, cadastre o administrador com seu próprio e-mail
+   e uma senha segura. Depois, use esses dados para entrar.
 
 Para PARAR o sistema: feche a janela preta do servidor.
 
@@ -28,7 +27,7 @@ No iPhone / Android (na MESMA rede Wi-Fi do computador):
 
 ACESSOS (quem pode entrar)
 --------------------------
-- O login "admin" é o dono do sistema.
+- O primeiro acesso cadastrado é o dono do sistema.
 - No canto inferior direito, clique em "Conta" para criar outros acessos
   (para a equipe) ou trocar a senha do administrador.
 

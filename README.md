@@ -7,8 +7,8 @@ neste computador, com login próprio e acesso restrito.
 
 ## Como usar
 1. Duplo clique em **`Iniciar.cmd`** (ou no atalho **“Sona Propostas”** na Área de Trabalho).
-2. Abre em **http://localhost:4317**. Login inicial: **`admin` / `sona01`**
-   (troque e crie outros acessos em **Conta → Acessos e senha**).
+2. Abre em **http://localhost:4317**. No primeiro acesso, cadastre o administrador
+   com seu próprio e-mail e uma senha segura.
 3. No celular/iPhone: acesse `http://<ip-do-computador>:4317` na mesma rede e use
    *Adicionar à Tela de Início* (PWA).
 
@@ -44,13 +44,19 @@ em `api/`, com os dados em um **Postgres gerenciado (Neon)** no lugar do arquivo
   `api/budget.js`, `api/integracao/ava.js` — mesmos caminhos e mesmo contrato do local.
 - Tabelas (`sona_users`, `sona_catalog_items`, `sona_budgets`, `sona_budget_items`,
   `sona_proposals`, `sona_meta`) são criadas sozinhas na primeira chamada.
-- Primeiro acesso na nuvem também é **`admin` / `sona01`** — troque a senha em
-  *Conta → Acessos e senha* logo depois.
+- No primeiro acesso na nuvem, a tela solicita a criação do administrador. O projeto
+  não distribui uma senha padrão compartilhada.
 
 ### Variáveis de ambiente
 - `DATABASE_URL` (ou `POSTGRES_URL`) — obrigatória; vem da integração Neon da Vercel.
 - `SESSION_SECRET` — opcional. Sem ela, um segredo é gerado e guardado no banco;
   definindo-a, as sessões continuam válidas mesmo se o banco for recriado.
+- `OPENAI_API_KEY` — obrigatória para o botão **✦ IA** do editor gerar imagens.
+- `OPENAI_IMAGE_MODEL` — opcional; usa `gpt-image-2` por padrão.
+
+A chave da OpenAI fica somente no servidor. Usuários autenticados podem abrir uma proposta,
+entrar em **W · Editar documento**, clicar em **✦ IA**, descrever a cena e inserir a imagem
+gerada diretamente no ponto do cursor.
 
 ### Levar os dados locais para a nuvem
 ```bash
