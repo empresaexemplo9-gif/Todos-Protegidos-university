@@ -563,9 +563,9 @@ export default function Home() {
     setScopeReport(bundle?.scopeReport ?? null);
     setProposalId(record.id);
     setProposalStatus(record.status);
-    setManualHtml(record.manualHtml ?? "");
+    setManualHtml(bundle?.templateVersion === 2 ? (record.manualHtml ?? "") : "");
     setAutomaticHtml(bundle?.templateVersion === 2 ? (bundle.automaticHtml ?? "") : "");
-    setWordMode(bundle?.documentMode === "manual" && Boolean(record.manualHtml));
+    setWordMode(bundle?.templateVersion === 2 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
     setHistoryOpen(false);
     setSection("proposals");
     window.scrollTo({ top: 0, behavior: "smooth" });
