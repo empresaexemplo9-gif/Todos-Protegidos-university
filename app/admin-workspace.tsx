@@ -899,7 +899,6 @@ function ProposalBuilder({
           <div className="progress-ring" aria-label="Proposta 75% preenchida"><b>75</b><small>%</small></div>
         </div>
 
-        {wordMode && <div className="word-mode-note"><span>W</span><div><strong>Edição livre ativa</strong><p>Você está ajustando diretamente o documento. Os dados automáticos continuam preservados e podem ser retomados a qualquer momento.</p></div></div>}
 
         <div className="form-card">
           <div className="form-card__head"><span>01</span><div><h3>Cliente e projeto</h3><p>Informações que aparecem na capa da proposta.</p></div></div>
@@ -1029,7 +1028,8 @@ function ProposalBuilder({
   );
 }
 
-type ImageHandlePosition = { left: number; top: number };
+type ImageHandlePosition = { left: number; top: number; right: number; bottom: number };
+type ResizeCorner = "nw" | "ne" | "sw" | "se";
 
 type RgbColor = { red: number; green: number; blue: number };
 
@@ -1195,10 +1195,31 @@ function ProposalAssetImage({ src, alt }: { src: string; alt: string }) {
 function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObject<HTMLElement | null>; html: string }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const selectedImageRef = useRef<HTMLImageElement | null>(null);
-  const resizeRef = useRef<{ image: HTMLImageElement; parentWidth: number; pointerId: number; startWidth: number; startX: number; startY: number } | null>(null);
-  // Arrasto livre da imagem. Só vira "absolute" e começa a mover depois de um limiar de arrasto,
-  // para que um clique simples apenas selecione (sem tirar a imagem do fluxo do texto).
+  // Redimensiona por qualquer um dos 4 cantos, mantendo a proporção e ancorando o canto oposto.
+  const resizeRef = useRef<{ image: HTMLImageElement; pointerId: number; corner: ResizeCorner; maxWidth: number; startX: number; startY: number; startWidth: number; startHeight: number; startLeft: number; startTop: number } | null>(null);
+  // Arrasto livre da imagem por todo o documento (entre páginas). Só sai do fluxo depois de um limiar,
+  // para que um clique simples apenas selecione.
   const dragRef = useRef<{ container: HTMLElement; image: HTMLImageElement; pointerId: number; startX: number; startY: number; offsetX: number; offsetY: number; started: boolean } | null>(null);
+  // Garante que a imagem esteja absoluta e reparentada na raiz do documento, para mover/redimensionar
+  // livremente por todas as páginas (sem ser cortada pelo overflow de uma página).
+  const ensureAbsolute = (image: HTMLImageElement, container: HTMLElement) => {
+    if (image.style.position === "absolute" && image.parentElement === container) return;
+    const containerRect = container.getBoundingClientRect();
+    const imageRect = image.getBoundingClientRect();
+    const left = imageRect.left - containerRect.left + container.scrollLeft;
+    const top = imageRect.top - containerRect.top + container.scrollTop;
+    container.style.position = "relative";
+    image.style.width = `${imageRect.width}px`;
+    image.style.height = `${imageRect.height}px`;
+    image.style.maxWidth = "none";
+    image.style.maxHeight = "none";
+    image.style.margin = "0";
+    image.style.position = "absolute";
+    image.style.left = `${left}px`;
+    image.style.top = `${top}px`;
+    image.style.zIndex = "8";
+    if (image.parentElement !== container) container.appendChild(image);
+  };
   const [handlePosition, setHandlePosition] = useState<ImageHandlePosition | null>(null);
   const [isRemovingBackground, setIsRemovingBackground] = useState(false);
   // Keep the same prop reference while editing so React does not restore the original HTML after each handle movement.
@@ -1212,7 +1233,12 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
     }
     const stageRect = stage.getBoundingClientRect();
     const imageRect = image.getBoundingClientRect();
-    setHandlePosition({ left: imageRect.right - stageRect.left, top: imageRect.bottom - stageRect.top });
+    setHandlePosition({
+      left: imageRect.left - stageRect.left,
+      top: imageRect.top - stageRect.top,
+      right: imageRect.right - stageRect.left,
+      bottom: imageRect.bottom - stageRect.top,
+    });
   };
 
   const selectImage = (image: HTMLImageElement | null) => {
@@ -1236,14 +1262,24 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
       const resize = resizeRef.current;
       if (!resize || event.pointerId !== resize.pointerId) return;
       event.preventDefault();
-      const deltaX = event.clientX - resize.startX;
-      const deltaY = event.clientY - resize.startY;
-      const delta = Math.abs(deltaX) >= Math.abs(deltaY) ? deltaX : deltaY;
-      const width = Math.min(resize.parentWidth, Math.max(40, resize.startWidth + delta));
-      resize.image.style.width = `${(width / resize.parentWidth) * 100}%`;
-      resize.image.style.height = "auto";
+      const hx = resize.corner === "ne" || resize.corner === "se" ? 1 : -1; // leste cresce com +dx, oeste com −dx
+      const vy = resize.corner === "sw" || resize.corner === "se" ? 1 : -1;
+      const ratio = resize.startHeight / resize.startWidth;
+      // Usa o eixo que mais se moveu, mantendo a proporção da imagem.
+      const proposedWidth = resize.startWidth + hx * (event.clientX - resize.startX);
+      const proposedFromHeight = (resize.startHeight + vy * (event.clientY - resize.startY)) / ratio;
+      let width = Math.abs(event.clientX - resize.startX) >= Math.abs(event.clientY - resize.startY) ? proposedWidth : proposedFromHeight;
+      width = Math.max(40, Math.min(resize.maxWidth, width));
+      const height = width * ratio;
+      resize.image.style.width = `${width}px`;
+      resize.image.style.height = `${height}px`;
       resize.image.style.maxWidth = "none";
       resize.image.style.maxHeight = "none";
+      // Cantos oeste/norte movem também left/top para manter o canto oposto fixo.
+      if (resize.image.style.position === "absolute") {
+        if (hx < 0) resize.image.style.left = `${resize.startLeft + (resize.startWidth - width)}px`;
+        if (vy < 0) resize.image.style.top = `${resize.startTop + (resize.startHeight - height)}px`;
+      }
       placeHandle(resize.image);
     };
     const moveImage = (event: PointerEvent) => {
@@ -1252,26 +1288,19 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
       // Enquanto não passar do limiar, é um clique — não mexe na imagem.
       if (!drag.started) {
         if (Math.abs(event.clientX - drag.startX) + Math.abs(event.clientY - drag.startY) < 5) return;
-        const containerRect = drag.container.getBoundingClientRect();
         const imageRect = drag.image.getBoundingClientRect();
-        drag.container.style.position = "relative";
-        drag.image.style.width = `${imageRect.width}px`;
-        drag.image.style.height = `${imageRect.height}px`;
-        drag.image.style.maxWidth = "none";
-        drag.image.style.maxHeight = "none";
-        drag.image.style.margin = "0";
-        drag.image.style.position = "absolute";
-        drag.image.style.zIndex = "8";
         drag.offsetX = drag.startX - imageRect.left;
         drag.offsetY = drag.startY - imageRect.top;
+        ensureAbsolute(drag.image, drag.container);
         drag.started = true;
       }
       event.preventDefault();
       const containerRect = drag.container.getBoundingClientRect();
-      const maxLeft = Math.max(0, drag.container.clientWidth - drag.image.offsetWidth);
-      const maxTop = Math.max(0, drag.container.clientHeight - drag.image.offsetHeight);
-      const left = Math.min(maxLeft, Math.max(0, event.clientX - containerRect.left - drag.offsetX));
-      const top = Math.min(maxTop, Math.max(0, event.clientY - containerRect.top - drag.offsetY));
+      // Livre por todo o documento (entre páginas); só não deixa sair da folha.
+      const maxLeft = Math.max(0, drag.container.scrollWidth - drag.image.offsetWidth);
+      const maxTop = Math.max(0, drag.container.scrollHeight - drag.image.offsetHeight);
+      const left = Math.min(maxLeft, Math.max(0, event.clientX - containerRect.left + drag.container.scrollLeft - drag.offsetX));
+      const top = Math.min(maxTop, Math.max(0, event.clientY - containerRect.top + drag.container.scrollTop - drag.offsetY));
       drag.image.style.left = `${left}px`;
       drag.image.style.top = `${top}px`;
       placeHandle(drag.image);
@@ -1310,7 +1339,7 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
         const image = event.target instanceof HTMLImageElement ? event.target : null;
         selectImage(image);
         if (!image) return;
-        const container = image.closest<HTMLElement>(".proposal-page") ?? editorRef.current;
+        const container = editorRef.current;
         if (!container) return;
         // Arma um arrasto potencial; a imagem só sai do fluxo se o cursor de fato mover (ver moveImage).
         dragRef.current = { container, image, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, offsetX: 0, offsetY: 0, started: false };
@@ -1328,7 +1357,7 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
       <button
         type="button"
         className="word-image-background-button"
-        style={{ left: handlePosition.left - 88, top: handlePosition.top }}
+        style={{ left: handlePosition.right - 66, top: handlePosition.top - 20 }}
         aria-label="Remover fundo da imagem selecionada"
         title={isRemovingBackground ? "Removendo fundo…" : "Remover fundo da imagem"}
         disabled={isRemovingBackground}
@@ -1359,7 +1388,7 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
       <button
         type="button"
         className="word-image-delete-button"
-        style={{ left: handlePosition.left - 36, top: handlePosition.top }}
+        style={{ left: handlePosition.right - 14, top: handlePosition.top - 20 }}
         aria-label="Excluir imagem selecionada"
         title="Excluir imagem"
         onClick={(event) => {
@@ -1371,22 +1400,33 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
           editorRef.current?.focus();
         }}
       >×</button>
-      <button
+      {([
+        { corner: "nw", left: handlePosition.left, top: handlePosition.top, cursor: "nwse" },
+        { corner: "ne", left: handlePosition.right, top: handlePosition.top, cursor: "nesw" },
+        { corner: "sw", left: handlePosition.left, top: handlePosition.bottom, cursor: "nesw" },
+        { corner: "se", left: handlePosition.right, top: handlePosition.bottom, cursor: "nwse" },
+      ] as const).map((handle) => <button
+        key={handle.corner}
         type="button"
-        className="word-image-resize-handle"
-        style={{ left: handlePosition.left, top: handlePosition.top }}
+        className={`word-image-resize-handle word-image-resize-handle--${handle.cursor}`}
+        style={{ left: handle.left, top: handle.top }}
         aria-label="Redimensionar imagem selecionada"
-        title="Arraste para aumentar ou diminuir a imagem"
+        title="Arraste para aumentar ou diminuir por este canto"
         onPointerDown={(event) => {
           const image = selectedImageRef.current;
-          const parent = image?.parentElement;
-          if (!image || !parent) return;
+          const container = editorRef.current;
+          if (!image || !container) return;
           event.preventDefault();
           event.stopPropagation();
-          const parentWidth = parent.getBoundingClientRect().width;
-          resizeRef.current = { image, parentWidth, pointerId: event.pointerId, startWidth: image.getBoundingClientRect().width, startX: event.clientX, startY: event.clientY };
+          if (handle.corner !== "se") ensureAbsolute(image, container);
+          const rect = image.getBoundingClientRect();
+          resizeRef.current = {
+            image, pointerId: event.pointerId, corner: handle.corner, maxWidth: container.clientWidth,
+            startX: event.clientX, startY: event.clientY, startWidth: rect.width, startHeight: rect.height,
+            startLeft: parseFloat(image.style.left) || 0, startTop: parseFloat(image.style.top) || 0,
+          };
         }}
-      />
+      />)}
     </>}
   </div>;
 }

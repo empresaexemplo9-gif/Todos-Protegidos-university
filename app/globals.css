@@ -318,6 +318,11 @@ button { cursor: pointer; }
 .word-editor-stage { width: 100%; max-width: 820px; margin: 0 auto; position: relative; }
 .word-editor-stage .proposal-document { max-width: none; }
 .proposal-document--editable { outline: none; }.proposal-document--editable:focus { box-shadow: 0 0 0 3px rgba(91,191,151,.35); border-radius: 2px; }.proposal-document--editable [contenteditable="false"] { user-select: none; }.proposal-document--editable img { cursor: move; max-width: 100%; height: auto; touch-action: none; }.proposal-document--editable img[data-word-selected] { outline: 3px solid #4a9f7e; outline-offset: 3px; }
+/* Edição livre: página com margens mínimas para poder encostar conteúdo nas bordas,
+   e sem cortar imagens arrastadas para fora de uma página. */
+.proposal-document--editable .proposal-page { padding: 22px 24px; overflow: visible; }
+.word-image-resize-handle--nwse { cursor: nwse-resize; }
+.word-image-resize-handle--nesw { cursor: nesw-resize; }
 .word-toolbar__align-all { min-height: 30px; padding: 0 9px; border: 1px solid #b9d2c7; border-radius: 6px; background: #edf7f2; color: #1e654c; font-size: 8px; font-weight: 800; white-space: nowrap; }
 .automatic-document-editor [contenteditable="true"] { outline: none; }
 .automatic-document-editor [contenteditable="true"]:focus .proposal-document,
@@ -378,7 +383,7 @@ button { cursor: pointer; }
   .workspace, .preview-panel { margin: 0; padding: 0; border: 0; background: #fff; height: auto; overflow: visible; }
   .builder-layout { display: block; }
   .proposal-document { display: block; width: 210mm; max-width: none; margin: 0; }
-  .proposal-page { width: 210mm; height: 297mm; min-height: 0; aspect-ratio: auto; overflow: hidden; box-sizing: border-box; box-shadow: none; margin: 0; padding: 33mm 26mm 27mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; break-after: page; page-break-after: always; break-inside: avoid; page-break-inside: avoid; }
+  .proposal-page { width: 210mm; height: 297mm; min-height: 0; aspect-ratio: auto; overflow: hidden; box-sizing: border-box; box-shadow: none; margin: 0; padding: 16mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; break-after: page; page-break-after: always; break-inside: avoid; page-break-inside: avoid; }
   .proposal-page table, .classic-table, .classic-table tbody { break-inside: avoid; page-break-inside: avoid; }
   .proposal-page tr, .investment-lines > div, .classic-section li { break-inside: avoid; }
   .catalog-product > .catalog-product__visual { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
