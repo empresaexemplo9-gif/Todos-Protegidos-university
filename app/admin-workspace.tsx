@@ -1474,7 +1474,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
               {hasSectionImages && <td className="solution-item-image">{(itemImages[item.id] ?? []).length > 0
                 ? <div>{(itemImages[item.id] ?? []).slice(0, 2).map((src, imageIndex) => <img key={src} src={src} alt={`${item.description} — imagem ${imageIndex + 1}`} />)}</div>
                 : <span>SEM IMAGEM</span>}</td>}
-              <td><strong>{item.description}</strong><span>{item.category}</span></td><td>{String(item.qty).padStart(2, "0")}</td>
+              <td className="solution-item-desc"><strong>{item.description}</strong><span>{item.category}</span></td><td className="solution-item-qty">{String(item.qty).padStart(2, "0")}</td>
             </tr>)}</tbody>
           </table>
           <p className="solution-caption">Seleção dimensionada pela SONA para este projeto. As imagens são ilustrativas e correspondem aos itens cadastrados na proposta.</p>
