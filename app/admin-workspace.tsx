@@ -944,7 +944,7 @@ type ImageHandlePosition = { left: number; top: number };
 function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObject<HTMLElement | null>; html: string }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const selectedImageRef = useRef<HTMLImageElement | null>(null);
-  const resizeRef = useRef<{ image: HTMLImageElement; parentWidth: number; startWidth: number; startX: number; startY: number } | null>(null);
+  const resizeRef = useRef<{ image: HTMLImageElement; parentWidth: number; pointerId: number; startWidth: number; startX: number; startY: number } | null>(null);
   const [handlePosition, setHandlePosition] = useState<ImageHandlePosition | null>(null);
 
   const placeHandle = (image = selectedImageRef.current) => {
@@ -975,10 +975,38 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
 
   useEffect(() => {
     const update = () => placeHandle();
+    const resizeImage = (event: PointerEvent) => {
+      const resize = resizeRef.current;
+      if (!resize || event.pointerId !== resize.pointerId) return;
+      event.preventDefault();
+      const deltaX = event.clientX - resize.startX;
+      const deltaY = event.clientY - resize.startY;
+      const delta = Math.abs(deltaX) >= Math.abs(deltaY) ? deltaX : deltaY;
+      const width = Math.min(resize.parentWidth, Math.max(40, resize.startWidth + delta));
+      resize.image.style.width = `${(width / resize.parentWidth) * 100}%`;
+      resize.image.style.height = "auto";
+      resize.image.style.maxWidth = "none";
+      resize.image.style.maxHeight = "none";
+      placeHandle(resize.image);
+    };
+    const finishResize = (event: PointerEvent) => {
+      if (!resizeRef.current || event.pointerId !== resizeRef.current.pointerId) return;
+      resizeRef.current = null;
+      placeHandle();
+    };
     const observer = new MutationObserver(update);
     if (editorRef.current) observer.observe(editorRef.current, { attributes: true, subtree: true, attributeFilter: ["style"] });
     window.addEventListener("resize", update);
-    return () => { observer.disconnect(); window.removeEventListener("resize", update); };
+    window.addEventListener("pointermove", resizeImage, { passive: false });
+    window.addEventListener("pointerup", finishResize);
+    window.addEventListener("pointercancel", finishResize);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+      window.removeEventListener("pointermove", resizeImage);
+      window.removeEventListener("pointerup", finishResize);
+      window.removeEventListener("pointercancel", finishResize);
+    };
   }, []);
 
   return <div className="word-editor-stage" ref={stageRef}>
@@ -989,7 +1017,8 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
       contentEditable
       suppressContentEditableWarning
       spellCheck
-      onClick={(event) => selectImage(event.target instanceof HTMLImageElement ? event.target : null)}
+      onPointerDown={(event) => selectImage(event.target instanceof HTMLImageElement ? event.target : null)}
+      onDragStart={(event) => { if (event.target instanceof HTMLImageElement) event.preventDefault(); }}
       onKeyUp={() => placeHandle()}
       onLoadCapture={(event) => { if (event.target === selectedImageRef.current) placeHandle(); }}
       onPaste={(event) => {
@@ -1002,12 +1031,10 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
       <button
         type="button"
         className="word-image-delete-button"
-        style={{ left: handlePosition.left - 28, top: handlePosition.top }}
+        style={{ left: handlePosition.left - 36, top: handlePosition.top }}
         aria-label="Excluir imagem selecionada"
         title="Excluir imagem"
-        onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
         onClick={(event) => {
-          event.preventDefault();
           event.stopPropagation();
           const image = selectedImageRef.current;
           if (!image || !window.confirm("Excluir esta imagem da proposta?")) return;
@@ -1029,28 +1056,8 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
           event.preventDefault();
           event.stopPropagation();
           const parentWidth = parent.getBoundingClientRect().width;
-          resizeRef.current = { image, parentWidth, startWidth: image.getBoundingClientRect().width, startX: event.clientX, startY: event.clientY };
-          event.currentTarget.setPointerCapture(event.pointerId);
+          resizeRef.current = { image, parentWidth, pointerId: event.pointerId, startWidth: image.getBoundingClientRect().width, startX: event.clientX, startY: event.clientY };
         }}
-        onPointerMove={(event) => {
-          const resize = resizeRef.current;
-          if (!resize || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
-          const deltaX = event.clientX - resize.startX;
-          const deltaY = event.clientY - resize.startY;
-          const delta = Math.abs(deltaX) >= Math.abs(deltaY) ? deltaX : deltaY;
-          const width = Math.min(resize.parentWidth, Math.max(40, resize.startWidth + delta));
-          resize.image.style.width = `${(width / resize.parentWidth) * 100}%`;
-          resize.image.style.height = "auto";
-          resize.image.style.maxWidth = "none";
-          resize.image.style.maxHeight = "none";
-          placeHandle(resize.image);
-        }}
-        onPointerUp={(event) => {
-          resizeRef.current = null;
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-          placeHandle();
-        }}
-        onPointerCancel={() => { resizeRef.current = null; placeHandle(); }}
       />
     </>}
   </div>;
