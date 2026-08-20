@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     if (req.method !== "POST") return json(res, 405, { error: "Método não suportado." });
 
     const body = await readBody(req);
-    return json(res, 200, await searchImages(body.q, { count: body.count }));
+    return json(res, 200, await searchImages(body.q, { count: body.count, official: body.official }));
   } catch (error) {
     if (error instanceof ImageSearchError) {
       return json(res, error.status, { error: error.message, code: error.code });

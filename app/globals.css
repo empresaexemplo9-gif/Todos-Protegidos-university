@@ -478,5 +478,7 @@ button { cursor: pointer; }
 .img-search__cell:disabled { cursor: wait; }
 .img-search__cell.is-importing { opacity: .6; }
 .img-search__cell span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.72); font-size: 9px; font-weight: 700; color: #26718d; }
+.img-search__opt { display: inline-flex; align-items: center; gap: 7px; color: #4b5860; font-size: 10px; cursor: pointer; }
+.img-search__opt input { width: 13px; height: 13px; }
 .img-search__error { margin: 0; color: #a23f3f; font-size: 10px; font-weight: 650; }
 .img-search__hint { color: #8a938d; font-size: 9px; line-height: 1.35; }

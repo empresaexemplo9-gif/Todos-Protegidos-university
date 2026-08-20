@@ -25,7 +25,15 @@ export async function searchImages(query, options = {}) {
     throw new ImageSearchError("Descreva o que deseja buscar.", 400, "invalid_query");
   }
   const count = Math.min(10, Math.max(1, Number(options.count) || 9));
-  const params = new URLSearchParams({ key, cx, q, searchType: "image", num: String(count), safe: "active" });
+  // Modo "foto oficial": prioriza a imagem de catálogo do fabricante — foto real,
+  // de fundo branco — reforçando o termo e usando os filtros do Google.
+  const official = options.official ?? false;
+  const effectiveQuery = official ? `${q} official product photo` : q;
+  const params = new URLSearchParams({ key, cx, q: effectiveQuery, searchType: "image", num: String(count), safe: "active" });
+  if (official) {
+    params.set("imgType", "photo");
+    params.set("imgDominantColor", "white");
+  }
 
   const fetchImpl = options.fetchImpl ?? fetch;
   const controller = new AbortController();

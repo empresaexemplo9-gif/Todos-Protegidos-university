@@ -260,6 +260,7 @@ type WebImageResult = { title: string; image: string; thumbnail: string; context
 // servidor baixa a imagem e devolve um data URL, que é entregue via onPick.
 function ImageSearchPanel({ defaultQuery, onPick, onClose }: { defaultQuery?: string; onPick: (dataUrl: string, label: string) => void; onClose: () => void }) {
   const [query, setQuery] = useState(defaultQuery ?? "");
+  const [official, setOfficial] = useState(true);
   const [busy, setBusy] = useState(false);
   const [importing, setImporting] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -269,7 +270,7 @@ function ImageSearchPanel({ defaultQuery, onPick, onClose }: { defaultQuery?: st
     if (q.length < 2 || busy) { setError("Descreva o que deseja buscar."); return; }
     setBusy(true); setError(""); setResults([]);
     try {
-      const response = await fetch("/api/ai/search-image", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ q, count: 9 }) });
+      const response = await fetch("/api/ai/search-image", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ q, count: 9, official }) });
       const data = await response.json().catch(() => ({})) as { results?: WebImageResult[]; error?: string };
       if (!response.ok) throw new Error(data.error || "Não foi possível buscar imagens.");
       setResults(data.results ?? []);
@@ -299,12 +300,13 @@ function ImageSearchPanel({ defaultQuery, onPick, onClose }: { defaultQuery?: st
     <div className="img-search" onPointerDown={(event) => event.stopPropagation()}>
       <div className="img-search__head"><strong>Buscar foto real na web</strong><button className="img-search__close" onClick={onClose} aria-label="Fechar">×</button></div>
       <div className="img-search__bar">
-        <input autoFocus value={query} placeholder="Ex.: rack de automação residencial" onChange={(event) => { setQuery(event.target.value); setError(""); }} onKeyDown={(event) => { if (event.key === "Enter") void runSearch(); if (event.key === "Escape") onClose(); }} disabled={busy} />
+        <input autoFocus value={query} placeholder="Nome ou modelo do produto (ex.: UniFi U7 Pro)" onChange={(event) => { setQuery(event.target.value); setError(""); }} onKeyDown={(event) => { if (event.key === "Enter") void runSearch(); if (event.key === "Escape") onClose(); }} disabled={busy} />
         <button className="img-search__go" onClick={() => void runSearch()} disabled={busy}>{busy ? "Buscando…" : "Buscar"}</button>
       </div>
+      <label className="img-search__opt"><input type="checkbox" checked={official} onChange={(event) => setOfficial(event.target.checked)} disabled={busy} />Foto oficial do produto (fundo branco)</label>
       {results.length > 0 && <div className="img-search__grid">{results.map((item) => <button key={item.image} className={`img-search__cell ${importing === item.image ? "is-importing" : ""}`} title={item.title} onClick={() => void pick(item)} disabled={Boolean(importing)}><img src={item.thumbnail} alt={item.title} loading="lazy" />{importing === item.image && <span>Importando…</span>}</button>)}</div>}
       {error && <p className="img-search__error" role="alert">{error}</p>}
-      <span className="img-search__hint">As imagens vêm da web (Google). Verifique direitos de uso antes de publicar a proposta.</span>
+      <span className="img-search__hint">Com “foto oficial” ligado, busca a imagem real do produto (fundo branco, como o fabricante divulga). As imagens vêm da web (Google) — confira os direitos de uso antes de publicar.</span>
     </div>
     </div>
   );

@@ -28,6 +28,17 @@ test("busca imagens e normaliza os resultados", async () => {
   assert.equal(result.results[0].thumbnail, "https://ex.com/t.jpg");
 });
 
+test("modo foto oficial aplica filtros de produto (foto, fundo branco)", async () => {
+  let request;
+  await searchImages("UniFi U7 Pro", {
+    key: "k", cx: "c", official: true,
+    fetchImpl: async (url) => { request = url; return new Response(JSON.stringify({ items: [] }), { status: 200, headers: { "content-type": "application/json" } }); },
+  });
+  assert.match(request, /imgType=photo/);
+  assert.match(request, /imgDominantColor=white/);
+  assert.match(request, /official\+product\+photo/);
+});
+
 test("traduz cota esgotada em mensagem segura", async () => {
   await assert.rejects(
     () => searchImages("teste", { key: "k", cx: "c", fetchImpl: async () => new Response("{}", { status: 403, headers: { "content-type": "application/json" } }) }),
