@@ -57,6 +57,23 @@ em `api/`, com os dados em um **Postgres gerenciado (Neon)** no lugar do arquivo
   (buscar e importar foto real da web). São a chave da API do Google e o id do
   mecanismo de busca (Custom Search) com busca de imagens habilitada.
 
+#### Como gerar `GOOGLE_CSE_KEY` e `GOOGLE_CSE_ID`
+1. **API key (`GOOGLE_CSE_KEY`):** em <https://console.cloud.google.com/> escolha/crie um
+   projeto → **APIs e serviços → Biblioteca** → ative a **Custom Search API** →
+   **Credenciais → Criar credenciais → Chave de API**. Copie a chave.
+2. **ID do mecanismo (`GOOGLE_CSE_ID`):** em
+   <https://programmablesearchengine.google.com/controlpanel/all> → **Adicionar** →
+   marque **"Pesquisar em toda a web"** e **ligue "Pesquisa de imagens"** → copie o
+   **Search engine ID**.
+3. **Cadastre no deploy** (mesma tela onde já está `OPENAI_API_KEY`): na Vercel em
+   **Settings → Environment Variables** e na Netlify em **Site configuration →
+   Environment variables**; depois refaça o deploy.
+
+Observações: a chave da OpenAI **não** serve aqui (provedores diferentes) — a `GOOGLE_CSE_KEY`
+precisa ser uma chave do Google Cloud. O plano grátis do Custom Search dá ~100 buscas/dia.
+Sem essas variáveis, o botão **🔎 Foto** mostra um aviso de "não configurado" e o resto da
+proposta continua funcionando.
+
 A chave da OpenAI fica somente no servidor. Usuários autenticados podem abrir uma proposta,
 entrar em **W · Editar documento**, clicar em **✦ IA**, descrever a cena e inserir a imagem
 gerada diretamente no ponto do cursor.
