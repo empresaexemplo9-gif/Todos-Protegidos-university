@@ -932,7 +932,7 @@ function ProposalBuilder({
           <div className="document-mode-tabs"><button className={!wordMode ? "active" : ""} onClick={onAutomaticMode}><span className="live-dot" /> AUTOMÁTICO</button><button className={wordMode ? "active" : ""} onClick={onStartWordMode}>W&nbsp; EDITAR DOCUMENTO</button></div>
           <div><span className={`proposal-state proposal-state--${status}`}>{proposalStatusLabel[status]}</span><button onClick={onExport} title="Baixar dados">⇩</button><button onClick={onPrint} className="toolbar-primary">Gerar PDF</button></div>
         </div>
-        {wordMode && <WordToolbar editorRef={manualEditorRef} />}
+        {wordMode && <WordToolbar editorRef={manualEditorRef} proposal={proposal} />}
         {wordMode ? <EditableProposalDocument editorRef={manualEditorRef} html={manualHtml} /> : <div ref={generatedPreviewRef}><ProposalSheet proposal={proposal} subtotal={subtotal} total={total} productImages={productImages} itemImages={itemImages} scopeReport={scopeReport} /></div>}
       </aside>
     </div>
@@ -1232,10 +1232,14 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
   </div>;
 }
 
-function WordToolbar({ editorRef }: { editorRef: React.RefObject<HTMLElement | null> }) {
+function WordToolbar({ editorRef, proposal }: { editorRef: React.RefObject<HTMLElement | null>; proposal: Proposal }) {
   const savedRange = useRef<Range | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState("");
 
   const command = (name: string, value?: string) => {
     editorRef.current?.focus();
@@ -1271,6 +1275,47 @@ function WordToolbar({ editorRef }: { editorRef: React.RefObject<HTMLElement | n
     restoreSelection();
     document.execCommand("insertImage", false, dataUrl);
   };
+  const insertGeneratedImage = (dataUrl: string, description: string) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+    restoreSelection();
+    document.execCommand("insertImage", false, dataUrl);
+    const inserted = Array.from(editor.querySelectorAll<HTMLImageElement>("img")).find((image) => image.src === dataUrl);
+    if (inserted) {
+      inserted.alt = description;
+      inserted.style.width = "100%";
+      inserted.style.height = "auto";
+      inserted.style.maxWidth = "100%";
+    }
+  };
+  const generateAiImage = async () => {
+    const prompt = aiPrompt.trim();
+    if (prompt.length < 5 || aiBusy) {
+      setAiError("Descreva a imagem com um pouco mais de detalhe.");
+      return;
+    }
+    setAiBusy(true);
+    setAiError("");
+    try {
+      const response = await fetch("/api/ai/image", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          prompt: `${prompt}. Projeto: ${proposal.project}. Cliente: ${proposal.client}.`,
+        }),
+      });
+      const data = await response.json().catch(() => ({})) as { image?: string; error?: string };
+      if (!response.ok || !data.image) throw new Error(data.error || "Não foi possível gerar a imagem.");
+      insertGeneratedImage(data.image, `Imagem gerada por IA: ${prompt}`);
+      setAiOpen(false);
+      setAiPrompt("");
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : "Não foi possível gerar a imagem.");
+    } finally {
+      setAiBusy(false);
+    }
+  };
   const applyColor = (name: "foreColor" | "hiliteColor", value: string) => { restoreSelection(); styled(name, value); };
   const applyLink = () => {
     const url = linkUrl.trim();
@@ -1302,12 +1347,40 @@ function WordToolbar({ editorRef }: { editorRef: React.RefObject<HTMLElement | n
     <div className="word-toolbar__group"><button onClick={() => command("insertUnorderedList")} title="Lista">•☰</button><button onClick={() => command("insertOrderedList")} title="Lista numerada">1☰</button><button onClick={() => command("outdent")} title="Diminuir recuo">⇤</button><button onClick={() => command("indent")} title="Aumentar recuo">⇥</button></div>
     <div className="word-toolbar__group">
       <label className="word-toolbar__file" title="Inserir imagem" onMouseDown={saveSelection}><span>🖼</span><input type="file" accept="image/*" onChange={(event) => { void insertImageFromFile(event.target.files); event.target.value = ""; }} /></label>
+      <button
+        className={aiOpen ? "word-toolbar__ai is-active" : "word-toolbar__ai"}
+        onMouseDown={saveSelection}
+        onClick={() => { setAiOpen((open) => !open); setAiError(""); }}
+        title="Criar uma imagem com inteligência artificial"
+      >✦ IA</button>
       <button onClick={() => { saveSelection(); setLinkOpen((open) => !open); }} title="Inserir link" className={linkOpen ? "is-active" : ""}>🔗</button>
       <button onClick={() => command("insertHorizontalRule")} title="Linha divisória">―</button>
       <button onClick={() => command("removeFormat")} title="Limpar formatação">⌫</button>
     </div>
     <div className="word-toolbar__group word-toolbar__images"><button onClick={() => resizeImage(-10)} title="Diminuir imagem">Imagem −</button><button onClick={() => resizeImage(10)} title="Aumentar imagem">Imagem +</button></div>
     <button className="word-toolbar__page" onClick={addPage} title="Adicionar nova página">＋ Página</button>
+    {aiOpen && <div className="word-toolbar__ai-panel" onMouseDown={(event) => event.stopPropagation()}>
+      <div>
+        <strong>Gerar imagem com IA</strong>
+        <span>A imagem entra no ponto do cursor. A geração pode levar até 2 minutos.</span>
+      </div>
+      <textarea
+        autoFocus
+        value={aiPrompt}
+        placeholder="Ex.: sala de cinema residencial sofisticada, iluminação indireta, caixas acústicas discretas e acabamento em madeira"
+        onChange={(event) => { setAiPrompt(event.target.value); setAiError(""); }}
+        onKeyDown={(event) => {
+          if ((event.ctrlKey || event.metaKey) && event.key === "Enter") void generateAiImage();
+          if (event.key === "Escape" && !aiBusy) setAiOpen(false);
+        }}
+        disabled={aiBusy}
+      />
+      <button className="word-toolbar__ai-generate" onClick={() => void generateAiImage()} disabled={aiBusy}>
+        {aiBusy ? "Gerando…" : "Gerar e inserir"}
+      </button>
+      <button className="word-toolbar__ai-cancel" onClick={() => setAiOpen(false)} disabled={aiBusy}>×</button>
+      {aiError && <p role="alert">{aiError}</p>}
+    </div>}
     {linkOpen && <div className="word-toolbar__link" onMouseDown={(event) => event.stopPropagation()}>
       <input autoFocus value={linkUrl} placeholder="https://…" onChange={(event) => setLinkUrl(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") applyLink(); if (event.key === "Escape") { setLinkOpen(false); setLinkUrl(""); } }} />
       <button onClick={applyLink}>Aplicar</button>
