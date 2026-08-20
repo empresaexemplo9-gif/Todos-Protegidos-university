@@ -1,5 +1,5 @@
 const OPENAI_IMAGE_ENDPOINT = "https://api.openai.com/v1/images/generations";
-const DEFAULT_MODEL = "gpt-image-2";
+const DEFAULT_MODEL = "gpt-image-1";
 
 export class OpenAIImageError extends Error {
   constructor(message, status = 500, code = "openai_error") {

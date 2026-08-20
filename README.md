@@ -52,7 +52,7 @@ em `api/`, com os dados em um **Postgres gerenciado (Neon)** no lugar do arquivo
 - `SESSION_SECRET` — opcional. Sem ela, um segredo é gerado e guardado no banco;
   definindo-a, as sessões continuam válidas mesmo se o banco for recriado.
 - `OPENAI_API_KEY` — obrigatória para o botão **✦ IA** do editor gerar imagens.
-- `OPENAI_IMAGE_MODEL` — opcional; usa `gpt-image-2` por padrão.
+- `OPENAI_IMAGE_MODEL` — opcional; usa `gpt-image-1` por padrão.
 
 A chave da OpenAI fica somente no servidor. Usuários autenticados podem abrir uma proposta,
 entrar em **W · Editar documento**, clicar em **✦ IA**, descrever a cena e inserir a imagem

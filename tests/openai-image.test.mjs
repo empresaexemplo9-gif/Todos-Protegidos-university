@@ -25,7 +25,7 @@ test("gera WebP horizontal e devolve data URL", async () => {
   assert.equal(request.url, "https://api.openai.com/v1/images/generations");
   assert.equal(request.options.headers.authorization, "Bearer sk-test");
   const body = JSON.parse(request.options.body);
-  assert.equal(body.model, "gpt-image-2");
+  assert.equal(body.model, "gpt-image-1");
   assert.equal(body.size, "1536x1024");
   assert.equal(body.quality, "medium");
   assert.equal(body.output_format, "webp");

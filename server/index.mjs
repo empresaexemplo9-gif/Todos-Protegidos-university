@@ -550,7 +550,7 @@ async function aiImageApi(req, res) {
   if (req.method === "GET") {
     return json(res, 200, {
       configured: Boolean((process.env.OPENAI_API_KEY || "").trim()),
-      model: process.env.OPENAI_IMAGE_MODEL || "gpt-image-2",
+      model: process.env.OPENAI_IMAGE_MODEL || "gpt-image-1",
     });
   }
   if (req.method !== "POST") return json(res, 405, { error: "Método não suportado." });
