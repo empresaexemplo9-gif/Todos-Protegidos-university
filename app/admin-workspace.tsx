@@ -1545,7 +1545,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
   const coverImages = productImages.length > 0 ? productImages : allItemImages;
   const solutionPages = solutionGroups.flatMap(([title, items]) => {
     const hasImages = items.some((item) => (itemImages[item.id] ?? []).length > 0);
-    const itemsPerPage = hasImages ? 6 : 10;
+    const itemsPerPage = hasImages ? 2 : 10;
     return Array.from({ length: Math.ceil(items.length / itemsPerPage) }, (_, pageIndex) => ({
       title,
       items: items.slice(pageIndex * itemsPerPage, (pageIndex + 1) * itemsPerPage),
