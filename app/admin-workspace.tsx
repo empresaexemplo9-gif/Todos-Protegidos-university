@@ -52,6 +52,7 @@ export type ProposalBundle = {
   scopeReport: ScopeReport | null;
   documentMode: "automatic" | "manual";
   automaticHtml?: string;
+  templateVersion?: number;
 };
 
 type ProposalStatus = "draft" | "finalized" | "sent" | "accepted";
@@ -504,6 +505,7 @@ export default function Home() {
     proposal, productImages, itemImages, scopeReport,
     documentMode: wordMode ? "manual" : "automatic",
     automaticHtml: wordMode ? automaticHtml : (generatedPreviewRef.current?.querySelector("#proposal-print")?.innerHTML ?? automaticHtml),
+    templateVersion: 2,
   });
 
   const refreshProposals = async () => {
@@ -562,7 +564,7 @@ export default function Home() {
     setProposalId(record.id);
     setProposalStatus(record.status);
     setManualHtml(record.manualHtml ?? "");
-    setAutomaticHtml(bundle?.automaticHtml ?? "");
+    setAutomaticHtml(bundle?.templateVersion === 2 ? (bundle.automaticHtml ?? "") : "");
     setWordMode(bundle?.documentMode === "manual" && Boolean(record.manualHtml));
     setHistoryOpen(false);
     setSection("proposals");
