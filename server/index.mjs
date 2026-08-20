@@ -22,6 +22,7 @@ import {
   SESSION_COOKIE,
 } from "./auth.mjs";
 import { generateProposalImage, OpenAIImageError } from "../shared/openai-image.mjs";
+import { searchImages, importImage, ImageSearchError } from "../shared/google-image.mjs";
 
 const PORT = Number(process.env.PORT) || 4317;
 const distDir = join(root, "dist");
@@ -567,6 +568,37 @@ async function aiImageApi(req, res) {
   }
 }
 
+async function aiSearchImageApi(req, res) {
+  const actor = await getActor(req);
+  if (!actor) return json(res, 401, { error: "Acesso restrito." });
+  if (req.method === "GET") {
+    return json(res, 200, { configured: Boolean((process.env.GOOGLE_CSE_KEY || "").trim()) && Boolean((process.env.GOOGLE_CSE_ID || "").trim()) });
+  }
+  if (req.method !== "POST") return json(res, 405, { error: "Método não suportado." });
+  try {
+    const body = await readBody(req);
+    return json(res, 200, await searchImages(body.q, { count: body.count }));
+  } catch (error) {
+    if (error instanceof ImageSearchError) return json(res, error.status, { error: error.message, code: error.code });
+    console.error("Unexpected image search error", error);
+    return json(res, 500, { error: "Erro interno na busca de imagens." });
+  }
+}
+
+async function aiImportImageApi(req, res) {
+  const actor = await getActor(req);
+  if (!actor) return json(res, 401, { error: "Acesso restrito." });
+  if (req.method !== "POST") return json(res, 405, { error: "Método não suportado." });
+  try {
+    const body = await readBody(req);
+    return json(res, 200, await importImage(body.url));
+  } catch (error) {
+    if (error instanceof ImageSearchError) return json(res, error.status, { error: error.message, code: error.code });
+    console.error("Unexpected image import error", error);
+    return json(res, 500, { error: "Erro interno ao importar a imagem." });
+  }
+}
+
 /* ------------------------------ arquivos estáticos (SPA) ------------------------------ */
 const MIME = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".mjs": "text/javascript",
@@ -619,6 +651,8 @@ const server = createServer(async (req, res) => {
       if (p === "/api/budget") return await budgetApi(req, res);
       if (p === "/api/integracao/ava") return await integracaoAvaApi(req, res);
       if (p === "/api/ai/image") return await aiImageApi(req, res);
+      if (p === "/api/ai/search-image") return await aiSearchImageApi(req, res);
+      if (p === "/api/ai/import-image") return await aiImportImageApi(req, res);
       return json(res, 404, { error: "Rota não encontrada." });
     }
     if (req.method !== "GET" && req.method !== "HEAD")
