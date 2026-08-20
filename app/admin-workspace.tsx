@@ -51,6 +51,7 @@ export type ProposalBundle = {
   itemImages: Record<number, string[]>;
   scopeReport: ScopeReport | null;
   documentMode: "automatic" | "manual";
+  automaticHtml?: string;
 };
 
 type ProposalStatus = "draft" | "finalized" | "sent" | "accepted";
@@ -412,6 +413,7 @@ export default function Home() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [manualHtml, setManualHtml] = useState("");
+  const [automaticHtml, setAutomaticHtml] = useState("");
   const [wordMode, setWordMode] = useState(false);
   const [busy, setBusy] = useState<"saving" | "finalizing" | "sending" | null>(null);
   const [notice, setNotice] = useState("");
@@ -437,6 +439,7 @@ export default function Home() {
 
   const patchProposal = <K extends keyof Proposal>(key: K, value: Proposal[K]) => {
     setProposal((current) => ({ ...current, [key]: value }));
+    setAutomaticHtml("");
     setProposalStatus("draft");
   };
 
@@ -491,6 +494,7 @@ export default function Home() {
   const proposalBundle = (): ProposalBundle => ({
     proposal, productImages, itemImages, scopeReport,
     documentMode: wordMode ? "manual" : "automatic",
+    automaticHtml: wordMode ? automaticHtml : (generatedPreviewRef.current?.querySelector("#proposal-print")?.innerHTML ?? automaticHtml),
   });
 
   const refreshProposals = async () => {
@@ -507,7 +511,7 @@ export default function Home() {
         body: JSON.stringify({
           action: "saveDraft", id: proposalId, code: proposal.code,
           client: proposal.client, project: proposal.project,
-          data: proposalBundle(), manualHtml: wordMode ? captureManualHtml() : manualHtml,
+          data: proposalBundle(), manualHtml: wordMode ? captureManualHtml() : (generatedPreviewRef.current?.querySelector("#proposal-print")?.innerHTML ?? manualHtml),
         }),
       });
       const data = await response.json() as { proposal?: SavedProposal; error?: string };
@@ -535,6 +539,7 @@ export default function Home() {
     setProposalId(null);
     setProposalStatus("draft");
     setManualHtml("");
+    setAutomaticHtml("");
     setWordMode(false);
     setSection("proposals");
   };
@@ -548,6 +553,7 @@ export default function Home() {
     setProposalId(record.id);
     setProposalStatus(record.status);
     setManualHtml(record.manualHtml ?? "");
+    setAutomaticHtml(bundle?.automaticHtml ?? "");
     setWordMode(bundle?.documentMode === "manual" && Boolean(record.manualHtml));
     setHistoryOpen(false);
     setSection("proposals");
@@ -706,10 +712,12 @@ export default function Home() {
             onExport={exportData}
             wordMode={wordMode}
             manualHtml={manualHtml}
+            automaticHtml={automaticHtml}
+            onAutomaticHtmlChange={setAutomaticHtml}
             manualEditorRef={manualEditorRef}
             generatedPreviewRef={generatedPreviewRef}
             onStartWordMode={startWordMode}
-            onAutomaticMode={() => { captureManualHtml(); setWordMode(false); }}
+            onAutomaticMode={() => { const html = captureManualHtml(); setAutomaticHtml(html); setWordMode(false); }}
             status={proposalStatus}
           />
         ) : section === "scope" ? (
@@ -823,6 +831,8 @@ function ProposalBuilder({
   onExport,
   wordMode,
   manualHtml,
+  automaticHtml,
+  onAutomaticHtmlChange,
   manualEditorRef,
   generatedPreviewRef,
   onStartWordMode,
@@ -847,6 +857,8 @@ function ProposalBuilder({
   onExport: () => void;
   wordMode: boolean;
   manualHtml: string;
+  automaticHtml: string;
+  onAutomaticHtmlChange: (html: string) => void;
   manualEditorRef: React.RefObject<HTMLElement | null>;
   generatedPreviewRef: React.RefObject<HTMLDivElement | null>;
   onStartWordMode: () => void;
@@ -990,7 +1002,17 @@ function ProposalBuilder({
           <div><span className={`proposal-state proposal-state--${status}`}>{proposalStatusLabel[status]}</span><button onClick={onExport} title="Baixar dados">⇩</button><button onClick={onPrint} className="toolbar-primary">Gerar PDF</button></div>
         </div>
         {wordMode && <WordToolbar editorRef={manualEditorRef} proposal={proposal} />}
-        {wordMode ? <EditableProposalDocument editorRef={manualEditorRef} html={manualHtml} /> : <div ref={generatedPreviewRef}><ProposalSheet proposal={proposal} subtotal={subtotal} total={total} productImages={productImages} itemImages={itemImages} scopeReport={scopeReport} /></div>}
+        {wordMode ? <EditableProposalDocument editorRef={manualEditorRef} html={manualHtml} /> : <div
+          ref={generatedPreviewRef}
+          className="automatic-document-editor"
+          onBlurCapture={() => {
+            const html = generatedPreviewRef.current?.querySelector("#proposal-print")?.innerHTML;
+            if (html) onAutomaticHtmlChange(html);
+          }}
+        >{automaticHtml
+          ? <EditableProposalDocument editorRef={manualEditorRef} html={automaticHtml} />
+          : <div contentEditable suppressContentEditableWarning spellCheck><ProposalSheet proposal={proposal} subtotal={subtotal} total={total} productImages={productImages} itemImages={itemImages} scopeReport={scopeReport} /></div>}
+        </div>}
       </aside>
     </div>
   );
