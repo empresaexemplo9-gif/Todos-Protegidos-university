@@ -255,6 +255,63 @@ function WifiHeatLayer({ aps, planWidthMeters, walls, band }: {
   return <canvas ref={ref} className="wifi-heat-canvas" aria-hidden="true" />;
 }
 
+type WebImageResult = { title: string; image: string; thumbnail: string; context?: string | null };
+// Painel de busca de foto real na web (Google Custom Search). Ao escolher, o
+// servidor baixa a imagem e devolve um data URL, que é entregue via onPick.
+function ImageSearchPanel({ defaultQuery, onPick, onClose }: { defaultQuery?: string; onPick: (dataUrl: string, label: string) => void; onClose: () => void }) {
+  const [query, setQuery] = useState(defaultQuery ?? "");
+  const [official, setOfficial] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [importing, setImporting] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [results, setResults] = useState<WebImageResult[]>([]);
+  const runSearch = async () => {
+    const q = query.trim();
+    if (q.length < 2 || busy) { setError("Descreva o que deseja buscar."); return; }
+    setBusy(true); setError(""); setResults([]);
+    try {
+      const response = await fetch("/api/ai/search-image", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ q, count: 9, official }) });
+      const data = await response.json().catch(() => ({})) as { results?: WebImageResult[]; error?: string };
+      if (!response.ok) throw new Error(data.error || "Não foi possível buscar imagens.");
+      setResults(data.results ?? []);
+      if (!(data.results ?? []).length) setError("Nenhuma imagem encontrada. Tente outros termos.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível buscar imagens.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const pick = async (item: WebImageResult) => {
+    if (importing) return;
+    setImporting(item.image); setError("");
+    try {
+      const response = await fetch("/api/ai/import-image", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url: item.image }) });
+      const data = await response.json().catch(() => ({})) as { image?: string; error?: string };
+      if (!response.ok || !data.image) throw new Error(data.error || "Não foi possível importar a imagem.");
+      onPick(data.image, item.title || "Imagem da web");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível importar a imagem.");
+    } finally {
+      setImporting(null);
+    }
+  };
+  return (
+    <div className="img-search-overlay" onPointerDown={onClose}>
+    <div className="img-search" onPointerDown={(event) => event.stopPropagation()}>
+      <div className="img-search__head"><strong>Buscar foto real na web</strong><button className="img-search__close" onClick={onClose} aria-label="Fechar">×</button></div>
+      <div className="img-search__bar">
+        <input autoFocus value={query} placeholder="Nome ou modelo do produto (ex.: UniFi U7 Pro)" onChange={(event) => { setQuery(event.target.value); setError(""); }} onKeyDown={(event) => { if (event.key === "Enter") void runSearch(); if (event.key === "Escape") onClose(); }} disabled={busy} />
+        <button className="img-search__go" onClick={() => void runSearch()} disabled={busy}>{busy ? "Buscando…" : "Buscar"}</button>
+      </div>
+      <label className="img-search__opt"><input type="checkbox" checked={official} onChange={(event) => setOfficial(event.target.checked)} disabled={busy} />Foto oficial do produto (fundo branco)</label>
+      {results.length > 0 && <div className="img-search__grid">{results.map((item) => <button key={item.image} className={`img-search__cell ${importing === item.image ? "is-importing" : ""}`} title={item.title} onClick={() => void pick(item)} disabled={Boolean(importing)}><img src={item.thumbnail} alt={item.title} loading="lazy" />{importing === item.image && <span>Importando…</span>}</button>)}</div>}
+      {error && <p className="img-search__error" role="alert">{error}</p>}
+      <span className="img-search__hint">Com “foto oficial” ligado, busca a imagem real do produto (fundo branco, como o fabricante divulga). As imagens vêm da web (Google) — confira os direitos de uso antes de publicar.</span>
+    </div>
+    </div>
+  );
+}
+
 export const plans = {
   SMARTLIFE: {
     tier: "SmartLife",
@@ -1240,6 +1297,8 @@ function WordToolbar({ editorRef, proposal }: { editorRef: React.RefObject<HTMLE
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [aiRealista, setAiRealista] = useState(true);
+  const [photoOpen, setPhotoOpen] = useState(false);
 
   const command = (name: string, value?: string) => {
     editorRef.current?.focus();
@@ -1298,11 +1357,12 @@ function WordToolbar({ editorRef, proposal }: { editorRef: React.RefObject<HTMLE
     setAiBusy(true);
     setAiError("");
     try {
+      const style = aiRealista ? "Fotografia realista e detalhada, iluminação natural. " : "";
       const response = await fetch("/api/ai/image", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          prompt: `${prompt}. Projeto: ${proposal.project}. Cliente: ${proposal.client}.`,
+          prompt: `${style}${prompt}. Projeto: ${proposal.project}. Cliente: ${proposal.client}.`,
         }),
       });
       const data = await response.json().catch(() => ({})) as { image?: string; error?: string };
@@ -1353,6 +1413,12 @@ function WordToolbar({ editorRef, proposal }: { editorRef: React.RefObject<HTMLE
         onClick={() => { setAiOpen((open) => !open); setAiError(""); }}
         title="Criar uma imagem com inteligência artificial"
       >✦ IA</button>
+      <button
+        className={photoOpen ? "word-toolbar__ai is-active" : "word-toolbar__ai"}
+        onMouseDown={saveSelection}
+        onClick={() => { setPhotoOpen((open) => !open); setAiOpen(false); }}
+        title="Buscar foto real na web e inserir"
+      >🔎 Foto</button>
       <button onClick={() => { saveSelection(); setLinkOpen((open) => !open); }} title="Inserir link" className={linkOpen ? "is-active" : ""}>🔗</button>
       <button onClick={() => command("insertHorizontalRule")} title="Linha divisória">―</button>
       <button onClick={() => command("removeFormat")} title="Limpar formatação">⌫</button>
@@ -1379,8 +1445,10 @@ function WordToolbar({ editorRef, proposal }: { editorRef: React.RefObject<HTMLE
         {aiBusy ? "Gerando…" : "Gerar e inserir"}
       </button>
       <button className="word-toolbar__ai-cancel" onClick={() => setAiOpen(false)} disabled={aiBusy}>×</button>
+      <label className="word-toolbar__ai-opt"><input type="checkbox" checked={aiRealista} onChange={(event) => setAiRealista(event.target.checked)} disabled={aiBusy} />Foto realista</label>
       {aiError && <p role="alert">{aiError}</p>}
     </div>}
+    {photoOpen && <ImageSearchPanel defaultQuery={proposal.project} onPick={(src, label) => { insertGeneratedImage(src, label); setPhotoOpen(false); }} onClose={() => setPhotoOpen(false)} />}
     {linkOpen && <div className="word-toolbar__link" onMouseDown={(event) => event.stopPropagation()}>
       <input autoFocus value={linkUrl} placeholder="https://…" onChange={(event) => setLinkUrl(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") applyLink(); if (event.key === "Escape") { setLinkOpen(false); setLinkUrl(""); } }} />
       <button onClick={applyLink}>Aplicar</button>
@@ -1474,7 +1542,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
               {hasSectionImages && <td className="solution-item-image">{(itemImages[item.id] ?? []).length > 0
                 ? <div>{(itemImages[item.id] ?? []).slice(0, 2).map((src, imageIndex) => <img key={src} src={src} alt={`${item.description} — imagem ${imageIndex + 1}`} />)}</div>
                 : <span>SEM IMAGEM</span>}</td>}
-              <td><strong>{item.description}</strong><span>{item.category}</span></td><td>{String(item.qty).padStart(2, "0")}</td>
+              <td className="solution-item-desc"><strong>{item.description}</strong><span>{item.category}</span></td><td className="solution-item-qty">{String(item.qty).padStart(2, "0")}</td>
             </tr>)}</tbody>
           </table>
           <p className="solution-caption">Seleção dimensionada pela SONA para este projeto. As imagens são ilustrativas e correspondem aos itens cadastrados na proposta.</p>
@@ -1560,6 +1628,8 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const [aiScopePrompt, setAiScopePrompt] = useState("");
   const [aiScopeBusy, setAiScopeBusy] = useState(false);
   const [aiScopeError, setAiScopeError] = useState("");
+  const [aiScopeRealista, setAiScopeRealista] = useState(true);
+  const [photoScopeOpen, setPhotoScopeOpen] = useState(false);
   const [planImage, setPlanImage] = useState<string | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
   const [draggingAsset, setDraggingAsset] = useState<number | null>(null);
@@ -1798,6 +1868,13 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   };
 
   // Gera uma imagem por IA e insere como imagem sobreposta no centro da planta do Escopo.
+  // Insere uma imagem (data URL) como imagem sobreposta no centro da planta, já selecionada.
+  const addScopeImageFromData = (src: string, name: string) => {
+    const id = Date.now();
+    setAssets((current) => [...current, { id, name, src, x: 50, y: 50, width: 26, rotation: 0 }]);
+    setSelectedAsset(id);
+    setSelectedMarker(null);
+  };
   const generateScopeImage = async () => {
     const prompt = aiScopePrompt.trim();
     if (prompt.length < 5 || aiScopeBusy) {
@@ -1807,17 +1884,15 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     setAiScopeBusy(true);
     setAiScopeError("");
     try {
+      const style = aiScopeRealista ? "Fotografia realista e detalhada, iluminação natural. " : "";
       const response = await fetch("/api/ai/image", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ prompt: `${prompt}. Projeto: ${project}. Cliente: ${client}.` }),
+        body: JSON.stringify({ prompt: `${style}${prompt}. Projeto: ${project}. Cliente: ${client}.` }),
       });
       const data = await response.json().catch(() => ({})) as { image?: string; error?: string };
       if (!response.ok || !data.image) throw new Error(data.error || "Não foi possível gerar a imagem.");
-      const id = Date.now();
-      setAssets((current) => [...current, { id, name: `IA: ${prompt.slice(0, 40)}`, src: data.image!, x: 50, y: 50, width: 26, rotation: 0 }]);
-      setSelectedAsset(id);
-      setSelectedMarker(null);
+      addScopeImageFromData(data.image, `IA: ${prompt.slice(0, 40)}`);
       setAiScopeOpen(false);
       setAiScopePrompt("");
     } catch (error) {
@@ -1918,7 +1993,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
 
         <div className="plan-card">
           <div className="plan-card__bar">
-            <div><span className="live-dot" /> PLANTA DE MARCAÇÃO</div><div className="plan-bar-actions"><div className="plan-modes"><button className={canvasMode === "marker" ? "active" : ""} onClick={() => setCanvasMode("marker")} title="Inserir pontos">✛ Marcar</button><button className={canvasMode === "pan" ? "active" : ""} onClick={() => setCanvasMode("pan")} title="Arrastar a planta">✋ Mover</button><button className={canvasMode === "wall" ? "active" : ""} onClick={() => setCanvasMode("wall")} title="Desenhar paredes — clique para traçar, 2 cliques finaliza, clique direito cancela">▟ Parede</button><button className={canvasMode === "room" ? "active" : ""} onClick={() => { setCanvasMode("room"); setRoomDraft(null); }} title="Desenhar um cômodo retangular — clique em dois cantos opostos, clique direito cancela">▭ Cômodo</button><button className={canvasMode === "calibrate" ? "active" : ""} onClick={() => { setCanvasMode("calibrate"); setCalibLine([]); }} title="Calibrar escala: trace uma medida conhecida na planta">📏 Escala</button></div>{(canvasMode === "wall" || canvasMode === "room") && <select className="wall-material" value={wallMaterial} onChange={(event) => setWallMaterial(event.target.value as WallMaterial)} title="Material da parede — define a atenuação real do sinal em dB">{wallMaterials.map((material) => <option key={material.id} value={material.id}>{material.label} · {material.db} dB</option>)}</select>}<div className="plan-zoom"><button onClick={() => setZoom((z) => clampZoom(z / 1.2))} title="Diminuir">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom((z) => clampZoom(z * 1.2))} title="Aumentar">＋</button><button onClick={resetView} title="Ajustar à tela">⤢</button>{walls.length > 0 && <button onClick={() => { setWalls([]); setWallDraft([]); }} title="Limpar paredes">🗑</button>}</div><button className={heatmap ? "active" : ""} onClick={() => setHeatmap((value) => !value)}>◉ Mapa de calor</button><select value={heatBand} onChange={(event) => setHeatBand(event.target.value as "2.4" | "5" | "6")}><option value="2.4">2,4 GHz</option><option value="5">5 GHz</option><option value="6">6 GHz</option></select><label className="plan-scale">Escala<input type="number" min="1" max="80" value={planWidthMeters} onChange={(event) => setPlanWidthMeters(Math.max(1, Number(event.target.value) || 1))} title="Largura real da planta, em metros" /><span>m</span></label><button type="button" className={aiScopeOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setAiScopeOpen((open) => !open); setAiScopeError(""); }} title="Gerar imagem com IA e inserir na planta">✦ IA</button><label className="plan-upload"><input type="file" accept="image/*" multiple onChange={(e) => e.target.files && void addOverlayImages(e.target.files)} />＋ Imagens</label><label className="plan-upload"><input type="file" accept="image/*,.pdf,application/pdf" onChange={(e) => e.target.files?.[0] && void loadPlan(e.target.files[0])} />{planImage ? "Trocar planta" : "＋ Carregar planta/PDF"}</label></div>
+            <div><span className="live-dot" /> PLANTA DE MARCAÇÃO</div><div className="plan-bar-actions"><div className="plan-modes"><button className={canvasMode === "marker" ? "active" : ""} onClick={() => setCanvasMode("marker")} title="Inserir pontos">✛ Marcar</button><button className={canvasMode === "pan" ? "active" : ""} onClick={() => setCanvasMode("pan")} title="Arrastar a planta">✋ Mover</button><button className={canvasMode === "wall" ? "active" : ""} onClick={() => setCanvasMode("wall")} title="Desenhar paredes — clique para traçar, 2 cliques finaliza, clique direito cancela">▟ Parede</button><button className={canvasMode === "room" ? "active" : ""} onClick={() => { setCanvasMode("room"); setRoomDraft(null); }} title="Desenhar um cômodo retangular — clique em dois cantos opostos, clique direito cancela">▭ Cômodo</button><button className={canvasMode === "calibrate" ? "active" : ""} onClick={() => { setCanvasMode("calibrate"); setCalibLine([]); }} title="Calibrar escala: trace uma medida conhecida na planta">📏 Escala</button></div>{(canvasMode === "wall" || canvasMode === "room") && <select className="wall-material" value={wallMaterial} onChange={(event) => setWallMaterial(event.target.value as WallMaterial)} title="Material da parede — define a atenuação real do sinal em dB">{wallMaterials.map((material) => <option key={material.id} value={material.id}>{material.label} · {material.db} dB</option>)}</select>}<div className="plan-zoom"><button onClick={() => setZoom((z) => clampZoom(z / 1.2))} title="Diminuir">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom((z) => clampZoom(z * 1.2))} title="Aumentar">＋</button><button onClick={resetView} title="Ajustar à tela">⤢</button>{walls.length > 0 && <button onClick={() => { setWalls([]); setWallDraft([]); }} title="Limpar paredes">🗑</button>}</div><button className={heatmap ? "active" : ""} onClick={() => setHeatmap((value) => !value)}>◉ Mapa de calor</button><select value={heatBand} onChange={(event) => setHeatBand(event.target.value as "2.4" | "5" | "6")}><option value="2.4">2,4 GHz</option><option value="5">5 GHz</option><option value="6">6 GHz</option></select><label className="plan-scale">Escala<input type="number" min="1" max="80" value={planWidthMeters} onChange={(event) => setPlanWidthMeters(Math.max(1, Number(event.target.value) || 1))} title="Largura real da planta, em metros" /><span>m</span></label><button type="button" className={aiScopeOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setAiScopeOpen((open) => !open); setPhotoScopeOpen(false); setAiScopeError(""); }} title="Gerar imagem com IA e inserir na planta">✦ IA</button><button type="button" className={photoScopeOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setPhotoScopeOpen((open) => !open); setAiScopeOpen(false); }} title="Buscar foto real na web e inserir na planta">🔎 Foto</button><label className="plan-upload"><input type="file" accept="image/*" multiple onChange={(e) => e.target.files && void addOverlayImages(e.target.files)} />＋ Imagens</label><label className="plan-upload"><input type="file" accept="image/*,.pdf,application/pdf" onChange={(e) => e.target.files?.[0] && void loadPlan(e.target.files[0])} />{planImage ? "Trocar planta" : "＋ Carregar planta/PDF"}</label></div>
           </div>
           <div
             className={`plan-canvas plan-canvas--mode-${canvasMode} ${planImage ? "plan-canvas--image" : ""}`}
@@ -1977,9 +2052,11 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
           {aiScopeOpen && <div className="scope-ai-panel" onPointerDown={(event) => event.stopPropagation()}>
             <div><strong>Gerar imagem com IA</strong><span>A imagem entra na planta e pode ser movida e redimensionada. Pode levar até 2 minutos.</span></div>
             <textarea autoFocus value={aiScopePrompt} placeholder="Ex.: rack de automação organizado, cabeamento estruturado, ambiente técnico limpo e profissional" onChange={(event) => { setAiScopePrompt(event.target.value); setAiScopeError(""); }} onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter") void generateScopeImage(); if (event.key === "Escape" && !aiScopeBusy) setAiScopeOpen(false); }} disabled={aiScopeBusy} />
+            <label className="scope-ai-panel__opt"><input type="checkbox" checked={aiScopeRealista} onChange={(event) => setAiScopeRealista(event.target.checked)} disabled={aiScopeBusy} />Foto realista</label>
             <div className="scope-ai-panel__actions"><button className="scope-ai-panel__generate" onClick={() => void generateScopeImage()} disabled={aiScopeBusy}>{aiScopeBusy ? "Gerando…" : "Gerar e inserir"}</button><button className="scope-ai-panel__cancel" onClick={() => setAiScopeOpen(false)} disabled={aiScopeBusy}>Cancelar</button></div>
             {aiScopeError && <p role="alert">{aiScopeError}</p>}
           </div>}
+          {photoScopeOpen && <ImageSearchPanel defaultQuery={project} onPick={(src, label) => { addScopeImageFromData(src, label); setPhotoScopeOpen(false); }} onClose={() => setPhotoScopeOpen(false)} />}
           {canvasMode === "calibrate" && <div className="calib-panel">{calibLine.length < 2 ? <span>Trace uma medida conhecida na planta ({calibLine.length}/2)</span> : <><label>Distância real<input type="number" min="0.1" step="0.1" value={calibMeters} onChange={(e) => setCalibMeters(e.target.value)} autoFocus /><span>m</span></label><button className="calib-apply" onClick={() => applyCalibration(Number(calibMeters))}>Aplicar</button></>}<button className="calib-cancel" onClick={() => { setCalibLine([]); setCalibMeters(""); }}>Limpar</button></div>}
           {(canvasMode === "wall" || canvasMode === "room") && selectedWall !== null && (() => { const wall = walls.find((entry) => entry.id === selectedWall); if (!wall) return null; return <div className="wall-panel"><span className="wall-panel__dot" style={{ background: wallColor(wall.material) }} /><label>Material<select value={wall.material} onChange={(event) => updateWall(wall.id, { material: event.target.value as WallMaterial })}>{wallMaterials.map((material) => <option key={material.id} value={material.id}>{material.label} · {material.db} dB</option>)}</select></label><span className="wall-panel__hint">Arraste os pontos para ajustar</span><button className="wall-panel__delete" onClick={() => removeWall(wall.id)}>Excluir parede</button><button className="calib-cancel" onClick={() => setSelectedWall(null)}>OK</button></div>; })()}
           {canvasMode === "marker" && marker && <div className="quickpick" onPointerDown={(event) => event.stopPropagation()}>

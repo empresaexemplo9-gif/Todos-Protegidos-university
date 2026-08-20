@@ -53,6 +53,9 @@ em `api/`, com os dados em um **Postgres gerenciado (Neon)** no lugar do arquivo
   definindo-a, as sessões continuam válidas mesmo se o banco for recriado.
 - `OPENAI_API_KEY` — obrigatória para o botão **✦ IA** do editor gerar imagens.
 - `OPENAI_IMAGE_MODEL` — opcional; usa `gpt-image-1` por padrão.
+- `GOOGLE_CSE_KEY` e `GOOGLE_CSE_ID` — obrigatórias para o botão **🔎 Foto**
+  (buscar e importar foto real da web). São a chave da API do Google e o id do
+  mecanismo de busca (Custom Search) com busca de imagens habilitada.
 
 A chave da OpenAI fica somente no servidor. Usuários autenticados podem abrir uma proposta,
 entrar em **W · Editar documento**, clicar em **✦ IA**, descrever a cena e inserir a imagem
