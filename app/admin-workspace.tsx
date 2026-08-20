@@ -505,7 +505,7 @@ export default function Home() {
     proposal, productImages, itemImages, scopeReport,
     documentMode: wordMode ? "manual" : "automatic",
     automaticHtml: wordMode ? automaticHtml : (generatedPreviewRef.current?.querySelector("#proposal-print")?.innerHTML ?? automaticHtml),
-    templateVersion: 2,
+    templateVersion: 3,
   });
 
   const refreshProposals = async () => {
@@ -563,9 +563,9 @@ export default function Home() {
     setScopeReport(bundle?.scopeReport ?? null);
     setProposalId(record.id);
     setProposalStatus(record.status);
-    setManualHtml(bundle?.templateVersion === 2 ? (record.manualHtml ?? "") : "");
-    setAutomaticHtml(bundle?.templateVersion === 2 ? (bundle.automaticHtml ?? "") : "");
-    setWordMode(bundle?.templateVersion === 2 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
+    setManualHtml(bundle?.templateVersion === 3 ? (record.manualHtml ?? "") : "");
+    setAutomaticHtml(bundle?.templateVersion === 3 ? (bundle.automaticHtml ?? "") : "");
+    setWordMode(bundle?.templateVersion === 3 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
     setHistoryOpen(false);
     setSection("proposals");
     window.scrollTo({ top: 0, behavior: "smooth" });
