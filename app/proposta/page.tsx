@@ -75,7 +75,7 @@ export default function ClientProposalPage() {
     </header>
     <section className="client-proposal-intro"><span>PROPOSTA INDIVIDUAL · {record.code}</span><h1>Olá, {record.client}.</h1><p>Confira todas as páginas da solução preparada pela SONA. Ao final, você poderá registrar seu aceite com segurança.</p></section>
     <div className="client-document-wrap">
-      {(bundle.documentMode === "manual" && bundle.templateVersion === 3 && record.manualHtml) || (bundle.documentMode === "automatic" && bundle.templateVersion === 3 && bundle.automaticHtml)
+      {(bundle.documentMode === "manual" && bundle.templateVersion === 4 && record.manualHtml) || (bundle.documentMode === "automatic" && bundle.templateVersion === 4 && bundle.automaticHtml)
         ? <article className="proposal-document" id="proposal-print" dangerouslySetInnerHTML={{ __html: bundle.documentMode === "manual" ? record.manualHtml : bundle.automaticHtml }} />
         : <ProposalSheet proposal={bundle.proposal} subtotal={totals.subtotal} total={totals.total} productImages={bundle.productImages ?? []} itemImages={bundle.itemImages ?? {}} scopeReport={bundle.scopeReport ?? null} />}
     </div>

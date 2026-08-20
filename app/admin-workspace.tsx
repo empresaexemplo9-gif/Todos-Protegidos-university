@@ -505,7 +505,7 @@ export default function Home() {
     proposal, productImages, itemImages, scopeReport,
     documentMode: wordMode ? "manual" : "automatic",
     automaticHtml: wordMode ? automaticHtml : (generatedPreviewRef.current?.querySelector("#proposal-print")?.innerHTML ?? automaticHtml),
-    templateVersion: 3,
+    templateVersion: 4,
   });
 
   const refreshProposals = async () => {
@@ -563,9 +563,9 @@ export default function Home() {
     setScopeReport(bundle?.scopeReport ?? null);
     setProposalId(record.id);
     setProposalStatus(record.status);
-    setManualHtml(bundle?.templateVersion === 3 ? (record.manualHtml ?? "") : "");
-    setAutomaticHtml(bundle?.templateVersion === 3 ? (bundle.automaticHtml ?? "") : "");
-    setWordMode(bundle?.templateVersion === 3 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
+    setManualHtml(bundle?.templateVersion === 4 ? (record.manualHtml ?? "") : "");
+    setAutomaticHtml(bundle?.templateVersion === 4 ? (bundle.automaticHtml ?? "") : "");
+    setWordMode(bundle?.templateVersion === 4 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
     setHistoryOpen(false);
     setSection("proposals");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1597,7 +1597,11 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
       pageCount: Math.ceil(items.length / itemsPerPage),
     }));
   });
-  const extraPages = proposal.extraPages ?? [];
+  const extraPages = (proposal.extraPages ?? []).filter((page) => {
+    const title = page.title.trim().toLocaleLowerCase("pt-BR");
+    const isPlaceholderTitle = !title || title === "nova página" || title === "pagina adicional" || title === "página adicional";
+    return Boolean(page.subtitle.trim() || page.body.trim() || page.images.length > 0 || !isPlaceholderTitle);
+  });
   const summaryPage = solutionPages.length + extraPages.length + 2;
   return (
     <article className="proposal-document" id="proposal-print">
