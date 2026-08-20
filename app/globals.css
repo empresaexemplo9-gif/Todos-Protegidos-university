@@ -375,6 +375,49 @@ button { cursor: pointer; }
   .proposal-page tr, .investment-lines > div, .classic-section li { break-inside: avoid; }
   .catalog-product > .catalog-product__visual { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .proposal-page:last-child { break-after: auto; page-break-after: auto; }
+  /* No PDF, fotos grandes permanecem dentro da área branca e nunca herdam
+     dimensões pequenas salvas por versões antigas do editor. */
+  .product-gallery--cover {
+    min-height: 0 !important;
+    height: 52mm !important;
+    margin: 4mm 0 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 4mm !important;
+    align-items: center !important;
+  }
+  .product-gallery--cover img {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 52mm !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    object-fit: contain !important;
+  }
+  .proposal-page--extra .reference-solution-gallery,
+  .proposal-page--extra .reference-solution-gallery--1 {
+    width: 100% !important;
+    min-height: 0 !important;
+    height: 125mm !important;
+    margin: 8mm 0 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .proposal-page--extra .reference-solution-gallery img,
+  .proposal-page--extra .reference-solution-gallery--1 img {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 125mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    object-fit: contain !important;
+  }
   .client-proposal-shell, .client-document-wrap { margin: 0; padding: 0; background: #fff; }
   body.print-scope .sidebar, body.print-scope .topbar, body.print-scope .scope-main, body.print-scope .scope-inspector, body.print-scope .toast { display: none !important; }
   body.print-scope .workspace, body.print-scope .scope-workspace { display: block; margin: 0; padding: 0; }

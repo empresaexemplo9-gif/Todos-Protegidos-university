@@ -505,7 +505,7 @@ export default function Home() {
     proposal, productImages, itemImages, scopeReport,
     documentMode: wordMode ? "manual" : "automatic",
     automaticHtml: wordMode ? automaticHtml : (generatedPreviewRef.current?.querySelector("#proposal-print")?.innerHTML ?? automaticHtml),
-    templateVersion: 4,
+    templateVersion: 5,
   });
 
   const refreshProposals = async () => {
@@ -563,9 +563,9 @@ export default function Home() {
     setScopeReport(bundle?.scopeReport ?? null);
     setProposalId(record.id);
     setProposalStatus(record.status);
-    setManualHtml(bundle?.templateVersion === 4 ? (record.manualHtml ?? "") : "");
-    setAutomaticHtml(bundle?.templateVersion === 4 ? (bundle.automaticHtml ?? "") : "");
-    setWordMode(bundle?.templateVersion === 4 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
+    setManualHtml(bundle?.templateVersion === 5 ? (record.manualHtml ?? "") : "");
+    setAutomaticHtml(bundle?.templateVersion === 5 ? (bundle.automaticHtml ?? "") : "");
+    setWordMode(bundle?.templateVersion === 5 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
     setHistoryOpen(false);
     setSection("proposals");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1125,7 +1125,13 @@ function removeConnectedImageBackground(imageData: ImageData) {
 
   for (let pixelIndex = 0; pixelIndex < pixelCount; pixelIndex += 1) {
     const alphaOffset = pixelIndex * 4 + 3;
-    if (background[pixelIndex]) {
+    const offset = pixelIndex * 4;
+    // Catálogos frequentemente entregam um quadriculado claro já gravado no
+    // arquivo. Esses quadrados não são conectados às bordas, portanto o flood
+    // fill sozinho deixava o padrão reaparecer no PDF. Remova também qualquer
+    // tom equivalente ao fundo amostrado nos quatro cantos.
+    const matchesSampledBackground = colors.some((color) => colorDistanceSquared(data, offset, color) <= toleranceSquared * .72);
+    if (background[pixelIndex] || matchesSampledBackground) {
       data[alphaOffset] = 0;
       continue;
     }
@@ -1138,7 +1144,6 @@ function removeConnectedImageBackground(imageData: ImageData) {
       || (y + 1 < height && background[pixelIndex + width]);
     if (!touchesBackground) continue;
 
-    const offset = pixelIndex * 4;
     const distance = Math.sqrt(Math.min(...colors.map((color) => colorDistanceSquared(data, offset, color))));
     const feather = Math.round(255 * Math.min(1, Math.max(0, (distance - tolerance * .72) / (tolerance * .65))));
     data[alphaOffset] = Math.min(data[alphaOffset], feather);
