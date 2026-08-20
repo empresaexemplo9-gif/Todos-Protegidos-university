@@ -425,6 +425,15 @@ export default function Home() {
   const generatedPreviewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (wordMode || automaticHtml) return;
+    const frame = window.requestAnimationFrame(() => {
+      const html = generatedPreviewRef.current?.querySelector("#proposal-print")?.innerHTML;
+      if (html?.trim()) setAutomaticHtml(html);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [wordMode, automaticHtml, proposal, productImages, itemImages, scopeReport]);
+
+  useEffect(() => {
     void fetch("/api/proposals", { cache: "no-store" }).then(async (response) => {
       const data = await response.json() as { proposals?: SavedProposal[] };
       if (response.ok) setSavedProposals(data.proposals ?? []);
@@ -1212,8 +1221,12 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
       if (!drag || event.pointerId !== drag.pointerId) return;
       event.preventDefault();
       const containerRect = drag.container.getBoundingClientRect();
-      drag.image.style.left = `${event.clientX - containerRect.left - drag.offsetX}px`;
-      drag.image.style.top = `${event.clientY - containerRect.top - drag.offsetY}px`;
+      const maxLeft = Math.max(0, drag.container.clientWidth - drag.image.offsetWidth);
+      const maxTop = Math.max(0, drag.container.clientHeight - drag.image.offsetHeight);
+      const left = Math.min(maxLeft, Math.max(0, event.clientX - containerRect.left - drag.offsetX));
+      const top = Math.min(maxTop, Math.max(0, event.clientY - containerRect.top - drag.offsetY));
+      drag.image.style.left = `${left}px`;
+      drag.image.style.top = `${top}px`;
       placeHandle(drag.image);
     };
     const finishResize = (event: PointerEvent) => {
