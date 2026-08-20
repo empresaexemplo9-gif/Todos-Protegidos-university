@@ -505,7 +505,7 @@ export default function Home() {
     proposal, productImages, itemImages, scopeReport,
     documentMode: wordMode ? "manual" : "automatic",
     automaticHtml: wordMode ? automaticHtml : (generatedPreviewRef.current?.querySelector("#proposal-print")?.innerHTML ?? automaticHtml),
-    templateVersion: 5,
+    templateVersion: 6,
   });
 
   const refreshProposals = async () => {
@@ -563,9 +563,9 @@ export default function Home() {
     setScopeReport(bundle?.scopeReport ?? null);
     setProposalId(record.id);
     setProposalStatus(record.status);
-    setManualHtml(bundle?.templateVersion === 5 ? (record.manualHtml ?? "") : "");
-    setAutomaticHtml(bundle?.templateVersion === 5 ? (bundle.automaticHtml ?? "") : "");
-    setWordMode(bundle?.templateVersion === 5 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
+    setManualHtml(bundle?.templateVersion === 6 ? (record.manualHtml ?? "") : "");
+    setAutomaticHtml(bundle?.templateVersion === 6 ? (bundle.automaticHtml ?? "") : "");
+    setWordMode(bundle?.templateVersion === 6 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
     setHistoryOpen(false);
     setSection("proposals");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1167,8 +1167,29 @@ async function imageWithoutBackground(image: HTMLImageElement) {
   if (!context) throw new Error("O navegador não conseguiu preparar a remoção de fundo.");
   context.drawImage(image, 0, 0);
   const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  let transparentPixels = 0;
+  for (let offset = 3; offset < imageData.data.length; offset += 4) {
+    if (imageData.data[offset] < 245) transparentPixels += 1;
+  }
+  if (transparentPixels > canvas.width * canvas.height * .005) return image.src;
   context.putImageData(removeConnectedImageBackground(imageData), 0, 0);
   return canvas.toDataURL("image/png");
+}
+
+function ProposalAssetImage({ src, alt }: { src: string; alt: string }) {
+  const [cleanSrc, setCleanSrc] = useState(src);
+  return <img
+    src={cleanSrc}
+    alt={alt}
+    onLoad={(event) => {
+      const image = event.currentTarget;
+      if (cleanSrc !== src || image.dataset.backgroundChecked === "true") return;
+      image.dataset.backgroundChecked = "true";
+      void imageWithoutBackground(image).then((result) => {
+        if (result !== image.src) setCleanSrc(result);
+      }).catch(() => undefined);
+    }}
+  />;
 }
 
 function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObject<HTMLElement | null>; html: string }) {
@@ -1625,7 +1646,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
           <h2>Automação SONA · {plan.tier}</h2>
           <p>O sistema proposto integra os ambientes de forma simples, segura e confiável. {plan.summary} A solução será configurada de acordo com o projeto <strong>{proposal.project}</strong>, respeitando as necessidades e a rotina do cliente.</p>
         </div>
-        {coverImages.length > 0 && <div className={`product-gallery product-gallery--cover product-gallery--${Math.min(4, coverImages.length)}`}>{coverImages.slice(0, 3).map((src, index) => <img key={src} src={src} alt={`Equipamento ${index + 1}`} />)}</div>}
+        {coverImages.length > 0 && <div className={`product-gallery product-gallery--cover product-gallery--${Math.min(4, coverImages.length)}`}>{coverImages.slice(0, 3).map((src, index) => <ProposalAssetImage key={src} src={src} alt={`Equipamento ${index + 1}`} />)}</div>}
         <PageFooter number="1" />
       </section>
 
@@ -1640,7 +1661,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
               <td className="solution-item-desc"><strong>{item.description}</strong><span>{item.category}</span></td><td className="solution-item-qty">{String(item.qty).padStart(2, "0")}</td>
             </tr>)}</tbody>
           </table>
-          {sectionImages.length > 0 && <div className={`reference-solution-gallery reference-solution-gallery--${Math.min(4, sectionImages.length)}`}>{sectionImages.slice(0, 4).map((src, imageIndex) => <img key={`${src}-${imageIndex}`} src={src} alt={`${title} — imagem ${imageIndex + 1}`} />)}</div>}
+          {sectionImages.length > 0 && <div className={`reference-solution-gallery reference-solution-gallery--${Math.min(4, sectionImages.length)}`}>{sectionImages.slice(0, 4).map((src, imageIndex) => <ProposalAssetImage key={`${src}-${imageIndex}`} src={src} alt={`${title} — imagem ${imageIndex + 1}`} />)}</div>}
           <PageFooter number={String(index + 2)} />
         </section>;
       })}
@@ -1650,7 +1671,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
           <DottedFrame />
           <div className="solution-heading"><h2>{(page.title || "Página adicional").toLocaleUpperCase("pt-BR")}</h2>{page.subtitle && <p>{page.subtitle}</p>}</div>
           {page.body && <div className="extra-page-body">{page.body.split("\n").filter(Boolean).map((paragraph, paragraphIndex) => <p key={paragraphIndex}>{paragraph}</p>)}</div>}
-          {page.images.length > 0 && <div className={`reference-solution-gallery reference-solution-gallery--${Math.min(4, page.images.length)}`}>{page.images.map((src, imageIndex) => <img key={imageIndex} src={src} alt={`Imagem ${imageIndex + 1} de ${page.title}`} />)}</div>}
+          {page.images.length > 0 && <div className={`reference-solution-gallery reference-solution-gallery--${Math.min(4, page.images.length)}`}>{page.images.map((src, imageIndex) => <ProposalAssetImage key={imageIndex} src={src} alt={`Imagem ${imageIndex + 1} de ${page.title}`} />)}</div>}
           <PageFooter number={String(solutionPages.length + index + 2)} />
         </section>
       ))}
