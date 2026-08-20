@@ -1196,7 +1196,9 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
   const stageRef = useRef<HTMLDivElement>(null);
   const selectedImageRef = useRef<HTMLImageElement | null>(null);
   const resizeRef = useRef<{ image: HTMLImageElement; parentWidth: number; pointerId: number; startWidth: number; startX: number; startY: number } | null>(null);
-  const dragRef = useRef<{ container: HTMLElement; image: HTMLImageElement; offsetX: number; offsetY: number; pointerId: number } | null>(null);
+  // Arrasto livre da imagem. Só vira "absolute" e começa a mover depois de um limiar de arrasto,
+  // para que um clique simples apenas selecione (sem tirar a imagem do fluxo do texto).
+  const dragRef = useRef<{ container: HTMLElement; image: HTMLImageElement; pointerId: number; startX: number; startY: number; offsetX: number; offsetY: number; started: boolean } | null>(null);
   const [handlePosition, setHandlePosition] = useState<ImageHandlePosition | null>(null);
   const [isRemovingBackground, setIsRemovingBackground] = useState(false);
   // Keep the same prop reference while editing so React does not restore the original HTML after each handle movement.
@@ -1247,6 +1249,23 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
     const moveImage = (event: PointerEvent) => {
       const drag = dragRef.current;
       if (!drag || event.pointerId !== drag.pointerId) return;
+      // Enquanto não passar do limiar, é um clique — não mexe na imagem.
+      if (!drag.started) {
+        if (Math.abs(event.clientX - drag.startX) + Math.abs(event.clientY - drag.startY) < 5) return;
+        const containerRect = drag.container.getBoundingClientRect();
+        const imageRect = drag.image.getBoundingClientRect();
+        drag.container.style.position = "relative";
+        drag.image.style.width = `${imageRect.width}px`;
+        drag.image.style.height = `${imageRect.height}px`;
+        drag.image.style.maxWidth = "none";
+        drag.image.style.maxHeight = "none";
+        drag.image.style.margin = "0";
+        drag.image.style.position = "absolute";
+        drag.image.style.zIndex = "8";
+        drag.offsetX = drag.startX - imageRect.left;
+        drag.offsetY = drag.startY - imageRect.top;
+        drag.started = true;
+      }
       event.preventDefault();
       const containerRect = drag.container.getBoundingClientRect();
       const maxLeft = Math.max(0, drag.container.clientWidth - drag.image.offsetWidth);
@@ -1291,32 +1310,10 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
         const image = event.target instanceof HTMLImageElement ? event.target : null;
         selectImage(image);
         if (!image) return;
-        event.preventDefault();
         const container = image.closest<HTMLElement>(".proposal-page") ?? editorRef.current;
         if (!container) return;
-        const containerRect = container.getBoundingClientRect();
-        const imageRect = image.getBoundingClientRect();
-        container.style.position = "relative";
-        const maxLeft = Math.max(0, container.clientWidth - imageRect.width);
-        const maxTop = Math.max(0, container.clientHeight - imageRect.height);
-        const initialLeft = Math.min(maxLeft, Math.max(0, imageRect.left - containerRect.left));
-        const initialTop = Math.min(maxTop, Math.max(0, imageRect.top - containerRect.top));
-        image.style.width = `${imageRect.width}px`;
-        image.style.maxWidth = "none";
-        image.style.height = `${imageRect.height}px`;
-        image.style.maxHeight = "none";
-        image.style.position = "absolute";
-        image.style.left = `${initialLeft}px`;
-        image.style.top = `${initialTop}px`;
-        image.style.zIndex = "8";
-        image.style.margin = "0";
-        dragRef.current = {
-          container,
-          image,
-          offsetX: event.clientX - imageRect.left,
-          offsetY: event.clientY - imageRect.top,
-          pointerId: event.pointerId,
-        };
+        // Arma um arrasto potencial; a imagem só sai do fluxo se o cursor de fato mover (ver moveImage).
+        dragRef.current = { container, image, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, offsetX: 0, offsetY: 0, started: false };
       }}
       onDragStart={(event) => { if (event.target instanceof HTMLImageElement) event.preventDefault(); }}
       onKeyUp={() => placeHandle()}
