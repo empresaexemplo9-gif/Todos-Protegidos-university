@@ -1469,7 +1469,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
           <DottedFrame />
           <div className="solution-heading"><h2>{title.toLocaleUpperCase("pt-BR")}{pageIndex > 0 ? " — CONTINUAÇÃO" : ""}</h2><p>{pageIndex === 0 ? proposalSectionCopy(title) : `Continuação dos itens desta solução · página ${pageIndex + 1} de ${pageCount}.`}</p></div>
           <table className={`classic-table classic-table--solution ${hasSectionImages ? "classic-table--with-images" : ""}`}>
-            <thead><tr>{hasSectionImages && <th aria-label="Imagem" />}<th>Item</th><th>Quantidade</th></tr></thead>
+            <thead><tr>{hasSectionImages && <th>Imagem</th>}<th>Item</th><th>Quantidade</th></tr></thead>
             <tbody>{items.map((item) => <tr key={item.id}>
               {hasSectionImages && <td className="solution-item-image">{(itemImages[item.id] ?? []).length > 0
                 ? <div>{(itemImages[item.id] ?? []).slice(0, 2).map((src, imageIndex) => <img key={src} src={src} alt={`${item.description} — imagem ${imageIndex + 1}`} />)}</div>
