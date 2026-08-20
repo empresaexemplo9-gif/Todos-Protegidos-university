@@ -998,42 +998,61 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
       }}
       dangerouslySetInnerHTML={{ __html: html }}
     />
-    {handlePosition && <button
-      type="button"
-      className="word-image-resize-handle"
-      style={{ left: handlePosition.left, top: handlePosition.top }}
-      aria-label="Redimensionar imagem selecionada"
-      title="Arraste para aumentar ou diminuir a imagem"
-      onPointerDown={(event) => {
-        const image = selectedImageRef.current;
-        const parent = image?.parentElement;
-        if (!image || !parent) return;
-        event.preventDefault();
-        event.stopPropagation();
-        const parentWidth = parent.getBoundingClientRect().width;
-        resizeRef.current = { image, parentWidth, startWidth: image.getBoundingClientRect().width, startX: event.clientX, startY: event.clientY };
-        event.currentTarget.setPointerCapture(event.pointerId);
-      }}
-      onPointerMove={(event) => {
-        const resize = resizeRef.current;
-        if (!resize || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
-        const deltaX = event.clientX - resize.startX;
-        const deltaY = event.clientY - resize.startY;
-        const delta = Math.abs(deltaX) >= Math.abs(deltaY) ? deltaX : deltaY;
-        const width = Math.min(resize.parentWidth, Math.max(40, resize.startWidth + delta));
-        resize.image.style.width = `${(width / resize.parentWidth) * 100}%`;
-        resize.image.style.height = "auto";
-        resize.image.style.maxWidth = "none";
-        resize.image.style.maxHeight = "none";
-        placeHandle(resize.image);
-      }}
-      onPointerUp={(event) => {
-        resizeRef.current = null;
-        if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-        placeHandle();
-      }}
-      onPointerCancel={() => { resizeRef.current = null; placeHandle(); }}
-    />}
+    {handlePosition && <>
+      <button
+        type="button"
+        className="word-image-delete-button"
+        style={{ left: handlePosition.left - 28, top: handlePosition.top }}
+        aria-label="Excluir imagem selecionada"
+        title="Excluir imagem"
+        onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const image = selectedImageRef.current;
+          if (!image || !window.confirm("Excluir esta imagem da proposta?")) return;
+          image.remove();
+          selectImage(null);
+          editorRef.current?.focus();
+        }}
+      >×</button>
+      <button
+        type="button"
+        className="word-image-resize-handle"
+        style={{ left: handlePosition.left, top: handlePosition.top }}
+        aria-label="Redimensionar imagem selecionada"
+        title="Arraste para aumentar ou diminuir a imagem"
+        onPointerDown={(event) => {
+          const image = selectedImageRef.current;
+          const parent = image?.parentElement;
+          if (!image || !parent) return;
+          event.preventDefault();
+          event.stopPropagation();
+          const parentWidth = parent.getBoundingClientRect().width;
+          resizeRef.current = { image, parentWidth, startWidth: image.getBoundingClientRect().width, startX: event.clientX, startY: event.clientY };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          const resize = resizeRef.current;
+          if (!resize || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+          const deltaX = event.clientX - resize.startX;
+          const deltaY = event.clientY - resize.startY;
+          const delta = Math.abs(deltaX) >= Math.abs(deltaY) ? deltaX : deltaY;
+          const width = Math.min(resize.parentWidth, Math.max(40, resize.startWidth + delta));
+          resize.image.style.width = `${(width / resize.parentWidth) * 100}%`;
+          resize.image.style.height = "auto";
+          resize.image.style.maxWidth = "none";
+          resize.image.style.maxHeight = "none";
+          placeHandle(resize.image);
+        }}
+        onPointerUp={(event) => {
+          resizeRef.current = null;
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+          placeHandle();
+        }}
+        onPointerCancel={() => { resizeRef.current = null; placeHandle(); }}
+      />
+    </>}
   </div>;
 }
 
@@ -1118,7 +1137,7 @@ function WordToolbar({ editorRef }: { editorRef: React.RefObject<HTMLElement | n
       <button onClick={applyLink}>Aplicar</button>
       <button className="word-toolbar__link-cancel" onClick={() => { setLinkOpen(false); setLinkUrl(""); }}>×</button>
     </div>}
-    <span className="word-toolbar__hint">Clique na imagem e arraste o puxador do canto para redimensionar</span>
+    <span className="word-toolbar__hint">Clique na imagem para redimensionar ou excluir</span>
   </div>;
 }
 
