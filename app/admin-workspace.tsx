@@ -600,7 +600,7 @@ export default function Home() {
 
   const startWordMode = () => {
     const generated = generatedPreviewRef.current?.querySelector("#proposal-print")?.innerHTML;
-    if (!manualHtml && generated) setManualHtml(generated);
+    if (generated?.trim()) setManualHtml(generated);
     setWordMode(true);
   };
 
@@ -1137,6 +1137,7 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
   const stageRef = useRef<HTMLDivElement>(null);
   const selectedImageRef = useRef<HTMLImageElement | null>(null);
   const resizeRef = useRef<{ image: HTMLImageElement; parentWidth: number; pointerId: number; startWidth: number; startX: number; startY: number } | null>(null);
+  const dragRef = useRef<{ container: HTMLElement; image: HTMLImageElement; offsetX: number; offsetY: number; pointerId: number } | null>(null);
   const [handlePosition, setHandlePosition] = useState<ImageHandlePosition | null>(null);
   const [isRemovingBackground, setIsRemovingBackground] = useState(false);
   // Keep the same prop reference while editing so React does not restore the original HTML after each handle movement.
@@ -1184,21 +1185,32 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
       resize.image.style.maxHeight = "none";
       placeHandle(resize.image);
     };
+    const moveImage = (event: PointerEvent) => {
+      const drag = dragRef.current;
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      event.preventDefault();
+      const containerRect = drag.container.getBoundingClientRect();
+      drag.image.style.left = `${event.clientX - containerRect.left - drag.offsetX}px`;
+      drag.image.style.top = `${event.clientY - containerRect.top - drag.offsetY}px`;
+      placeHandle(drag.image);
+    };
     const finishResize = (event: PointerEvent) => {
-      if (!resizeRef.current || event.pointerId !== resizeRef.current.pointerId) return;
-      resizeRef.current = null;
+      if (resizeRef.current?.pointerId === event.pointerId) resizeRef.current = null;
+      if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
       placeHandle();
     };
     const observer = new MutationObserver(update);
     if (editorRef.current) observer.observe(editorRef.current, { attributes: true, subtree: true, attributeFilter: ["style"] });
     window.addEventListener("resize", update);
     window.addEventListener("pointermove", resizeImage, { passive: false });
+    window.addEventListener("pointermove", moveImage, { passive: false });
     window.addEventListener("pointerup", finishResize);
     window.addEventListener("pointercancel", finishResize);
     return () => {
       observer.disconnect();
       window.removeEventListener("resize", update);
       window.removeEventListener("pointermove", resizeImage);
+      window.removeEventListener("pointermove", moveImage);
       window.removeEventListener("pointerup", finishResize);
       window.removeEventListener("pointercancel", finishResize);
     };
@@ -1212,7 +1224,29 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
       contentEditable
       suppressContentEditableWarning
       spellCheck
-      onPointerDown={(event) => selectImage(event.target instanceof HTMLImageElement ? event.target : null)}
+      onPointerDown={(event) => {
+        const image = event.target instanceof HTMLImageElement ? event.target : null;
+        selectImage(image);
+        if (!image) return;
+        event.preventDefault();
+        const container = image.closest<HTMLElement>(".proposal-page") ?? editorRef.current;
+        if (!container) return;
+        const containerRect = container.getBoundingClientRect();
+        const imageRect = image.getBoundingClientRect();
+        container.style.position = "relative";
+        image.style.position = "absolute";
+        image.style.left = `${imageRect.left - containerRect.left}px`;
+        image.style.top = `${imageRect.top - containerRect.top}px`;
+        image.style.zIndex = "8";
+        image.style.margin = "0";
+        dragRef.current = {
+          container,
+          image,
+          offsetX: event.clientX - imageRect.left,
+          offsetY: event.clientY - imageRect.top,
+          pointerId: event.pointerId,
+        };
+      }}
       onDragStart={(event) => { if (event.target instanceof HTMLImageElement) event.preventDefault(); }}
       onKeyUp={() => placeHandle()}
       onLoadCapture={(event) => { if (event.target === selectedImageRef.current) placeHandle(); }}
@@ -1391,6 +1425,18 @@ function WordToolbar({ editorRef, proposal }: { editorRef: React.RefObject<HTMLE
     doc.appendChild(section);
     section.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+  const alignDocument = () => {
+    const doc = editorRef.current;
+    if (!doc) return;
+    doc.querySelectorAll<HTMLElement>("h1, h2, h3, p, ul, ol, table, blockquote, .solution-heading").forEach((element) => {
+      element.style.marginLeft = "0";
+      element.style.marginRight = "0";
+      element.style.textAlign = "left";
+      element.style.transform = "none";
+    });
+    doc.querySelectorAll<HTMLElement>(".proposal-page").forEach((page) => { page.style.textAlign = "left"; });
+    doc.focus();
+  };
 
   return <div className="word-toolbar" role="toolbar" aria-label="Ferramentas de edição do documento" onMouseDown={(event) => event.preventDefault()}>
     <div className="word-toolbar__brand"><b>W</b><span>Documento</span></div>
@@ -1404,6 +1450,7 @@ function WordToolbar({ editorRef, proposal }: { editorRef: React.RefObject<HTMLE
       <label title="Cor de destaque"><span className="word-toolbar__marker">▉</span><input type="color" defaultValue="#ffef9f" onMouseDown={saveSelection} onChange={(event) => applyColor("hiliteColor", event.target.value)} /></label>
     </div>
     <div className="word-toolbar__group"><button onClick={() => command("justifyLeft")} title="Alinhar à esquerda">⯇</button><button onClick={() => command("justifyCenter")} title="Centralizar">≡</button><button onClick={() => command("justifyRight")} title="Alinhar à direita">⯈</button><button onClick={() => command("justifyFull")} title="Justificar">☰</button></div>
+    <button className="word-toolbar__align-all" onClick={alignDocument} title="Forçar títulos e textos para o mesmo alinhamento">↤ Alinhar tudo</button>
     <div className="word-toolbar__group"><button onClick={() => command("insertUnorderedList")} title="Lista">•☰</button><button onClick={() => command("insertOrderedList")} title="Lista numerada">1☰</button><button onClick={() => command("outdent")} title="Diminuir recuo">⇤</button><button onClick={() => command("indent")} title="Aumentar recuo">⇥</button></div>
     <div className="word-toolbar__group">
       <label className="word-toolbar__file" title="Inserir imagem" onMouseDown={saveSelection}><span>🖼</span><input type="file" accept="image/*" onChange={(event) => { void insertImageFromFile(event.target.files); event.target.value = ""; }} /></label>
@@ -1454,7 +1501,7 @@ function WordToolbar({ editorRef, proposal }: { editorRef: React.RefObject<HTMLE
       <button onClick={applyLink}>Aplicar</button>
       <button className="word-toolbar__link-cancel" onClick={() => { setLinkOpen(false); setLinkUrl(""); }}>×</button>
     </div>}
-    <span className="word-toolbar__hint">Clique na imagem para redimensionar ou excluir</span>
+    <span className="word-toolbar__hint">Arraste a imagem para mover; use a alça para redimensionar</span>
   </div>;
 }
 
