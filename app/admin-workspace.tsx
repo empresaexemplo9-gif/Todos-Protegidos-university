@@ -941,11 +941,147 @@ function ProposalBuilder({
 
 type ImageHandlePosition = { left: number; top: number };
 
+type RgbColor = { red: number; green: number; blue: number };
+
+function cornerColor(data: Uint8ClampedArray, width: number, height: number, cornerX: 0 | 1, cornerY: 0 | 1): RgbColor {
+  const sampleSize = Math.max(2, Math.min(12, Math.round(Math.min(width, height) * .012)));
+  const startX = cornerX === 0 ? 0 : width - sampleSize;
+  const startY = cornerY === 0 ? 0 : height - sampleSize;
+  let red = 0;
+  let green = 0;
+  let blue = 0;
+  let samples = 0;
+
+  for (let y = startY; y < startY + sampleSize; y += 1) {
+    for (let x = startX; x < startX + sampleSize; x += 1) {
+      const offset = (y * width + x) * 4;
+      if (data[offset + 3] === 0) continue;
+      red += data[offset];
+      green += data[offset + 1];
+      blue += data[offset + 2];
+      samples += 1;
+    }
+  }
+
+  return samples > 0
+    ? { red: red / samples, green: green / samples, blue: blue / samples }
+    : { red: 255, green: 255, blue: 255 };
+}
+
+function colorDistanceSquared(data: Uint8ClampedArray, offset: number, color: RgbColor) {
+  const red = data[offset] - color.red;
+  const green = data[offset + 1] - color.green;
+  const blue = data[offset + 2] - color.blue;
+  return red * red + green * green + blue * blue;
+}
+
+function removeConnectedImageBackground(imageData: ImageData) {
+  const { data, width, height } = imageData;
+  const pixelCount = width * height;
+  const background = new Uint8Array(pixelCount);
+  const queue = new Uint32Array(pixelCount);
+  const colors = [
+    cornerColor(data, width, height, 0, 0),
+    cornerColor(data, width, height, 1, 0),
+    cornerColor(data, width, height, 0, 1),
+    cornerColor(data, width, height, 1, 1),
+  ];
+  const cornerSpread = Math.sqrt(Math.max(...colors.flatMap((color, index) => colors.slice(index + 1).map((other) => {
+    const red = color.red - other.red;
+    const green = color.green - other.green;
+    const blue = color.blue - other.blue;
+    return red * red + green * green + blue * blue;
+  }))));
+  const tolerance = Math.min(96, Math.max(52, 52 + cornerSpread * .35));
+  const toleranceSquared = tolerance * tolerance;
+  let queueStart = 0;
+  let queueEnd = 0;
+
+  const resemblesBackground = (pixelIndex: number) => {
+    const offset = pixelIndex * 4;
+    if (data[offset + 3] === 0) return true;
+    return colors.some((color) => colorDistanceSquared(data, offset, color) <= toleranceSquared);
+  };
+  const enqueue = (pixelIndex: number) => {
+    if (background[pixelIndex] || !resemblesBackground(pixelIndex)) return;
+    background[pixelIndex] = 1;
+    queue[queueEnd] = pixelIndex;
+    queueEnd += 1;
+  };
+
+  for (let x = 0; x < width; x += 1) {
+    enqueue(x);
+    enqueue((height - 1) * width + x);
+  }
+  for (let y = 1; y < height - 1; y += 1) {
+    enqueue(y * width);
+    enqueue(y * width + width - 1);
+  }
+
+  while (queueStart < queueEnd) {
+    const pixelIndex = queue[queueStart];
+    queueStart += 1;
+    const x = pixelIndex % width;
+    const y = Math.floor(pixelIndex / width);
+    if (x > 0) enqueue(pixelIndex - 1);
+    if (x + 1 < width) enqueue(pixelIndex + 1);
+    if (y > 0) enqueue(pixelIndex - width);
+    if (y + 1 < height) enqueue(pixelIndex + width);
+  }
+
+  if (queueEnd < Math.max(12, pixelCount * .005)) {
+    throw new Error("Não foi possível identificar um fundo contínuo ao redor da imagem.");
+  }
+
+  for (let pixelIndex = 0; pixelIndex < pixelCount; pixelIndex += 1) {
+    const alphaOffset = pixelIndex * 4 + 3;
+    if (background[pixelIndex]) {
+      data[alphaOffset] = 0;
+      continue;
+    }
+
+    const x = pixelIndex % width;
+    const y = Math.floor(pixelIndex / width);
+    const touchesBackground = (x > 0 && background[pixelIndex - 1])
+      || (x + 1 < width && background[pixelIndex + 1])
+      || (y > 0 && background[pixelIndex - width])
+      || (y + 1 < height && background[pixelIndex + width]);
+    if (!touchesBackground) continue;
+
+    const offset = pixelIndex * 4;
+    const distance = Math.sqrt(Math.min(...colors.map((color) => colorDistanceSquared(data, offset, color))));
+    const feather = Math.round(255 * Math.min(1, Math.max(0, (distance - tolerance * .72) / (tolerance * .65))));
+    data[alphaOffset] = Math.min(data[alphaOffset], feather);
+  }
+
+  return imageData;
+}
+
+async function imageWithoutBackground(image: HTMLImageElement) {
+  if (!image.complete || image.naturalWidth === 0) {
+    await new Promise<void>((resolve, reject) => {
+      image.addEventListener("load", () => resolve(), { once: true });
+      image.addEventListener("error", () => reject(new Error("Não foi possível carregar a imagem.")), { once: true });
+    });
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new Error("O navegador não conseguiu preparar a remoção de fundo.");
+  context.drawImage(image, 0, 0);
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  context.putImageData(removeConnectedImageBackground(imageData), 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
 function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObject<HTMLElement | null>; html: string }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const selectedImageRef = useRef<HTMLImageElement | null>(null);
   const resizeRef = useRef<{ image: HTMLImageElement; parentWidth: number; pointerId: number; startWidth: number; startX: number; startY: number } | null>(null);
   const [handlePosition, setHandlePosition] = useState<ImageHandlePosition | null>(null);
+  const [isRemovingBackground, setIsRemovingBackground] = useState(false);
   // Keep the same prop reference while editing so React does not restore the original HTML after each handle movement.
   const documentHtml = useMemo(() => ({ __html: html }), [html]);
 
@@ -1030,6 +1166,37 @@ function EditableProposalDocument({ editorRef, html }: { editorRef: React.RefObj
       dangerouslySetInnerHTML={documentHtml}
     />
     {handlePosition && <>
+      <button
+        type="button"
+        className="word-image-background-button"
+        style={{ left: handlePosition.left - 88, top: handlePosition.top }}
+        aria-label="Remover fundo da imagem selecionada"
+        title={isRemovingBackground ? "Removendo fundo…" : "Remover fundo da imagem"}
+        disabled={isRemovingBackground}
+        onPointerDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+        onClick={async (event) => {
+          event.stopPropagation();
+          const image = selectedImageRef.current;
+          if (!image || isRemovingBackground) return;
+          setIsRemovingBackground(true);
+          try {
+            const transparentImage = await imageWithoutBackground(image);
+            if (!image.isConnected) return;
+            image.removeAttribute("srcset");
+            image.src = transparentImage;
+            editorRef.current?.focus();
+            placeHandle(image);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "Não foi possível remover o fundo desta imagem.";
+            window.alert(`${message}\n\nUse uma imagem enviada do computador e com o objeto separado das bordas.`);
+          } finally {
+            setIsRemovingBackground(false);
+          }
+        }}
+      >{isRemovingBackground ? "…" : "Fundo −"}</button>
       <button
         type="button"
         className="word-image-delete-button"
