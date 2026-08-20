@@ -501,6 +501,85 @@ button { cursor: pointer; }
   object-fit: contain;
 }
 
+/* Modelo visual do PDF de referência: tabela no topo e imagens amplas abaixo. */
+.proposal-page--solution .classic-table--reference {
+  display: table;
+  width: 100%;
+  margin: 18px 0 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.proposal-page--solution .classic-table--reference thead { display: table-header-group; }
+.proposal-page--solution .classic-table--reference tbody { display: table-row-group; }
+.proposal-page--solution .classic-table--reference tr { display: table-row; border: 0; }
+.proposal-page--solution .classic-table--reference th,
+.proposal-page--solution .classic-table--reference td {
+  display: table-cell;
+  padding: 3px 8px;
+  border: 0;
+  border-bottom: 1px solid #222 !important;
+  color: #222;
+  vertical-align: top;
+}
+.proposal-page--solution .classic-table--reference th {
+  color: var(--proposal-green);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+.proposal-page--solution .classic-table--reference th:last-child,
+.proposal-page--solution .classic-table--reference td:last-child {
+  width: 128px;
+  border-left: 1px solid #222 !important;
+  text-align: center;
+}
+.proposal-page--solution .classic-table--reference .solution-item-desc {
+  padding-left: 8px;
+  font-size: 11.5px;
+  line-height: 1.16;
+  text-align: left;
+}
+.proposal-page--solution .classic-table--reference .solution-item-desc::before { display: none; }
+.proposal-page--solution .classic-table--reference .solution-item-desc strong,
+.proposal-page--solution .classic-table--reference .solution-item-desc span { display: block; color: #222; text-align: left; }
+.proposal-page--solution .classic-table--reference .solution-item-desc span { margin-top: 1px; font-size: 9px; text-transform: none; }
+.proposal-page--solution .classic-table--reference .solution-item-qty {
+  border: 0 !important;
+  border-bottom: 1px solid #222 !important;
+  border-left: 1px solid #222 !important;
+  border-radius: 0;
+  color: #222;
+  font-size: 11px;
+  font-weight: 400;
+  text-align: center;
+}
+.reference-solution-gallery {
+  width: 100%;
+  min-height: 300px;
+  margin: 30px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+.reference-solution-gallery img {
+  width: auto;
+  max-width: 48%;
+  height: auto;
+  max-height: 330px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  object-fit: contain;
+}
+.reference-solution-gallery--1 img { max-width: 100%; max-height: 390px; }
+.proposal-page--summary .classic-section { margin-bottom: 20px; }
+.proposal-page--summary .classic-section h2 { margin-bottom: 8px; }
+.proposal-page--summary .classic-section li { line-height: 1.35; }
+.proposal-page--summary .investment-card { margin-top: 24px; }
+
 /* =====================================================================
    Busca de foto real na web (Google) + opção "foto realista"
    ===================================================================== */

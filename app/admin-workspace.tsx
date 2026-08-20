@@ -1587,8 +1587,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
   const allItemImages = proposal.items.flatMap((item) => itemImages[item.id] ?? []);
   const coverImages = productImages.length > 0 ? productImages : allItemImages;
   const solutionPages = solutionGroups.flatMap(([title, items]) => {
-    const hasImages = items.some((item) => (itemImages[item.id] ?? []).length > 0);
-    const itemsPerPage = hasImages ? 3 : 10;
+    const itemsPerPage = 8;
     return Array.from({ length: Math.ceil(items.length / itemsPerPage) }, (_, pageIndex) => ({
       title,
       items: items.slice(pageIndex * itemsPerPage, (pageIndex + 1) * itemsPerPage),
@@ -1597,9 +1596,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
     }));
   });
   const extraPages = proposal.extraPages ?? [];
-  const afterLocationPage = 2 + solutionPages.length + (scopeReport ? 1 : 0);
-  const detailsPage = afterLocationPage + extraPages.length;
-  const contactPage = detailsPage + 1;
+  const summaryPage = solutionPages.length + extraPages.length + 2;
   return (
     <article className="proposal-document" id="proposal-print">
       <section className="proposal-page proposal-page--main">
@@ -1622,55 +1619,37 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
       </section>
 
       {solutionPages.map(({ title, items, pageIndex, pageCount }, index) => {
-        const hasSectionImages = items.some((item) => (itemImages[item.id] ?? []).length > 0);
+        const sectionImages = items.flatMap((item) => itemImages[item.id] ?? []);
         return <section className="proposal-page proposal-page--solution" key={`${title}-${pageIndex}`}>
           <DottedFrame />
           <div className="solution-heading"><h2>{title.toLocaleUpperCase("pt-BR")}{pageIndex > 0 ? " — CONTINUAÇÃO" : ""}</h2><p>{pageIndex === 0 ? proposalSectionCopy(title) : `Continuação dos itens desta solução · página ${pageIndex + 1} de ${pageCount}.`}</p></div>
-          <table className={`classic-table classic-table--solution ${hasSectionImages ? "classic-table--with-images" : ""}`}>
-            <thead><tr>{hasSectionImages && <th>Imagem</th>}<th>Item</th><th>Quantidade</th></tr></thead>
+          <table className="classic-table classic-table--solution classic-table--reference">
+            <thead><tr><th>Item</th><th>Quantidade</th></tr></thead>
             <tbody>{items.map((item) => <tr key={item.id}>
-              {hasSectionImages && <td className="solution-item-image">{(itemImages[item.id] ?? []).length > 0
-                ? <div>{(itemImages[item.id] ?? []).slice(0, 2).map((src, imageIndex) => <img key={src} src={src} alt={`${item.description} — imagem ${imageIndex + 1}`} />)}</div>
-                : <span>SEM IMAGEM</span>}</td>}
               <td className="solution-item-desc"><strong>{item.description}</strong><span>{item.category}</span></td><td className="solution-item-qty">{String(item.qty).padStart(2, "0")}</td>
             </tr>)}</tbody>
           </table>
-          <p className="solution-caption">Seleção dimensionada pela SONA para este projeto. As imagens são ilustrativas e correspondem aos itens cadastrados na proposta.</p>
+          {sectionImages.length > 0 && <div className={`reference-solution-gallery reference-solution-gallery--${Math.min(4, sectionImages.length)}`}>{sectionImages.slice(0, 4).map((src, imageIndex) => <img key={`${src}-${imageIndex}`} src={src} alt={`${title} — imagem ${imageIndex + 1}`} />)}</div>}
           <PageFooter number={String(index + 2)} />
         </section>;
       })}
-
-      {scopeReport && <section className="proposal-page proposal-page--location">
-        <DottedFrame />
-        <div className="solution-heading"><h2>LOCAÇÃO ESTIMADA — {scopeReport.project.toLocaleUpperCase("pt-BR")}</h2><p>{scopeReport.address}</p></div>
-        <div className="proposal-location-plan"><div className="report-plan__canvas">{scopeReport.planImage ? <img src={scopeReport.planImage} alt={`Planta do projeto ${scopeReport.project}`} /> : <DefaultFloorPlan />}{scopeReport.assets.map((asset) => <img className="report-plan__asset" key={asset.id} src={asset.src} alt={asset.name} style={{ left: `${asset.x}%`, top: `${asset.y}%`, width: `${asset.width}%`, transform: `translate(-50%, -50%) rotate(${asset.rotation ?? 0}deg)` }} />)}{scopeReport.markers.map((item) => { const tool = scopeReport.tools.find((entry) => entry.id === item.type) ?? scopeReport.tools[0]; const photo = scopeReport.markerImages?.[item.id]; if (photo) return <img className="report-plan__speaker" key={item.id} src={photo} alt={item.label} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size }} />; return <span key={item.id} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool?.color ?? "#638c7e" }}>{item.label}</span>; })}</div>{(scopeReport.equipmentLegend?.length ?? 0) > 0 && <aside className="plan-equipment"><span className="plan-equipment__title">Equipamentos</span>{scopeReport.equipmentLegend.map((eq, legendIndex) => <div className="plan-equipment__item" key={legendIndex}><img src={eq.image} alt={eq.name} /><div><strong>{eq.name}</strong><b>{String(eq.qty).padStart(2, "0")} un</b></div></div>)}</aside>}</div>
-        <div className="report-legend">{scopeReport.tools.map((tool) => { const qty = scopeReport.markers.filter((item) => item.type === tool.id).length; return qty > 0 ? <div key={tool.id}><i style={{ background: tool.color }}>{tool.code}</i><span>{tool.label}</span><b>{qty}</b></div> : null; })}</div>
-        <PageFooter number={String(2 + solutionPages.length)} />
-      </section>}
 
       {extraPages.map((page, index) => (
         <section className="proposal-page proposal-page--extra" key={page.id}>
           <DottedFrame />
           <div className="solution-heading"><h2>{(page.title || "Página adicional").toLocaleUpperCase("pt-BR")}</h2>{page.subtitle && <p>{page.subtitle}</p>}</div>
           {page.body && <div className="extra-page-body">{page.body.split("\n").filter(Boolean).map((paragraph, paragraphIndex) => <p key={paragraphIndex}>{paragraph}</p>)}</div>}
-          {page.images.length > 0 && <div className={`product-gallery product-gallery--${Math.min(4, page.images.length)}`}>{page.images.map((src, imageIndex) => <img key={imageIndex} src={src} alt={`Imagem ${imageIndex + 1} de ${page.title}`} />)}</div>}
-          <PageFooter number={String(afterLocationPage + index)} />
+          {page.images.length > 0 && <div className={`reference-solution-gallery reference-solution-gallery--${Math.min(4, page.images.length)}`}>{page.images.map((src, imageIndex) => <img key={imageIndex} src={src} alt={`Imagem ${imageIndex + 1} de ${page.title}`} />)}</div>}
+          <PageFooter number={String(solutionPages.length + index + 2)} />
         </section>
       ))}
 
-      <section className="proposal-page proposal-page--details">
+      <section className="proposal-page proposal-page--details proposal-page--summary">
         <DottedFrame />
-        <div className="classic-section"><h2>Material</h2><ul>{proposal.items.map((item) => <li key={item.id}>{item.description} — {item.qty} {item.unit}.</li>)}</ul></div>
-        <div className="classic-section"><h2>Serviços</h2><ul>{proposal.services.split("\n").filter(Boolean).map((item) => <li key={item}>{item}</li>)}</ul></div>
+        <div className="classic-section"><h2>Serviços Complementares</h2><ul>{proposal.services.split("\n").filter(Boolean).map((item) => <li key={item}>{item}</li>)}</ul></div>
         <div className="classic-section"><h2>Exclusões</h2><ul>{proposal.exclusions.split("\n").filter(Boolean).map((item) => <li key={item}>{item}</li>)}</ul></div>
-        <div className="classic-section classic-section--notes"><h2>Observações</h2><p>{proposal.notes}</p></div>
-        <PageFooter number={String(detailsPage)} />
-      </section>
-
-      <section className="proposal-page proposal-page--contact">
-        <DottedFrame />
         <div className="investment-card">
-          <h2>Valor Total do Investimento</h2>
+          <h2>Valor Total</h2>
           <div className="investment-lines">
             {categoryTotals.map(([category, value]) => <div key={category}><span>{category}</span><i /><strong>{brl.format(value)}</strong></div>)}
           </div>
@@ -1682,7 +1661,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
           <div><h2>Contato</h2><strong>{proposal.consultant}</strong><span>contato@sonatecnologia.com.br</span><span>Av. Jamel Cecílio · Metropolitan Mall</span><span>Goiânia — GO</span><small>Proposta {proposal.code} · {date}</small></div>
           <ProposalBrand stacked />
         </div>
-        <PageFooter number={String(contactPage)} />
+        <PageFooter number={String(summaryPage)} />
       </section>
     </article>
   );
