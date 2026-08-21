@@ -107,8 +107,11 @@ type UbiquitiAP = { id: string; name: string; r24: number; r5: number; r6?: numb
 // Raios de cobertura internos aproximados (metros) por faixa \u2014 refer\u00eancia para posicionamento.
 const ubiquitiAPs: UbiquitiAP[] = [
   // Mais usados primeiro (aparecem no topo e são o padrão ao inserir um AP).
-  { id: "u6-plus", name: "UniFi U6+", r24: 10, r5: 7 },
-  { id: "u7-pro", name: "UniFi U7 Pro", r24: 13, r5: 10, r6: 9 },
+  // Raios (m) até a borda útil de cobertura, calibrados pela área oficial da Ubiquiti:
+  // U7 Pro e U6 Pro ≈ 140 m² (~1.500 ft²) — o WiFi 7 ganha em velocidade, não em alcance,
+  // então o U7 Pro cobre praticamente o mesmo que o U6 Pro. O U6+ (2x2 de entrada) cobre um pouco menos.
+  { id: "u6-plus", name: "UniFi U6+", r24: 11, r5: 8 },
+  { id: "u7-pro", name: "UniFi U7 Pro", r24: 12, r5: 9, r6: 8 },
   { id: "u6-lite", name: "UniFi U6 Lite", r24: 9, r5: 6 },
   { id: "u6-pro", name: "UniFi U6 Pro", r24: 12, r5: 9 },
   { id: "u6-lr", name: "UniFi U6 Long-Range", r24: 15, r5: 10 },
@@ -1879,7 +1882,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const [markers, setMarkers] = useState<ScopeMarker[]>([
     { id: 1, type: "light", label: "L01", environment: "Sala", description: "Circuito principal", status: "previsto", x: 28, y: 31, size: 38, range: 18 },
     { id: 2, type: "climate", label: "AR01", environment: "Sala", description: "Evaporadora", status: "aprovado", x: 67, y: 28, size: 38, range: 18 },
-    { id: 3, type: "access-point", label: "AP01", environment: "Circulação", description: "Cobertura Wi-Fi principal", status: "previsto", x: 53, y: 58, size: 38, range: 7, apModel: "u6-plus" },
+    { id: 3, type: "access-point", label: "AP01", environment: "Circulação", description: "Cobertura Wi-Fi principal", status: "previsto", x: 53, y: 58, size: 38, range: 8, apModel: "u6-plus" },
   ]);
   const [selectedMarker, setSelectedMarker] = useState<number | null>(null);
   const [assets, setAssets] = useState<PlanAsset[]>([]);
