@@ -505,7 +505,7 @@ export default function Home() {
     proposal, productImages, itemImages, scopeReport,
     documentMode: wordMode ? "manual" : "automatic",
     automaticHtml: wordMode ? automaticHtml : (generatedPreviewRef.current?.querySelector("#proposal-print")?.innerHTML ?? automaticHtml),
-    templateVersion: 9,
+    templateVersion: 10,
   });
 
   const refreshProposals = async () => {
@@ -563,9 +563,9 @@ export default function Home() {
     setScopeReport(bundle?.scopeReport ?? null);
     setProposalId(record.id);
     setProposalStatus(record.status);
-    setManualHtml(bundle?.templateVersion === 9 ? (record.manualHtml ?? "") : "");
-    setAutomaticHtml(bundle?.templateVersion === 9 ? (bundle.automaticHtml ?? "") : "");
-    setWordMode(bundle?.templateVersion === 9 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
+    setManualHtml(bundle?.templateVersion === 10 ? (record.manualHtml ?? "") : "");
+    setAutomaticHtml(bundle?.templateVersion === 10 ? (bundle.automaticHtml ?? "") : "");
+    setWordMode(bundle?.templateVersion === 10 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
     setHistoryOpen(false);
     setSection("proposals");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1715,7 +1715,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
           <h2>Automação SONA · {plan.tier}</h2>
           <p>O sistema proposto integra os ambientes de forma simples, segura e confiável. {plan.summary} A solução será configurada de acordo com o projeto <strong>{proposal.project}</strong>, respeitando as necessidades e a rotina do cliente.</p>
         </div>
-        {coverImages.length > 0 && <div className={`product-gallery product-gallery--cover product-gallery--${Math.min(4, coverImages.length)}`}>{coverImages.slice(0, 3).map((src, index) => <ProposalAssetImage key={src} src={src} alt={`Equipamento ${index + 1}`} />)}</div>}
+        {coverImages.length > 0 && <div className={`product-gallery product-gallery--cover product-gallery--${Math.min(2, coverImages.length)}`}>{coverImages.slice(0, 2).map((src, index) => <ProposalAssetImage key={src} src={src} alt={`Equipamento ${index + 1}`} />)}</div>}
         <PageFooter number="1" />
       </section>
 
