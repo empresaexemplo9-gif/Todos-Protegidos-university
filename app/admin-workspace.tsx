@@ -1566,6 +1566,22 @@ function WordToolbar({ editorRef, proposal }: { editorRef: React.RefObject<HTMLE
     doc.appendChild(section);
     section.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+  // Espaçamento entre linhas (como no PowerPoint): aplica line-height aos blocos da seleção.
+  const setLineSpacing = (value: string) => {
+    const editor = editorRef.current;
+    const selection = window.getSelection();
+    if (!editor || !value || !selection || selection.rangeCount === 0) return;
+    editor.focus();
+    const range = selection.getRangeAt(0);
+    const blocks = Array.from(editor.querySelectorAll<HTMLElement>("p, h1, h2, h3, li, blockquote"));
+    let targets = blocks.filter((element) => range.intersectsNode(element));
+    if (targets.length === 0) {
+      let node: Node | null = range.startContainer;
+      while (node && node !== editor && !(node instanceof HTMLElement && /^(P|H1|H2|H3|LI|BLOCKQUOTE)$/.test(node.nodeName))) node = node.parentNode;
+      if (node && node !== editor) targets = [node as HTMLElement];
+    }
+    targets.forEach((element) => { element.style.lineHeight = value; });
+  };
   const alignDocument = () => {
     const doc = editorRef.current;
     if (!doc) return;
@@ -1582,10 +1598,11 @@ function WordToolbar({ editorRef, proposal }: { editorRef: React.RefObject<HTMLE
   return <div className="word-toolbar" role="toolbar" aria-label="Ferramentas de edição do documento" onMouseDown={(event) => event.preventDefault()}>
     <div className="word-toolbar__brand"><b>W</b><span>Documento</span></div>
     <select aria-label="Estilo do parágrafo" defaultValue="p" onChange={(event) => command("formatBlock", event.target.value)} onMouseDown={(event) => event.stopPropagation()}><option value="p">Texto normal</option><option value="h2">Título</option><option value="h3">Subtítulo</option><option value="blockquote">Citação</option></select>
-    <select aria-label="Fonte" defaultValue="" onChange={(event) => event.target.value && styled("fontName", event.target.value)} onMouseDown={(event) => event.stopPropagation()}><option value="">Fonte padrão</option><option value='Georgia, "Times New Roman", serif'>Serifada</option><option value='"Segoe UI", system-ui, sans-serif'>Moderna</option><option value='"Courier New", monospace'>Mono</option></select>
+    <select aria-label="Fonte" defaultValue="" onChange={(event) => event.target.value && styled("fontName", event.target.value)} onMouseDown={(event) => event.stopPropagation()}><option value="">Fonte padrão</option><option value='Arial, Helvetica, sans-serif'>Arial</option><option value='Calibri, "Segoe UI", sans-serif'>Calibri</option><option value='"Segoe UI", system-ui, sans-serif'>Segoe UI</option><option value='"Trebuchet MS", sans-serif'>Trebuchet</option><option value='Verdana, Geneva, sans-serif'>Verdana</option><option value='Tahoma, sans-serif'>Tahoma</option><option value='Georgia, serif'>Georgia</option><option value='"Times New Roman", Times, serif'>Times New Roman</option><option value='Garamond, serif'>Garamond</option><option value='"Courier New", monospace'>Courier New</option><option value='Impact, sans-serif'>Impact</option><option value='"Comic Sans MS", cursive'>Comic Sans</option></select>
     <select aria-label="Tamanho do texto" defaultValue="3" onChange={(event) => styled("fontSize", event.target.value)} onMouseDown={(event) => event.stopPropagation()}><option value="1">Mínimo</option><option value="2">Pequeno</option><option value="3">Normal</option><option value="4">Médio</option><option value="5">Grande</option><option value="6">Enorme</option><option value="7">Máximo</option></select>
+    <select aria-label="Espaçamento entre linhas" defaultValue="" onChange={(event) => { setLineSpacing(event.target.value); event.currentTarget.selectedIndex = 0; }} onMouseDown={(event) => event.stopPropagation()} title="Espaçamento entre linhas"><option value="">↕ Linhas</option><option value="1">1,0</option><option value="1.15">1,15</option><option value="1.5">1,5</option><option value="2">2,0</option><option value="2.5">2,5</option></select>
     <div className="word-toolbar__group"><button onClick={() => command("undo")} title="Desfazer">↶</button><button onClick={() => command("redo")} title="Refazer">↷</button></div>
-    <div className="word-toolbar__group"><button onClick={() => command("bold")} title="Negrito"><b>B</b></button><button onClick={() => command("italic")} title="Itálico"><i>I</i></button><button onClick={() => command("underline")} title="Sublinhado"><u>U</u></button><button onClick={() => command("strikeThrough")} title="Tachado"><s>S</s></button></div>
+    <div className="word-toolbar__group"><button onClick={() => command("bold")} title="Negrito"><b>B</b></button><button onClick={() => command("italic")} title="Itálico"><i>I</i></button><button onClick={() => command("underline")} title="Sublinhado"><u>U</u></button><button onClick={() => command("strikeThrough")} title="Tachado"><s>S</s></button><button onClick={() => command("superscript")} title="Sobrescrito">x²</button><button onClick={() => command("subscript")} title="Subscrito">x₂</button></div>
     <div className="word-toolbar__group word-toolbar__colors">
       <label title="Cor do texto"><span style={{ color: "#1e654c" }}>A</span><input type="color" defaultValue="#1e654c" onMouseDown={saveSelection} onChange={(event) => applyColor("foreColor", event.target.value)} /></label>
       <label title="Cor de destaque"><span className="word-toolbar__marker">▉</span><input type="color" defaultValue="#ffef9f" onMouseDown={saveSelection} onChange={(event) => applyColor("hiliteColor", event.target.value)} /></label>
