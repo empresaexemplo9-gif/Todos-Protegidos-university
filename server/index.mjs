@@ -8,6 +8,12 @@ import { root, getData, saveData } from "./store.mjs";
 import { initialCatalog } from "./catalog-seed.mjs";
 import { clean, money, bounded, sanitizeHtml } from "../shared/validate.mjs";
 import {
+  CATALOG_CLASSIFICATION_VERSION,
+  compareCatalogItems,
+  normalizeCatalogItem,
+  normalizeProposalItems,
+} from "../shared/catalog-classification.mjs";
+import {
   normalizeAvaConfig,
   avaFetchRecords,
   collectFields,
@@ -98,21 +104,40 @@ function mapProposal(row, includeData = true, includePrivate = true) {
   };
 }
 /* ------------------------------ seed do catálogo ------------------------------ */
-const CATALOG_SEED_VERSION = "2026-08-19-estoque-real-v2";
+const CATALOG_SEED_VERSION = `2026-08-21-categorias-${CATALOG_CLASSIFICATION_VERSION}`;
+
+function normalizeProposalData(data) {
+  if (!data || typeof data !== "object" || !Array.isArray(data.proposal?.items)) return data;
+  return {
+    ...data,
+    proposal: { ...data.proposal, items: normalizeProposalItems(data.proposal.items) },
+  };
+}
+
 function seedCatalog(data) {
   if (data.meta.catalogSeedVersion === CATALOG_SEED_VERSION && data.catalogItems.length) return;
   const now = new Date().toISOString();
-  const existing = new Set(data.catalogItems.map((i) => i.id));
-  for (const item of initialCatalog) {
-    if (existing.has(item.id)) continue;
-    data.catalogItems.push({
+  const existing = new Map(data.catalogItems.map((item) => [item.id, item]));
+  for (const sourceItem of initialCatalog) {
+    const item = normalizeCatalogItem(sourceItem);
+    const saved = existing.get(item.id);
+    if (saved) {
+      Object.assign(saved, { kind: item.kind, category: item.category });
+      continue;
+    }
+    const created = {
       id: item.id, kind: item.kind, name: item.name, category: item.category, brand: item.brand,
       model: item.model, sku: item.sku, system: item.system, description: item.description,
       sourceUrl: item.sourceUrl, unit: item.unit, purchasePrice: item.purchasePrice || 0,
       salePrice: item.salePrice || 0, imageUrl: item.imageUrl || "", updatedBy: item.updatedBy || "Equipe Sona",
       createdAt: now, updatedAt: now,
-    });
+    };
+    data.catalogItems.push(created);
+    existing.set(created.id, created);
   }
+  data.catalogItems = data.catalogItems.map((item) => normalizeCatalogItem(item));
+  data.budgetItems = data.budgetItems.map((item) => normalizeCatalogItem(item));
+  data.proposals = data.proposals.map((proposal) => ({ ...proposal, data: normalizeProposalData(proposal.data) }));
   data.meta.catalogSeedVersion = CATALOG_SEED_VERSION;
 }
 function budgetCode(data) {
@@ -276,7 +301,7 @@ async function proposalsApi(req, res, url) {
       const now = new Date().toISOString();
       const values = {
         code, client: clean(body.client, 160) || "Novo cliente", project: clean(body.project, 160) || "Novo projeto",
-        data: body.data, manualHtml: sanitizeHtml(body.manualHtml), status: "draft", updatedBy: actor.email, updatedAt: now,
+        data: normalizeProposalData(body.data), manualHtml: sanitizeHtml(body.manualHtml), status: "draft", updatedBy: actor.email, updatedAt: now,
       };
       let row = id ? data.proposals.find((p) => p.id === id) : data.proposals.find((p) => p.code === code);
       if (row) {
@@ -330,7 +355,7 @@ async function budgetApi(req, res) {
     if (data.catalogItems.length !== before.c || data.budgets.length !== before.b || data.meta.catalogSeedVersion !== before.v)
       await saveData(data);
     const catalogItems = [...data.catalogItems]
-      .sort((a, b) => String(a.category).localeCompare(String(b.category)) || String(a.name).localeCompare(String(b.name)))
+      .sort(compareCatalogItems)
       .map(mapCatalogItem);
     const budgets = [...data.budgets]
       .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))
@@ -348,7 +373,7 @@ async function budgetApi(req, res) {
       if (!name) return json(res, 400, { error: "Informe o nome do item." });
       const kind = item.kind === "service" ? "service" : "equipment";
       const itemId = clean(item.id, 80) || randomUUID();
-      const values = {
+      const values = normalizeCatalogItem({
         id: itemId, kind, name, category: clean(item.category, 80), brand: clean(item.brand, 80),
         model: clean(item.model, 100), sku: clean(item.sku, 60),
         system: clean(item.system, 30).toUpperCase() || "UNIVERSAL",
@@ -356,7 +381,7 @@ async function budgetApi(req, res) {
         unit: clean(item.unit, 12) || (kind === "service" ? "sv" : "un"),
         purchasePrice: money(item.purchasePrice), salePrice: money(item.salePrice),
         imageUrl: clean(item.imageUrl, 800), updatedBy: actor.email, updatedAt: now,
-      };
+      });
       const existing = data.catalogItems.find((c) => c.id === itemId);
       let saved;
       if (existing) {
@@ -427,7 +452,7 @@ async function budgetApi(req, res) {
         const kind = raw?.kind === "service" ? "service" : "equipment";
         const sku = clean(raw?.sku, 60);
         const id = sku ? `imp-${sku.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}` : randomUUID();
-        const values = {
+        const values = normalizeCatalogItem({
           id, kind, name, category: clean(raw?.category, 80), brand: clean(raw?.brand, 80),
           model: clean(raw?.model, 100), sku,
           system: clean(raw?.system, 30).toUpperCase() || "SMARTLIFE",
@@ -435,7 +460,7 @@ async function budgetApi(req, res) {
           unit: clean(raw?.unit, 12) || (kind === "service" ? "sv" : "un"),
           purchasePrice: money(raw?.purchasePrice), salePrice: money(raw?.salePrice),
           imageUrl: clean(raw?.imageUrl || raw?.image, 800), updatedBy: actor.email, updatedAt: now,
-        };
+        });
         const existing = data.catalogItems.find((c) => c.id === id) || (sku ? data.catalogItems.find((c) => c.sku && c.sku === sku) : null);
         if (existing) { Object.assign(existing, values); updated++; }
         else { data.catalogItems.push({ ...values, createdAt: now }); created++; }

@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import AvaBudgetWorkspace from "./budget-workspace";
+import {
+  classifyCatalogItem,
+  normalizeProposalItems,
+} from "../shared/catalog-classification.mjs";
 
 export type ProposalItem = {
   id: number;
@@ -12,6 +16,8 @@ export type ProposalItem = {
   unit: string;
   unitPrice: number;
 };
+
+const organizeProposalItems = (items: ProposalItem[]) => normalizeProposalItems(items) as ProposalItem[];
 
 export type ProposalExtraPage = {
   id: number;
@@ -543,9 +549,9 @@ const initialProposal: Proposal = {
   items: [
     { id: 1, category: "Automação", description: "Gateway Zigbee SmartLife", qty: 1, unit: "un", unitPrice: 0 },
     { id: 2, category: "Automação", description: "Módulo de iluminação MolSmart", qty: 3, unit: "un", unitPrice: 0 },
-    { id: 3, category: "Home cinema", description: "Receiver Onkyo TX-NR5100", qty: 1, unit: "un", unitPrice: 0 },
-    { id: 4, category: "Som ambiente", description: "Caixa de embutir ELAC IC-C81", qty: 6, unit: "un", unitPrice: 0 },
-    { id: 5, category: "Redes Wi-Fi", description: "Access Point UniFi U6+", qty: 3, unit: "un", unitPrice: 0 },
+    { id: 5, category: "Rede e infraestrutura", description: "Access Point UniFi U6+", qty: 3, unit: "un", unitPrice: 0 },
+    { id: 3, category: "Áudio e vídeo", description: "Receiver Onkyo TX-NR5100", qty: 1, unit: "un", unitPrice: 0 },
+    { id: 4, category: "Áudio e vídeo", description: "Caixa de embutir ELAC IC-C81", qty: 6, unit: "un", unitPrice: 0 },
   ],
   extraPages: [],
 };
@@ -691,7 +697,7 @@ export default function Home() {
   };
 
   const proposalBundle = (): ProposalBundle => ({
-    proposal, productImages, itemImages, scopeReport,
+    proposal: { ...proposal, items: organizeProposalItems(proposal.items) }, productImages, itemImages, scopeReport,
     documentMode: wordMode ? "manual" : "automatic",
     automaticHtml: wordMode ? automaticHtml : (generatedPreviewRef.current?.querySelector("#proposal-print")?.innerHTML ?? automaticHtml),
     templateVersion: 11,
@@ -747,7 +753,8 @@ export default function Home() {
   const openSavedProposal = (record: SavedProposal) => {
     const bundle = record.data;
     const keepsManualDocument = (bundle?.templateVersion === 10 || bundle?.templateVersion === 11) && bundle.documentMode === "manual" && Boolean(record.manualHtml);
-    setProposal({ ...initialProposal, ...(bundle?.proposal ?? {}), extraPages: bundle?.proposal?.extraPages ?? [] });
+    const savedProposal = { ...initialProposal, ...(bundle?.proposal ?? {}), extraPages: bundle?.proposal?.extraPages ?? [] };
+    setProposal({ ...savedProposal, items: organizeProposalItems(savedProposal.items) });
     setProductImages(bundle?.productImages ?? []);
     setItemImages(bundle?.itemImages ?? {});
     setScopeReport(bundle?.scopeReport ?? null);
@@ -926,7 +933,7 @@ export default function Home() {
             Object.values(itemImages).flat().forEach((src) => { if (src.startsWith("blob:")) URL.revokeObjectURL(src); });
             setItemImages(report.itemImages ?? {});
             setProductImages(report.productImages ?? []);
-            patchProposal("items", report.items);
+            patchProposal("items", organizeProposalItems(report.items));
             patchProposal("client", report.client);
             patchProposal("project", report.project);
             patchProposal("address", report.address);
@@ -938,7 +945,7 @@ export default function Home() {
           <AvaBudgetWorkspace onUseInProposal={({ items, discountPercent }) => {
             Object.values(itemImages).flat().forEach((src) => { if (src.startsWith("blob:")) URL.revokeObjectURL(src); });
             setItemImages({});
-            patchProposal("items", items);
+            patchProposal("items", organizeProposalItems(items));
             patchProposal("discount", discountPercent);
             setSection("proposals");
             window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1861,24 +1868,24 @@ function WordToolbar({ editorRef, proposal }: { editorRef: React.RefObject<HTMLE
 }
 
 function proposalSectionFor(category: string) {
-  const value = category.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  if (/home cinema|audiovisual|audio e video|tv|video/.test(value)) return "Home Cinema e Áudio & Vídeo";
-  if (/som ambiente|sonorizacao|multiroom|audio/.test(value)) return "Sonorização Ambiente";
-  if (/rede|wi-fi|wifi|dados|cabeamento|infraestrutura/.test(value)) return "Sistema de Redes Wi-Fi";
-  if (/seguranca|fechadura|acesso|camera|sensor/.test(value)) return "Segurança Inteligente";
-  if (/energia|condicionador|protecao/.test(value)) return "Proteção de Energia";
-  if (/servico|instalacao|configuracao|programacao|projeto/.test(value)) return "Serviços Especializados";
+  const classification = classifyCatalogItem({ name: category, category });
+  if (classification === "Áudio e vídeo") return "Áudio e Vídeo";
+  if (classification === "Rede e infraestrutura") return "Sistema de Redes Wi-Fi";
+  if (classification === "Segurança e CFTV" || classification === "Sensores") return "Segurança Inteligente";
+  if (classification === "Energia e proteção") return "Proteção de Energia";
+  if (classification === "Diversos") return "Complementos e Diversos";
+  if (classification === "Serviço") return "Serviços Especializados";
   return "Automação Residencial";
 }
 
 function proposalSectionCopy(title: string) {
   const copy: Record<string, string> = {
     "Automação Residencial": "A solução integra iluminação, cortinas, climatização, comandos e cenas em uma única experiência. O processamento local e a compatibilidade com diferentes protocolos entregam velocidade, confiabilidade e privacidade.",
-    "Home Cinema e Áudio & Vídeo": "Para uma experiência audiovisual imersiva, propomos um conjunto dimensionado para o ambiente, com eletrônica, caixas acústicas, cabeamento e proteção compatíveis entre si.",
-    "Sonorização Ambiente": "O sistema de sonorização distribui música com qualidade e controle independente, respeitando a arquitetura, o uso de cada ambiente e a expansão futura.",
+    "Áudio e Vídeo": "Para uma experiência audiovisual imersiva, propomos sistemas de áudio e vídeo dimensionados para o ambiente e integrados à automação do projeto.",
     "Sistema de Redes Wi-Fi": "A infraestrutura de rede foi dimensionada para cobertura estável, alto desempenho e conexão confiável dos equipamentos de automação, entretenimento e uso pessoal.",
     "Segurança Inteligente": "A solução de segurança conecta acessos, sensores e monitoramento ao ecossistema da residência, ampliando controle, rastreabilidade e tranquilidade.",
     "Proteção de Energia": "Os equipamentos de proteção e condicionamento preservam a instalação e os dispositivos eletrônicos contra oscilações e distúrbios da rede elétrica.",
+    "Complementos e Diversos": "Cabos, fios, conectores, adaptadores e demais complementos foram organizados nesta seção para facilitar a conferência do fornecimento.",
     "Serviços Especializados": "A SONA realiza projeto, instalação, programação, testes, treinamento e entrega assistida para garantir que toda a solução funcione de forma integrada.",
   };
   return copy[title] ?? "Solução dimensionada pela SONA para atender às necessidades técnicas e de uso deste projeto.";
@@ -1887,16 +1894,17 @@ function proposalSectionCopy(title: string) {
 export function ProposalSheet({ proposal, subtotal, total, productImages, itemImages, scopeReport }: { proposal: Proposal; subtotal: number; total: number; productImages: string[]; itemImages: Record<number, string[]>; scopeReport: ScopeReport | null }) {
   const plan = plans[proposal.plan];
   const date = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long", year: "numeric" }).format(new Date());
-  const categoryTotals = Object.entries(proposal.items.reduce<Record<string, number>>((groups, item) => {
+  const organizedItems = organizeProposalItems(proposal.items);
+  const categoryTotals = Object.entries(organizedItems.reduce<Record<string, number>>((groups, item) => {
     groups[item.category] = (groups[item.category] ?? 0) + item.qty * item.unitPrice;
     return groups;
   }, {}));
-  const solutionGroups = Object.entries(proposal.items.reduce<Record<string, ProposalItem[]>>((groups, item) => {
+  const solutionGroups = Object.entries(organizedItems.reduce<Record<string, ProposalItem[]>>((groups, item) => {
     const section = proposalSectionFor(item.category);
     groups[section] = [...(groups[section] ?? []), item];
     return groups;
   }, {}));
-  const allItemImages = proposal.items.flatMap((item) => itemImages[item.id] ?? []);
+  const allItemImages = organizedItems.flatMap((item) => itemImages[item.id] ?? []);
   const coverImages = productImages.length > 0 ? productImages : allItemImages;
   const solutionPages = solutionGroups.flatMap(([title, items]) => {
     const itemsPerPage = 8;
