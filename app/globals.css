@@ -383,7 +383,25 @@ button { cursor: pointer; }
   .workspace, .preview-panel { margin: 0; padding: 0; border: 0; background: #fff; height: auto; overflow: visible; }
   .builder-layout { display: block; }
   .proposal-document { display: block; width: 210mm; max-width: none; margin: 0; }
-  .proposal-page { width: 210mm; height: 297mm; min-height: 0; aspect-ratio: auto; overflow: hidden; box-sizing: border-box; box-shadow: none; margin: 0; padding: 16mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; break-after: page; page-break-after: always; break-inside: avoid; page-break-inside: avoid; }
+  .proposal-page { width: 210mm; height: 297mm; min-height: 0; aspect-ratio: auto; overflow: hidden; box-sizing: border-box; box-shadow: none; margin: 0; padding: 16mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; break-after: page; page-break-after: always; break-inside: avoid; page-break-inside: avoid; background-color: #fff; background-image: radial-gradient(circle, #181c22 0 1mm, transparent 1.15mm), radial-gradient(circle, #181c22 0 1mm, transparent 1.15mm), radial-gradient(circle, #181c22 0 1mm, transparent 1.15mm), radial-gradient(circle, #181c22 0 1mm, transparent 1.15mm); background-size: 11mm 5mm; background-repeat: repeat-x; background-position: 7mm 7mm, 7mm 17mm, 7mm calc(100% - 17mm), 7mm calc(100% - 7mm); }
+  /* Moldura impressa diretamente na folha: permanece estável mesmo enquanto
+     imagens são convertidas para PNG transparente antes da impressão. */
+  .proposal-page > .dot-grid,
+  .proposal-page > .proposal-brand { display: none !important; }
+  .proposal-page::before {
+    content: "S  ●  N  A";
+    position: absolute;
+    z-index: 20;
+    top: 7mm;
+    right: 9mm;
+    padding: 1.5mm 0 1.5mm 6mm;
+    background: #fff;
+    color: #181c22;
+    font-size: 6mm;
+    line-height: 1;
+    letter-spacing: 1.1mm;
+  }
+  .contact-card .proposal-brand { display: grid !important; }
   .proposal-page table, .classic-table, .classic-table tbody { break-inside: avoid; page-break-inside: avoid; }
   .proposal-page tr, .investment-lines > div, .classic-section li { break-inside: avoid; }
   .catalog-product > .catalog-product__visual { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
