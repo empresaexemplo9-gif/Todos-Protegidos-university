@@ -505,7 +505,7 @@ export default function Home() {
     proposal, productImages, itemImages, scopeReport,
     documentMode: wordMode ? "manual" : "automatic",
     automaticHtml: wordMode ? automaticHtml : (generatedPreviewRef.current?.querySelector("#proposal-print")?.innerHTML ?? automaticHtml),
-    templateVersion: 7,
+    templateVersion: 8,
   });
 
   const refreshProposals = async () => {
@@ -563,9 +563,9 @@ export default function Home() {
     setScopeReport(bundle?.scopeReport ?? null);
     setProposalId(record.id);
     setProposalStatus(record.status);
-    setManualHtml(bundle?.templateVersion === 7 ? (record.manualHtml ?? "") : "");
-    setAutomaticHtml(bundle?.templateVersion === 7 ? (bundle.automaticHtml ?? "") : "");
-    setWordMode(bundle?.templateVersion === 7 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
+    setManualHtml(bundle?.templateVersion === 8 ? (record.manualHtml ?? "") : "");
+    setAutomaticHtml(bundle?.templateVersion === 8 ? (bundle.automaticHtml ?? "") : "");
+    setWordMode(bundle?.templateVersion === 8 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
     setHistoryOpen(false);
     setSection("proposals");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1123,15 +1123,42 @@ function removeConnectedImageBackground(imageData: ImageData) {
     throw new Error("Não foi possível identificar um fundo contínuo ao redor da imagem.");
   }
 
+  // Remove os pequenos blocos desconectados do quadriculado sem apagar áreas
+  // claras grandes que pertencem ao produto (por exemplo, access points).
+  const visited = new Uint8Array(pixelCount);
+  const componentQueue = new Uint32Array(pixelCount);
+  const maxCheckerComponent = Math.max(180, Math.round(pixelCount * .0035));
+  for (let start = 0; start < pixelCount; start += 1) {
+    if (background[start] || visited[start] || !resemblesBackground(start)) continue;
+    let componentStart = 0;
+    let componentEnd = 0;
+    visited[start] = 1;
+    componentQueue[componentEnd++] = start;
+    while (componentStart < componentEnd) {
+      const pixelIndex = componentQueue[componentStart++];
+      const x = pixelIndex % width;
+      const y = Math.floor(pixelIndex / width);
+      const neighbors = [
+        x > 0 ? pixelIndex - 1 : -1,
+        x + 1 < width ? pixelIndex + 1 : -1,
+        y > 0 ? pixelIndex - width : -1,
+        y + 1 < height ? pixelIndex + width : -1,
+      ];
+      for (const neighbor of neighbors) {
+        if (neighbor < 0 || background[neighbor] || visited[neighbor] || !resemblesBackground(neighbor)) continue;
+        visited[neighbor] = 1;
+        componentQueue[componentEnd++] = neighbor;
+      }
+    }
+    if (componentEnd <= maxCheckerComponent) {
+      for (let index = 0; index < componentEnd; index += 1) background[componentQueue[index]] = 1;
+    }
+  }
+
   for (let pixelIndex = 0; pixelIndex < pixelCount; pixelIndex += 1) {
     const alphaOffset = pixelIndex * 4 + 3;
     const offset = pixelIndex * 4;
-    // Catálogos frequentemente entregam um quadriculado claro já gravado no
-    // arquivo. Esses quadrados não são conectados às bordas, portanto o flood
-    // fill sozinho deixava o padrão reaparecer no PDF. Remova também qualquer
-    // tom equivalente ao fundo amostrado nos quatro cantos.
-    const matchesSampledBackground = colors.some((color) => colorDistanceSquared(data, offset, color) <= toleranceSquared * .72);
-    if (background[pixelIndex] || matchesSampledBackground) {
+    if (background[pixelIndex]) {
       data[alphaOffset] = 0;
       continue;
     }
