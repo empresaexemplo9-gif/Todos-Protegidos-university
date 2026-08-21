@@ -5,6 +5,7 @@ import { ensureSchema } from "../lib/db.js";
 import { getActor } from "../lib/auth.js";
 import { json, failure, readBody, clean, sanitizeHtml } from "../lib/http.js";
 import {
+  seedCatalog,
   listProposals, findProposalById, findProposalByCode, findProposalByToken, saveProposalDraft,
   setProposalStatus, acceptProposal, deleteProposal, mapProposal,
 } from "../lib/repo.js";
@@ -12,6 +13,7 @@ import {
 export default async function handler(req, res) {
   try {
     await ensureSchema();
+    await seedCatalog();
 
     if (req.method === "GET") {
       const token = clean(req.query?.token, 160);
