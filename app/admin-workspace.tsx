@@ -102,6 +102,7 @@ const scopeCatalogKeywords: Record<string, string[]> = {
 };
 
 const normalizeText = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const markerUsesCatalogPhoto = (type: string) => type === "audio" || type === "access-point";
 
 type UbiquitiAP = { id: string; name: string; r24: number; r5: number; r6?: number };
 // Raios de cobertura internos aproximados (metros) por faixa \u2014 refer\u00eancia para posicionamento.
@@ -129,6 +130,20 @@ const ubiquitiAPs: UbiquitiAP[] = [
 function modelRadius(id: string, band: "2.4" | "5" | "6") {
   const m = ubiquitiAPs.find((a) => a.id === id) ?? ubiquitiAPs[0];
   return band === "2.4" ? m.r24 : band === "6" ? (m.r6 ?? m.r5) : m.r5;
+}
+
+function catalogAccessPointForModel(items: ScopeCatalogItem[], modelId: string) {
+  const aliases: Record<string, string[]> = {
+    "u6-plus": ["u6+", "u6 plus"],
+    "u7-pro": ["u7 pro"],
+  };
+  const model = ubiquitiAPs.find((item) => item.id === modelId);
+  const candidates = aliases[modelId] ?? [model?.name.replace(/^UniFi\s+/i, "") ?? modelId];
+  return items.find((item) => {
+    const haystack = normalizeText([item.name, item.brand, item.model, item.sku, item.category].filter(Boolean).join(" "));
+    const isAccessPoint = haystack.includes("access point") || haystack.includes("unifi");
+    return isAccessPoint && candidates.some((candidate) => haystack.includes(normalizeText(candidate)));
+  });
 }
 
 // Materiais de parede com atenuação real (dB), referência 5 GHz — mesma ordem de grandeza
@@ -383,6 +398,94 @@ function EquipmentInventoryPanel({ onPick, onClose }: { onPick: (dataUrl: string
   );
 }
 
+type CropRect = { x: number; y: number; width: number; height: number };
+type CropDragMode = "draw" | "move" | "nw" | "ne" | "sw" | "se";
+
+function ImageCropDialog({ src, title, onSave, onClose }: { src: string; title: string; onSave: (src: string) => void; onClose: () => void }) {
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ mode: CropDragMode; startX: number; startY: number; rect: CropRect } | null>(null);
+  const [rect, setRect] = useState<CropRect>({ x: 10, y: 10, width: 80, height: 80 });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const pointFromPointer = (clientX: number, clientY: number) => {
+    const bounds = surfaceRef.current?.getBoundingClientRect();
+    if (!bounds) return { x: 0, y: 0 };
+    return { x: Math.max(0, Math.min(100, ((clientX - bounds.left) / bounds.width) * 100)), y: Math.max(0, Math.min(100, ((clientY - bounds.top) / bounds.height) * 100)) };
+  };
+  const begin = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const point = pointFromPointer(event.clientX, event.clientY);
+    const mode = (event.target as HTMLElement).closest<HTMLElement>("[data-crop-mode]")?.dataset.cropMode as CropDragMode | undefined;
+    dragRef.current = { mode: mode ?? "draw", startX: point.x, startY: point.y, rect };
+    if (!mode) setRect({ x: point.x, y: point.y, width: 0, height: 0 });
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const move = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || event.buttons === 0) return;
+    const point = pointFromPointer(event.clientX, event.clientY);
+    const dx = point.x - drag.startX;
+    const dy = point.y - drag.startY;
+    if (drag.mode === "draw") {
+      setRect({ x: Math.min(drag.startX, point.x), y: Math.min(drag.startY, point.y), width: Math.abs(dx), height: Math.abs(dy) });
+      return;
+    }
+    if (drag.mode === "move") {
+      setRect({ ...drag.rect, x: Math.max(0, Math.min(100 - drag.rect.width, drag.rect.x + dx)), y: Math.max(0, Math.min(100 - drag.rect.height, drag.rect.y + dy)) });
+      return;
+    }
+    const left = drag.mode.includes("w") ? Math.max(0, Math.min(drag.rect.x + drag.rect.width - 2, drag.rect.x + dx)) : drag.rect.x;
+    const right = drag.mode.includes("e") ? Math.min(100, Math.max(drag.rect.x + 2, drag.rect.x + drag.rect.width + dx)) : drag.rect.x + drag.rect.width;
+    const top = drag.mode.includes("n") ? Math.max(0, Math.min(drag.rect.y + drag.rect.height - 2, drag.rect.y + dy)) : drag.rect.y;
+    const bottom = drag.mode.includes("s") ? Math.min(100, Math.max(drag.rect.y + 2, drag.rect.y + drag.rect.height + dy)) : drag.rect.y + drag.rect.height;
+    setRect({ x: left, y: top, width: right - left, height: bottom - top });
+  };
+  const end = (event: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current = null;
+    try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* noop */ }
+  };
+  const save = async () => {
+    if (rect.width < 2 || rect.height < 2) { setError("Selecione uma área maior para recortar."); return; }
+    setBusy(true); setError("");
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const element = new Image();
+        element.onload = () => resolve(element);
+        element.onerror = () => reject(new Error("Não foi possível abrir esta imagem."));
+        element.src = src;
+      });
+      const sx = Math.round(image.naturalWidth * rect.x / 100);
+      const sy = Math.round(image.naturalHeight * rect.y / 100);
+      const sw = Math.max(1, Math.round(image.naturalWidth * rect.width / 100));
+      const sh = Math.max(1, Math.round(image.naturalHeight * rect.height / 100));
+      const canvas = document.createElement("canvas");
+      canvas.width = sw; canvas.height = sh;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Seu navegador não conseguiu preparar o recorte.");
+      context.drawImage(image, sx, sy, sw, sh, 0, 0, sw, sh);
+      onSave(canvas.toDataURL("image/png"));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível salvar o recorte.");
+      setBusy(false);
+    }
+  };
+  return <div className="crop-dialog-backdrop" onPointerDown={(event) => { if (event.currentTarget === event.target && !busy) onClose(); }}>
+    <section className="crop-dialog" role="dialog" aria-modal="true" aria-label={`Recortar ${title}`}>
+      <header><div><span>EDIÇÃO DA IMAGEM DO ESCOPO</span><strong>Recortar {title}</strong><small>Arraste para criar o corte. Mova a área ou use os quatro cantos para ajustar.</small></div><button onClick={onClose} disabled={busy} aria-label="Fechar">×</button></header>
+      <div className="crop-dialog__stage">
+        <div ref={surfaceRef} className="crop-surface" onPointerDown={begin} onPointerMove={move} onPointerUp={end} onPointerCancel={end}>
+          <img src={src} alt={title} draggable={false} />
+          <div className="crop-selection" data-crop-mode="move" style={{ left: `${rect.x}%`, top: `${rect.y}%`, width: `${rect.width}%`, height: `${rect.height}%` }}>
+            {(["nw", "ne", "sw", "se"] as const).map((corner) => <i key={corner} className={`crop-handle crop-handle--${corner}`} data-crop-mode={corner} />)}
+          </div>
+        </div>
+      </div>
+      {error && <p className="crop-dialog__error" role="alert">{error}</p>}
+      <footer><span>{Math.round(rect.width)}% × {Math.round(rect.height)}% da imagem</span><button className="btn btn--ghost" onClick={() => setRect({ x: 0, y: 0, width: 100, height: 100 })} disabled={busy}>Imagem inteira</button><button className="btn btn--ghost" onClick={onClose} disabled={busy}>Cancelar</button><button className="btn btn--green" onClick={() => void save()} disabled={busy}>{busy ? "Salvando…" : "Salvar recorte"}</button></footer>
+    </section>
+  </div>;
+}
+
 export const plans = {
   SMARTLIFE: {
     tier: "SmartLife",
@@ -574,7 +677,7 @@ export default function Home() {
     proposal, productImages, itemImages, scopeReport,
     documentMode: wordMode ? "manual" : "automatic",
     automaticHtml: wordMode ? automaticHtml : (generatedPreviewRef.current?.querySelector("#proposal-print")?.innerHTML ?? automaticHtml),
-    templateVersion: 10,
+    templateVersion: 11,
   });
 
   const refreshProposals = async () => {
@@ -626,15 +729,16 @@ export default function Home() {
 
   const openSavedProposal = (record: SavedProposal) => {
     const bundle = record.data;
+    const keepsManualDocument = (bundle?.templateVersion === 10 || bundle?.templateVersion === 11) && bundle.documentMode === "manual" && Boolean(record.manualHtml);
     setProposal({ ...initialProposal, ...(bundle?.proposal ?? {}), extraPages: bundle?.proposal?.extraPages ?? [] });
     setProductImages(bundle?.productImages ?? []);
     setItemImages(bundle?.itemImages ?? {});
     setScopeReport(bundle?.scopeReport ?? null);
     setProposalId(record.id);
     setProposalStatus(record.status);
-    setManualHtml(bundle?.templateVersion === 10 ? (record.manualHtml ?? "") : "");
-    setAutomaticHtml(bundle?.templateVersion === 10 ? (bundle.automaticHtml ?? "") : "");
-    setWordMode(bundle?.templateVersion === 10 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
+    setManualHtml(keepsManualDocument ? (record.manualHtml ?? "") : "");
+    setAutomaticHtml(bundle?.templateVersion === 11 ? (bundle.automaticHtml ?? "") : "");
+    setWordMode(keepsManualDocument);
     setHistoryOpen(false);
     setSection("proposals");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1791,7 +1895,9 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
     const isPlaceholderTitle = !title || title === "nova página" || title === "pagina adicional" || title === "página adicional";
     return Boolean(page.subtitle.trim() || page.body.trim() || page.images.length > 0 || !isPlaceholderTitle);
   });
-  const summaryPage = solutionPages.length + extraPages.length + 2;
+  const scopePageCount = scopeReport ? 1 : 0;
+  const scopePageNumber = solutionPages.length + 2;
+  const summaryPage = solutionPages.length + scopePageCount + extraPages.length + 2;
   return (
     <article className="proposal-document" id="proposal-print">
       <section className="proposal-page proposal-page--main">
@@ -1829,13 +1935,33 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
         </section>;
       })}
 
+      {scopeReport && <section className="proposal-page proposal-page--scope">
+        <DottedFrame />
+        <div className="solution-heading"><h2>ESCOPO TÉCNICO · PLANTA DO PROJETO</h2><p>{scopeReport.project} · {scopeReport.address}</p></div>
+        <div className="proposal-location-plan">
+          <div className="report-plan__canvas">
+            {scopeReport.planImage ? <img src={scopeReport.planImage} alt={`Planta de ${scopeReport.project}`} /> : <DefaultFloorPlan />}
+            {(scopeReport.assets ?? []).map((item) => <img className="report-plan__asset" key={item.id} src={item.src} alt={item.name} style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%`, transform: `translate(-50%, -50%) rotate(${item.rotation ?? 0}deg)` }} />)}
+            {(scopeReport.markers ?? []).map((item) => {
+              const tool = (scopeReport.tools ?? []).find((entry) => entry.id === item.type) ?? scopeReport.tools?.[0];
+              const photo = scopeReport.markerImages?.[item.id];
+              return photo
+                ? <img className="report-plan__speaker" key={item.id} src={photo} alt={item.catalogName ?? item.label} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size }} />
+                : <span key={item.id} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool?.color ?? "#4d5551" }}>{item.label}</span>;
+            })}
+          </div>
+          {(scopeReport.equipmentLegend ?? []).length > 0 && <aside className="plan-equipment"><span className="plan-equipment__title">Equipamentos na planta</span>{scopeReport.equipmentLegend.map((item) => <div className="plan-equipment__item" key={item.name}><img src={item.image} alt={item.name} /><div><strong>{item.name}</strong><b>{item.qty} un.</b></div></div>)}</aside>}
+        </div>
+        <PageFooter number={String(scopePageNumber)} />
+      </section>}
+
       {extraPages.map((page, index) => (
         <section className="proposal-page proposal-page--extra" key={page.id}>
           <DottedFrame />
           <div className="solution-heading"><h2>{(page.title || "Página adicional").toLocaleUpperCase("pt-BR")}</h2>{page.subtitle && <p>{page.subtitle}</p>}</div>
           {page.body && <div className="extra-page-body">{page.body.split("\n").filter(Boolean).map((paragraph, paragraphIndex) => <p key={paragraphIndex}>{paragraph}</p>)}</div>}
           {page.images.length > 0 && <div className={`reference-solution-gallery reference-solution-gallery--${Math.min(4, page.images.length)}`}>{page.images.map((src, imageIndex) => <ProposalAssetImage key={imageIndex} src={src} alt={`Imagem ${imageIndex + 1} de ${page.title}`} />)}</div>}
-          <PageFooter number={String(solutionPages.length + index + 2)} />
+          <PageFooter number={String(solutionPages.length + scopePageCount + index + 2)} />
         </section>
       ))}
 
@@ -1895,6 +2021,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const [aiScopeRealista, setAiScopeRealista] = useState(true);
   const [photoScopeOpen, setPhotoScopeOpen] = useState(false);
   const [inventoryScopeOpen, setInventoryScopeOpen] = useState(false);
+  const [cropTarget, setCropTarget] = useState<{ kind: "plan" | "asset"; src: string; id?: number; title: string } | null>(null);
   const [planImage, setPlanImage] = useState<string | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
   const [draggingAsset, setDraggingAsset] = useState<number | null>(null);
@@ -1997,7 +2124,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     const stored = window.localStorage.getItem("sona-scope-draft");
     const timer = window.setTimeout(() => { if (stored) {
       try {
-        const draft = JSON.parse(stored) as { tools?: ScopeTool[]; markers?: ScopeMarker[]; assets?: PlanAsset[]; walls?: Array<{ id: number; pts: Array<{ x: number; y: number }>; material?: WallMaterial }>; client?: string; project?: string; address?: string; detectedTools?: string[] };
+        const draft = JSON.parse(stored) as { tools?: ScopeTool[]; markers?: ScopeMarker[]; assets?: PlanAsset[]; walls?: Array<{ id: number; pts: Array<{ x: number; y: number }>; material?: WallMaterial }>; client?: string; project?: string; address?: string; detectedTools?: string[]; planImage?: string | null };
         if (draft.tools?.length) setTools(draft.tools);
         if (draft.markers?.length) setMarkers(draft.markers.map((item) => ({ ...item, size: item.size || 38, range: item.range || 18 })));
         if (draft.assets) setAssets(draft.assets.map((item) => ({ ...item, rotation: item.rotation ?? 0 })));
@@ -2006,6 +2133,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
         if (draft.project) setProject(draft.project);
         if (draft.address) setAddress(draft.address);
         if (draft.detectedTools) setDetectedTools(draft.detectedTools);
+        if (draft.planImage) setPlanImage(draft.planImage);
       } catch { /* mantém o projeto seguro */ }
     } }, 0);
     return () => window.clearTimeout(timer);
@@ -2024,6 +2152,17 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     setMarkers((current) => current.map((item) => item.type === "access-point" && item.apModel ? { ...item, range: modelRadius(item.apModel, heatBand) } : item));
   }, [heatBand]);
 
+  // Ao carregar o catálogo, vincula automaticamente o modelo selecionado do AP à sua
+  // foto. Assim o marcador já nasce com a imagem, sem exigir um segundo vínculo manual.
+  useEffect(() => {
+    if (!catalogItems.length) return;
+    setMarkers((current) => current.map((item) => {
+      if (item.type !== "access-point" || item.catalogItemId) return item;
+      const catalogItem = catalogAccessPointForModel(catalogItems, item.apModel ?? "u6-plus");
+      return catalogItem ? { ...item, catalogItemId: catalogItem.id, catalogName: catalogItem.name, description: catalogItem.name } : item;
+    }));
+  }, [catalogItems]);
+
   const updateMarker = (id: number, patch: Partial<ScopeMarker>) => setMarkers((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
   const updateAsset = (id: number, patch: Partial<PlanAsset>) => setAssets((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
 
@@ -2034,7 +2173,8 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     const id = Math.max(0, ...markers.map((item) => item.id)) + 1;
     const count = markers.filter((item) => item.type === tool.id).length + 1;
     const isAp = tool.id === "access-point";
-    const next: ScopeMarker = { id, type: tool.id, label: `${tool.code}${String(count).padStart(2, "0")}`, environment: "Novo ambiente", description: tool.label, status: "previsto", x, y, size: 38, range: isAp ? modelRadius("u6-plus", heatBand) : 18, ...(isAp ? { apModel: "u6-plus" } : {}) };
+    const apCatalogItem = isAp ? catalogAccessPointForModel(catalogItems, "u6-plus") : undefined;
+    const next: ScopeMarker = { id, type: tool.id, label: `${tool.code}${String(count).padStart(2, "0")}`, environment: "Novo ambiente", description: apCatalogItem?.name ?? tool.label, status: "previsto", x, y, size: 38, range: isAp ? modelRadius("u6-plus", heatBand) : 18, ...(isAp ? { apModel: "u6-plus", catalogItemId: apCatalogItem?.id, catalogName: apCatalogItem?.name } : {}) };
     setMarkers((current) => [...current, next]);
     setSelectedMarker(id);
     setSelectedAsset(null);
@@ -2168,8 +2308,12 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   };
 
   const saveScope = () => {
-    window.localStorage.setItem("sona-scope-draft", JSON.stringify({ tools, markers, assets, walls, client, project, address, detectedTools }));
-    setToast("Planejamento salvo neste dispositivo");
+    try {
+      window.localStorage.setItem("sona-scope-draft", JSON.stringify({ tools, markers, assets, walls, client, project, address, detectedTools, planImage }));
+      setToast("Planejamento e imagens salvos neste dispositivo");
+    } catch {
+      setToast("A imagem é grande demais para o rascunho local. Gere e salve a proposta para armazená-la no projeto.");
+    }
     window.setTimeout(() => setToast(""), 2400);
   };
 
@@ -2205,12 +2349,12 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     const itemImages: Record<number, string[]> = {};
     entries.forEach((item, index) => { if (item.imageUrl) itemImages[index + 1] = [item.imageUrl]; });
     const productImages = Array.from(new Set(entries.map((item) => item.imageUrl).filter(Boolean))).slice(0, 3);
-    // Fotos das caixas de sonorização por marcador, para a planta da proposta.
+    // Fotos dos equipamentos que precisam aparecer diretamente na planta da proposta.
     const markerImages: Record<number, string> = {};
     // Legenda de equipamentos usados na planta (modelo + foto + quantidade), como no padrão da proposta.
     const legendMap = new Map<string, { image: string; name: string; qty: number }>();
     markers.forEach((point) => {
-      if (point.type !== "audio" || !point.catalogItemId) return;
+      if (!markerUsesCatalogPhoto(point.type) || !point.catalogItemId) return;
       const ci = catalogItems.find((entry) => entry.id === point.catalogItemId);
       if (!ci?.imageUrl) return;
       markerImages[point.id] = ci.imageUrl;
@@ -2258,7 +2402,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
 
         <div className="plan-card">
           <div className="plan-card__bar">
-            <div><span className="live-dot" /> PLANTA DE MARCAÇÃO</div><div className="plan-bar-actions"><div className="plan-modes"><button className={canvasMode === "marker" ? "active" : ""} onClick={() => setCanvasMode("marker")} title="Inserir pontos">✛ Marcar</button><button className={canvasMode === "pan" ? "active" : ""} onClick={() => setCanvasMode("pan")} title="Arrastar a planta">✋ Mover</button><button className={canvasMode === "wall" ? "active" : ""} onClick={() => setCanvasMode("wall")} title="Desenhar paredes — clique para traçar, 2 cliques finaliza, clique direito cancela">▟ Parede</button><button className={canvasMode === "room" ? "active" : ""} onClick={() => { setCanvasMode("room"); setRoomDraft(null); }} title="Desenhar um cômodo retangular — clique em dois cantos opostos, clique direito cancela">▭ Cômodo</button><button className={canvasMode === "calibrate" ? "active" : ""} onClick={() => { setCanvasMode("calibrate"); setCalibLine([]); }} title="Calibrar escala: trace uma medida conhecida na planta">📏 Escala</button></div>{(canvasMode === "wall" || canvasMode === "room") && <select className="wall-material" value={wallMaterial} onChange={(event) => setWallMaterial(event.target.value as WallMaterial)} title="Material da parede — define a atenuação real do sinal em dB">{wallMaterials.map((material) => <option key={material.id} value={material.id}>{material.label} · {material.db} dB</option>)}</select>}<div className="plan-zoom"><button onClick={() => setZoom((z) => clampZoom(z / 1.2))} title="Diminuir">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom((z) => clampZoom(z * 1.2))} title="Aumentar">＋</button><button onClick={resetView} title="Ajustar à tela">⤢</button>{walls.length > 0 && <button onClick={() => { setWalls([]); setWallDraft([]); }} title="Limpar paredes">🗑</button>}</div><button className={heatmap ? "active" : ""} onClick={() => setHeatmap((value) => !value)}>◉ Mapa de calor</button><select value={heatBand} onChange={(event) => setHeatBand(event.target.value as "2.4" | "5" | "6")}><option value="2.4">2,4 GHz</option><option value="5">5 GHz</option><option value="6">6 GHz</option></select><label className="plan-scale">Escala<input type="number" min="1" max="80" value={planWidthMeters} onChange={(event) => setPlanWidthMeters(Math.max(1, Number(event.target.value) || 1))} title="Largura real da planta, em metros" /><span>m</span></label><button type="button" className={aiScopeOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setAiScopeOpen((open) => !open); setPhotoScopeOpen(false); setAiScopeError(""); }} title="Gerar imagem com IA e inserir na planta">✦ IA</button><button type="button" className={photoScopeOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setPhotoScopeOpen((open) => !open); setAiScopeOpen(false); setInventoryScopeOpen(false); }} title="Buscar foto real na web e inserir na planta">🔎 Foto</button><button type="button" className={inventoryScopeOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setInventoryScopeOpen((open) => !open); setPhotoScopeOpen(false); setAiScopeOpen(false); }} title="Inventário de equipamentos: inserir a foto do equipamento do catálogo">▦ Equip.</button><label className="plan-upload"><input type="file" accept="image/*" multiple onChange={(e) => e.target.files && void addOverlayImages(e.target.files)} />＋ Imagens</label><label className="plan-upload"><input type="file" accept="image/*,.pdf,application/pdf" onChange={(e) => e.target.files?.[0] && void loadPlan(e.target.files[0])} />{planImage ? "Trocar planta" : "＋ Carregar planta/PDF"}</label></div>
+            <div><span className="live-dot" /> PLANTA DE MARCAÇÃO</div><div className="plan-bar-actions"><div className="plan-modes"><button className={canvasMode === "marker" ? "active" : ""} onClick={() => setCanvasMode("marker")} title="Inserir pontos">✛ Marcar</button><button className={canvasMode === "pan" ? "active" : ""} onClick={() => setCanvasMode("pan")} title="Arrastar a planta">✋ Mover</button><button className={canvasMode === "wall" ? "active" : ""} onClick={() => setCanvasMode("wall")} title="Desenhar paredes — clique para traçar, 2 cliques finaliza, clique direito cancela">▟ Parede</button><button className={canvasMode === "room" ? "active" : ""} onClick={() => { setCanvasMode("room"); setRoomDraft(null); }} title="Desenhar um cômodo retangular — clique em dois cantos opostos, clique direito cancela">▭ Cômodo</button><button className={canvasMode === "calibrate" ? "active" : ""} onClick={() => { setCanvasMode("calibrate"); setCalibLine([]); }} title="Calibrar escala: trace uma medida conhecida na planta">📏 Escala</button></div>{(canvasMode === "wall" || canvasMode === "room") && <select className="wall-material" value={wallMaterial} onChange={(event) => setWallMaterial(event.target.value as WallMaterial)} title="Material da parede — define a atenuação real do sinal em dB">{wallMaterials.map((material) => <option key={material.id} value={material.id}>{material.label} · {material.db} dB</option>)}</select>}<div className="plan-zoom"><button onClick={() => setZoom((z) => clampZoom(z / 1.2))} title="Diminuir">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom((z) => clampZoom(z * 1.2))} title="Aumentar">＋</button><button onClick={resetView} title="Ajustar à tela">⤢</button>{walls.length > 0 && <button onClick={() => { setWalls([]); setWallDraft([]); }} title="Limpar paredes">🗑</button>}</div><button className={heatmap ? "active" : ""} onClick={() => setHeatmap((value) => !value)}>◉ Mapa de calor</button><select value={heatBand} onChange={(event) => setHeatBand(event.target.value as "2.4" | "5" | "6")}><option value="2.4">2,4 GHz</option><option value="5">5 GHz</option><option value="6">6 GHz</option></select><label className="plan-scale">Escala<input type="number" min="1" max="80" value={planWidthMeters} onChange={(event) => setPlanWidthMeters(Math.max(1, Number(event.target.value) || 1))} title="Largura real da planta, em metros" /><span>m</span></label>{planImage && <button type="button" className="plan-ai" onClick={() => setCropTarget({ kind: "plan", src: planImage, title: "planta do projeto" })} title="Recortar e salvar apenas uma área da planta">✂ Recortar planta</button>}<button type="button" className={aiScopeOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setAiScopeOpen((open) => !open); setPhotoScopeOpen(false); setAiScopeError(""); }} title="Gerar imagem com IA e inserir na planta">✦ IA</button><button type="button" className={photoScopeOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setPhotoScopeOpen((open) => !open); setAiScopeOpen(false); setInventoryScopeOpen(false); }} title="Buscar foto real na web e inserir na planta">🔎 Foto</button><button type="button" className={inventoryScopeOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setInventoryScopeOpen((open) => !open); setPhotoScopeOpen(false); setAiScopeOpen(false); }} title="Inventário de equipamentos: inserir a foto do equipamento do catálogo">▦ Equip.</button><label className="plan-upload"><input type="file" accept="image/*" multiple onChange={(e) => e.target.files && void addOverlayImages(e.target.files)} />＋ Imagens</label><label className="plan-upload"><input type="file" accept="image/*,.pdf,application/pdf" onChange={(e) => e.target.files?.[0] && void loadPlan(e.target.files[0])} />{planImage ? "Trocar planta" : "＋ Carregar planta/PDF"}</label></div>
           </div>
           <div
             className={`plan-canvas plan-canvas--mode-${canvasMode} ${planImage ? "plan-canvas--image" : ""}`}
@@ -2295,9 +2439,9 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
             {markers.map((item) => {
               const tool = tools.find((entry) => entry.id === item.type) ?? tools[0];
               const catItem = item.catalogItemId ? catalogItems.find((entry) => entry.id === item.catalogItemId) : undefined;
-              // Só na sonorização (áudio): quando o ponto está ligado a uma caixa do catálogo,
-              // o marcador mostra a foto real do equipamento (de frente) para demonstrar a distribuição.
-              const photo = item.type === "audio" && catItem?.imageUrl ? catItem.imageUrl : "";
+              // Caixas de som e access points vinculados ao catálogo aparecem com a foto real
+              // do equipamento para demonstrar com clareza a distribuição na planta.
+              const photo = markerUsesCatalogPhoto(item.type) && catItem?.imageUrl ? catItem.imageUrl : "";
               return <button
                 key={item.id}
                 className={`scope-marker ${photo ? "scope-marker--photo" : ""} ${selectedMarker === item.id ? "selected" : ""}`}
@@ -2323,6 +2467,14 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
           </div>}
           {photoScopeOpen && <ImageSearchPanel defaultQuery={project} onPick={(src, label) => { addScopeImageFromData(src, label); setPhotoScopeOpen(false); }} onClose={() => setPhotoScopeOpen(false)} />}
           {inventoryScopeOpen && <EquipmentInventoryPanel onPick={(src, label) => { addScopeImageFromData(src, label); setInventoryScopeOpen(false); }} onClose={() => setInventoryScopeOpen(false)} />}
+          {cropTarget && <ImageCropDialog src={cropTarget.src} title={cropTarget.title} onClose={() => setCropTarget(null)} onSave={(src) => {
+            if (cropTarget.kind === "plan") {
+              setPlanImage(src);
+              setPlanPages((current) => current.length ? current.map((page, index) => index === activePage ? src : page) : current);
+            } else if (cropTarget.id !== undefined) updateAsset(cropTarget.id, { src });
+            setCropTarget(null);
+            setToast("Recorte salvo no projeto");
+          }} />}
           {canvasMode === "calibrate" && <div className="calib-panel">{calibLine.length < 2 ? <span>Trace uma medida conhecida na planta ({calibLine.length}/2)</span> : <><label>Distância real<input type="number" min="0.1" step="0.1" value={calibMeters} onChange={(e) => setCalibMeters(e.target.value)} autoFocus /><span>m</span></label><button className="calib-apply" onClick={() => applyCalibration(Number(calibMeters))}>Aplicar</button></>}<button className="calib-cancel" onClick={() => { setCalibLine([]); setCalibMeters(""); }}>Limpar</button></div>}
           {(canvasMode === "wall" || canvasMode === "room") && selectedWall !== null && (() => { const wall = walls.find((entry) => entry.id === selectedWall); if (!wall) return null; return <div className="wall-panel"><span className="wall-panel__dot" style={{ background: wallColor(wall.material) }} /><label>Material<select value={wall.material} onChange={(event) => updateWall(wall.id, { material: event.target.value as WallMaterial })}>{wallMaterials.map((material) => <option key={material.id} value={material.id}>{material.label} · {material.db} dB</option>)}</select></label><span className="wall-panel__hint">Arraste os pontos para ajustar</span><button className="wall-panel__delete" onClick={() => removeWall(wall.id)}>Excluir parede</button><button className="calib-cancel" onClick={() => setSelectedWall(null)}>OK</button></div>; })()}
           {canvasMode === "marker" && marker && <div className="quickpick" onPointerDown={(event) => event.stopPropagation()}>
@@ -2350,17 +2502,26 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
       <aside className="scope-inspector">
         <div className="inspector-title"><span>PROPRIEDADES</span><h3>{marker ? marker.label : "Nenhum ponto selecionado"}</h3></div>
         {marker ? <>
-          <div className="inspector-preview" style={{ background: tools.find((tool) => tool.id === marker.type)?.color }}>{marker.label}</div>
+          {(() => {
+            const catalogItem = marker.catalogItemId ? catalogItems.find((item) => item.id === marker.catalogItemId) : undefined;
+            const photo = markerUsesCatalogPhoto(marker.type) ? catalogItem?.imageUrl : undefined;
+            return photo
+              ? <div className="asset-inspector-preview"><img src={photo} alt={catalogItem?.name ?? marker.label} /></div>
+              : <div className="inspector-preview" style={{ background: tools.find((tool) => tool.id === marker.type)?.color }}>{marker.label}</div>;
+          })()}
           <label className="field">Código do ponto<input value={marker.label} onChange={(e) => updateMarker(marker.id, { label: e.target.value.toUpperCase() })} /></label>
           <label className="field">Tipo<select value={marker.type} onChange={(e) => updateMarker(marker.id, { type: e.target.value })}>{tools.map((tool) => <option key={tool.id} value={tool.id}>{tool.label}</option>)}</select></label>
           <label className="field">Ambiente<input value={marker.environment} onChange={(e) => updateMarker(marker.id, { environment: e.target.value })} /></label>
           <label className="field">Descrição técnica<textarea rows={3} value={marker.description} onChange={(e) => updateMarker(marker.id, { description: e.target.value })} /></label>
           <label className="field">Status<select value={marker.status} onChange={(e) => updateMarker(marker.id, { status: e.target.value as ScopeMarker["status"] })}><option value="previsto">Previsto</option><option value="revisar">Revisar</option><option value="aprovado">Aprovado</option></select></label>
           <label className="field">Tamanho do símbolo<input type="range" min="26" max="90" value={marker.size} onChange={(e) => updateMarker(marker.id, { size: Number(e.target.value) })} /></label>
-          {marker.type === "access-point" && <><label className="field">Modelo Ubiquiti<select value={marker.apModel ?? "u6-plus"} onChange={(e) => updateMarker(marker.id, { apModel: e.target.value, range: modelRadius(e.target.value, heatBand) })}>{ubiquitiAPs.map((ap) => <option key={ap.id} value={ap.id}>{ap.name}</option>)}</select></label><label className="field">Alcance no plano (m)<input type="range" min="3" max="30" value={marker.range} onChange={(e) => updateMarker(marker.id, { range: Number(e.target.value) })} /><small>~{marker.range} m em {heatBand === "2.4" ? "2,4" : heatBand} GHz · ajuste fino</small></label></>}
+          {marker.type === "access-point" && <><label className="field">Modelo Ubiquiti<select value={marker.apModel ?? "u6-plus"} onChange={(e) => {
+            const catalogItem = catalogAccessPointForModel(catalogItems, e.target.value);
+            updateMarker(marker.id, { apModel: e.target.value, range: modelRadius(e.target.value, heatBand), catalogItemId: catalogItem?.id, catalogName: catalogItem?.name, description: catalogItem?.name ?? "Access point Wi-Fi" });
+          }}>{ubiquitiAPs.map((ap) => <option key={ap.id} value={ap.id}>{ap.name}</option>)}</select></label><label className="field">Alcance no plano (m)<input type="range" min="3" max="30" value={marker.range} onChange={(e) => updateMarker(marker.id, { range: Number(e.target.value) })} /><small>~{marker.range} m em {heatBand === "2.4" ? "2,4" : heatBand} GHz · ajuste fino</small></label></>}
           <div className="catalog-suggestions"><div><strong>ITENS COMPATÍVEIS</strong><small>Filtrados pela legenda “{tools.find((tool) => tool.id === marker.type)?.label}”</small></div>{suggestedCatalog.length ? suggestedCatalog.map((item) => <button key={item.id} className={marker.catalogItemId === item.id ? "selected" : ""} onClick={() => updateMarker(marker.id, { catalogItemId: item.id, catalogName: item.name, description: `${item.name} · ${[item.brand, item.model].filter(Boolean).join(" ")}` })}><span><b>{item.name}</b><small>{item.brand} · {item.model}</small></span><i>{marker.catalogItemId === item.id ? "✓" : "+"}</i></button>) : <p>Nenhum item compatível nesta categoria.</p>}</div>
           <button className="delete-marker" onClick={() => { setMarkers((current) => current.filter((item) => item.id !== marker.id)); setSelectedMarker(null); }}>Excluir ponto</button>
-        </> : asset ? <><div className="asset-inspector-preview"><img src={asset.src} alt={asset.name} /></div><label className="field">Nome da imagem<input value={asset.name} onChange={(event) => updateAsset(asset.id, { name: event.target.value })} /></label><label className="field">Tamanho<input type="range" min="5" max="95" value={asset.width} onChange={(event) => updateAsset(asset.id, { width: Number(event.target.value) })} /><small>{asset.width}% da largura da planta</small></label><label className="field">Rotação<input type="range" min="-180" max="180" step="1" value={asset.rotation ?? 0} onChange={(event) => updateAsset(asset.id, { rotation: Number(event.target.value) })} /><small>{asset.rotation ?? 0}°</small></label><div className="asset-rotation-actions"><button type="button" onClick={() => updateAsset(asset.id, { rotation: ((asset.rotation ?? 0) - 90 + 180) % 360 - 180 })}>↶ 90°</button><button type="button" onClick={() => updateAsset(asset.id, { rotation: ((asset.rotation ?? 0) + 90 + 180) % 360 - 180 })}>90° ↷</button><button type="button" onClick={() => updateAsset(asset.id, { rotation: 0 })}>Restaurar</button></div><button className="delete-marker" onClick={() => { setAssets((current) => current.filter((item) => item.id !== asset.id)); setSelectedAsset(null); }}>Excluir imagem</button></> : <div className="inspector-empty"><span>⌖</span><p>Selecione um marcador ou uma imagem para mover, editar, aumentar, diminuir ou excluir.</p></div>}
+        </> : asset ? <><div className="asset-inspector-preview"><img src={asset.src} alt={asset.name} /></div><label className="field">Nome da imagem<input value={asset.name} onChange={(event) => updateAsset(asset.id, { name: event.target.value })} /></label><label className="field">Tamanho<input type="range" min="5" max="95" value={asset.width} onChange={(event) => updateAsset(asset.id, { width: Number(event.target.value) })} /><small>{asset.width}% da largura da planta</small></label><div className="asset-size-actions"><button type="button" onClick={() => updateAsset(asset.id, { width: Math.max(5, asset.width - 5) })}>− Diminuir</button><button type="button" onClick={() => updateAsset(asset.id, { width: Math.min(95, asset.width + 5) })}>＋ Aumentar</button><button type="button" onClick={() => setCropTarget({ kind: "asset", id: asset.id, src: asset.src, title: asset.name })}>✂ Recortar</button></div><label className="field">Rotação<input type="range" min="-180" max="180" step="1" value={asset.rotation ?? 0} onChange={(event) => updateAsset(asset.id, { rotation: Number(event.target.value) })} /><small>{asset.rotation ?? 0}°</small></label><div className="asset-rotation-actions"><button type="button" onClick={() => updateAsset(asset.id, { rotation: ((asset.rotation ?? 0) - 90 + 180) % 360 - 180 })}>↶ 90°</button><button type="button" onClick={() => updateAsset(asset.id, { rotation: ((asset.rotation ?? 0) + 90 + 180) % 360 - 180 })}>90° ↷</button><button type="button" onClick={() => updateAsset(asset.id, { rotation: 0 })}>Restaurar</button></div><p className="asset-drag-hint">Arraste a imagem diretamente sobre a planta. Use a alça no canto para redimensionar livremente.</p><button className="delete-marker" onClick={() => { setAssets((current) => current.filter((item) => item.id !== asset.id)); setSelectedAsset(null); }}>Excluir imagem</button></> : <div className="inspector-empty"><span>⌖</span><p>Selecione um marcador ou uma imagem para mover, editar, aumentar, diminuir ou excluir.</p></div>}
 
         <div className="legend-editor">
           <div className="legend-editor__head"><div><span>LEGENDA EDITÁVEL</span><p>Altere nomes, siglas e cores.</p></div><button onClick={() => { const id = `custom-${Date.now()}`; setTools((current) => [...current, { id, code: "X", label: "Novo marcador", color: "#5f6964", category: "Automação" }]); setSelectedTool(id); }}>＋</button></div>
@@ -2370,7 +2531,14 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
 
       <section className="scope-report" aria-hidden="true">
         <DottedFrame /><div className="word-title"><strong>ESCOPO TÉCNICO</strong><b>{project}</b></div><p className="report-address">{address}</p>
-        <div className="report-plan"><div className="report-plan__canvas">{planImage ? <img src={planImage} alt="" /> : <DefaultFloorPlan />}{assets.map((item) => <img className="report-plan__asset" key={item.id} src={item.src} alt="" style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%`, transform: `translate(-50%, -50%) rotate(${item.rotation ?? 0}deg)` }} />)}{markers.map((item) => { const tool = tools.find((entry) => entry.id === item.type) ?? tools[0]; return <span key={item.id} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool.color }}>{item.label}</span>; })}</div></div>
+        <div className="report-plan"><div className="report-plan__canvas">{planImage ? <img src={planImage} alt="" /> : <DefaultFloorPlan />}{assets.map((item) => <img className="report-plan__asset" key={item.id} src={item.src} alt="" style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%`, transform: `translate(-50%, -50%) rotate(${item.rotation ?? 0}deg)` }} />)}{markers.map((item) => {
+          const tool = tools.find((entry) => entry.id === item.type) ?? tools[0];
+          const catalogItem = item.catalogItemId ? catalogItems.find((entry) => entry.id === item.catalogItemId) : undefined;
+          const photo = markerUsesCatalogPhoto(item.type) ? catalogItem?.imageUrl : undefined;
+          return photo
+            ? <img className="report-plan__speaker" key={item.id} src={photo} alt={catalogItem?.name ?? item.label} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size }} />
+            : <span key={item.id} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool.color }}>{item.label}</span>;
+        })}</div></div>
         <div className="report-legend">{totals.map(({ tool, qty }) => <div key={tool.id}><i style={{ background: tool.color }}>{tool.code}</i><span>{tool.label}</span><b>{qty}</b></div>)}</div>
         <table className="classic-table"><thead><tr><th>Item / ambiente</th><th>Quantidade</th></tr></thead><tbody>{totals.map(({ tool, qty }) => <tr key={tool.id}><td><strong>{tool.label}</strong><span>{tool.category}</span></td><td>{qty}</td></tr>)}</tbody></table><PageFooter number="1" />
       </section>
