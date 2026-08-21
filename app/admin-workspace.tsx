@@ -505,7 +505,7 @@ export default function Home() {
     proposal, productImages, itemImages, scopeReport,
     documentMode: wordMode ? "manual" : "automatic",
     automaticHtml: wordMode ? automaticHtml : (generatedPreviewRef.current?.querySelector("#proposal-print")?.innerHTML ?? automaticHtml),
-    templateVersion: 8,
+    templateVersion: 9,
   });
 
   const refreshProposals = async () => {
@@ -563,9 +563,9 @@ export default function Home() {
     setScopeReport(bundle?.scopeReport ?? null);
     setProposalId(record.id);
     setProposalStatus(record.status);
-    setManualHtml(bundle?.templateVersion === 8 ? (record.manualHtml ?? "") : "");
-    setAutomaticHtml(bundle?.templateVersion === 8 ? (bundle.automaticHtml ?? "") : "");
-    setWordMode(bundle?.templateVersion === 8 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
+    setManualHtml(bundle?.templateVersion === 9 ? (record.manualHtml ?? "") : "");
+    setAutomaticHtml(bundle?.templateVersion === 9 ? (bundle.automaticHtml ?? "") : "");
+    setWordMode(bundle?.templateVersion === 9 && bundle.documentMode === "manual" && Boolean(record.manualHtml));
     setHistoryOpen(false);
     setSection("proposals");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1128,8 +1128,13 @@ function removeConnectedImageBackground(imageData: ImageData) {
   const visited = new Uint8Array(pixelCount);
   const componentQueue = new Uint32Array(pixelCount);
   const maxCheckerComponent = Math.max(180, Math.round(pixelCount * .0035));
+  const checkerToleranceSquared = Math.min(toleranceSquared * .14, 22 * 22);
+  const resemblesChecker = (pixelIndex: number) => {
+    const offset = pixelIndex * 4;
+    return colors.some((color) => colorDistanceSquared(data, offset, color) <= checkerToleranceSquared);
+  };
   for (let start = 0; start < pixelCount; start += 1) {
-    if (background[start] || visited[start] || !resemblesBackground(start)) continue;
+    if (background[start] || visited[start] || !resemblesChecker(start)) continue;
     let componentStart = 0;
     let componentEnd = 0;
     visited[start] = 1;
@@ -1145,7 +1150,7 @@ function removeConnectedImageBackground(imageData: ImageData) {
         y + 1 < height ? pixelIndex + width : -1,
       ];
       for (const neighbor of neighbors) {
-        if (neighbor < 0 || background[neighbor] || visited[neighbor] || !resemblesBackground(neighbor)) continue;
+        if (neighbor < 0 || background[neighbor] || visited[neighbor] || !resemblesChecker(neighbor)) continue;
         visited[neighbor] = 1;
         componentQueue[componentEnd++] = neighbor;
       }
