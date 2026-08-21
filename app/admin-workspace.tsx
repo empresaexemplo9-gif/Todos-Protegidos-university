@@ -102,6 +102,7 @@ const scopeCatalogKeywords: Record<string, string[]> = {
 };
 
 const normalizeText = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const markerUsesCatalogPhoto = (type: string) => type === "audio" || type === "access-point";
 
 type UbiquitiAP = { id: string; name: string; r24: number; r5: number; r6?: number };
 // Raios de cobertura internos aproximados (metros) por faixa \u2014 refer\u00eancia para posicionamento.
@@ -129,6 +130,20 @@ const ubiquitiAPs: UbiquitiAP[] = [
 function modelRadius(id: string, band: "2.4" | "5" | "6") {
   const m = ubiquitiAPs.find((a) => a.id === id) ?? ubiquitiAPs[0];
   return band === "2.4" ? m.r24 : band === "6" ? (m.r6 ?? m.r5) : m.r5;
+}
+
+function catalogAccessPointForModel(items: ScopeCatalogItem[], modelId: string) {
+  const aliases: Record<string, string[]> = {
+    "u6-plus": ["u6+", "u6 plus"],
+    "u7-pro": ["u7 pro"],
+  };
+  const model = ubiquitiAPs.find((item) => item.id === modelId);
+  const candidates = aliases[modelId] ?? [model?.name.replace(/^UniFi\s+/i, "") ?? modelId];
+  return items.find((item) => {
+    const haystack = normalizeText([item.name, item.brand, item.model, item.sku, item.category].filter(Boolean).join(" "));
+    const isAccessPoint = haystack.includes("access point") || haystack.includes("unifi");
+    return isAccessPoint && candidates.some((candidate) => haystack.includes(normalizeText(candidate)));
+  });
 }
 
 // Materiais de parede com atenuação real (dB), referência 5 GHz — mesma ordem de grandeza
@@ -2024,6 +2039,17 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     setMarkers((current) => current.map((item) => item.type === "access-point" && item.apModel ? { ...item, range: modelRadius(item.apModel, heatBand) } : item));
   }, [heatBand]);
 
+  // Ao carregar o catálogo, vincula automaticamente o modelo selecionado do AP à sua
+  // foto. Assim o marcador já nasce com a imagem, sem exigir um segundo vínculo manual.
+  useEffect(() => {
+    if (!catalogItems.length) return;
+    setMarkers((current) => current.map((item) => {
+      if (item.type !== "access-point" || item.catalogItemId) return item;
+      const catalogItem = catalogAccessPointForModel(catalogItems, item.apModel ?? "u6-plus");
+      return catalogItem ? { ...item, catalogItemId: catalogItem.id, catalogName: catalogItem.name, description: catalogItem.name } : item;
+    }));
+  }, [catalogItems]);
+
   const updateMarker = (id: number, patch: Partial<ScopeMarker>) => setMarkers((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
   const updateAsset = (id: number, patch: Partial<PlanAsset>) => setAssets((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
 
@@ -2034,7 +2060,8 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     const id = Math.max(0, ...markers.map((item) => item.id)) + 1;
     const count = markers.filter((item) => item.type === tool.id).length + 1;
     const isAp = tool.id === "access-point";
-    const next: ScopeMarker = { id, type: tool.id, label: `${tool.code}${String(count).padStart(2, "0")}`, environment: "Novo ambiente", description: tool.label, status: "previsto", x, y, size: 38, range: isAp ? modelRadius("u6-plus", heatBand) : 18, ...(isAp ? { apModel: "u6-plus" } : {}) };
+    const apCatalogItem = isAp ? catalogAccessPointForModel(catalogItems, "u6-plus") : undefined;
+    const next: ScopeMarker = { id, type: tool.id, label: `${tool.code}${String(count).padStart(2, "0")}`, environment: "Novo ambiente", description: apCatalogItem?.name ?? tool.label, status: "previsto", x, y, size: 38, range: isAp ? modelRadius("u6-plus", heatBand) : 18, ...(isAp ? { apModel: "u6-plus", catalogItemId: apCatalogItem?.id, catalogName: apCatalogItem?.name } : {}) };
     setMarkers((current) => [...current, next]);
     setSelectedMarker(id);
     setSelectedAsset(null);
@@ -2205,12 +2232,12 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     const itemImages: Record<number, string[]> = {};
     entries.forEach((item, index) => { if (item.imageUrl) itemImages[index + 1] = [item.imageUrl]; });
     const productImages = Array.from(new Set(entries.map((item) => item.imageUrl).filter(Boolean))).slice(0, 3);
-    // Fotos das caixas de sonorização por marcador, para a planta da proposta.
+    // Fotos dos equipamentos que precisam aparecer diretamente na planta da proposta.
     const markerImages: Record<number, string> = {};
     // Legenda de equipamentos usados na planta (modelo + foto + quantidade), como no padrão da proposta.
     const legendMap = new Map<string, { image: string; name: string; qty: number }>();
     markers.forEach((point) => {
-      if (point.type !== "audio" || !point.catalogItemId) return;
+      if (!markerUsesCatalogPhoto(point.type) || !point.catalogItemId) return;
       const ci = catalogItems.find((entry) => entry.id === point.catalogItemId);
       if (!ci?.imageUrl) return;
       markerImages[point.id] = ci.imageUrl;
@@ -2295,9 +2322,9 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
             {markers.map((item) => {
               const tool = tools.find((entry) => entry.id === item.type) ?? tools[0];
               const catItem = item.catalogItemId ? catalogItems.find((entry) => entry.id === item.catalogItemId) : undefined;
-              // Só na sonorização (áudio): quando o ponto está ligado a uma caixa do catálogo,
-              // o marcador mostra a foto real do equipamento (de frente) para demonstrar a distribuição.
-              const photo = item.type === "audio" && catItem?.imageUrl ? catItem.imageUrl : "";
+              // Caixas de som e access points vinculados ao catálogo aparecem com a foto real
+              // do equipamento para demonstrar com clareza a distribuição na planta.
+              const photo = markerUsesCatalogPhoto(item.type) && catItem?.imageUrl ? catItem.imageUrl : "";
               return <button
                 key={item.id}
                 className={`scope-marker ${photo ? "scope-marker--photo" : ""} ${selectedMarker === item.id ? "selected" : ""}`}
@@ -2350,14 +2377,23 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
       <aside className="scope-inspector">
         <div className="inspector-title"><span>PROPRIEDADES</span><h3>{marker ? marker.label : "Nenhum ponto selecionado"}</h3></div>
         {marker ? <>
-          <div className="inspector-preview" style={{ background: tools.find((tool) => tool.id === marker.type)?.color }}>{marker.label}</div>
+          {(() => {
+            const catalogItem = marker.catalogItemId ? catalogItems.find((item) => item.id === marker.catalogItemId) : undefined;
+            const photo = markerUsesCatalogPhoto(marker.type) ? catalogItem?.imageUrl : undefined;
+            return photo
+              ? <div className="asset-inspector-preview"><img src={photo} alt={catalogItem?.name ?? marker.label} /></div>
+              : <div className="inspector-preview" style={{ background: tools.find((tool) => tool.id === marker.type)?.color }}>{marker.label}</div>;
+          })()}
           <label className="field">Código do ponto<input value={marker.label} onChange={(e) => updateMarker(marker.id, { label: e.target.value.toUpperCase() })} /></label>
           <label className="field">Tipo<select value={marker.type} onChange={(e) => updateMarker(marker.id, { type: e.target.value })}>{tools.map((tool) => <option key={tool.id} value={tool.id}>{tool.label}</option>)}</select></label>
           <label className="field">Ambiente<input value={marker.environment} onChange={(e) => updateMarker(marker.id, { environment: e.target.value })} /></label>
           <label className="field">Descrição técnica<textarea rows={3} value={marker.description} onChange={(e) => updateMarker(marker.id, { description: e.target.value })} /></label>
           <label className="field">Status<select value={marker.status} onChange={(e) => updateMarker(marker.id, { status: e.target.value as ScopeMarker["status"] })}><option value="previsto">Previsto</option><option value="revisar">Revisar</option><option value="aprovado">Aprovado</option></select></label>
           <label className="field">Tamanho do símbolo<input type="range" min="26" max="90" value={marker.size} onChange={(e) => updateMarker(marker.id, { size: Number(e.target.value) })} /></label>
-          {marker.type === "access-point" && <><label className="field">Modelo Ubiquiti<select value={marker.apModel ?? "u6-plus"} onChange={(e) => updateMarker(marker.id, { apModel: e.target.value, range: modelRadius(e.target.value, heatBand) })}>{ubiquitiAPs.map((ap) => <option key={ap.id} value={ap.id}>{ap.name}</option>)}</select></label><label className="field">Alcance no plano (m)<input type="range" min="3" max="30" value={marker.range} onChange={(e) => updateMarker(marker.id, { range: Number(e.target.value) })} /><small>~{marker.range} m em {heatBand === "2.4" ? "2,4" : heatBand} GHz · ajuste fino</small></label></>}
+          {marker.type === "access-point" && <><label className="field">Modelo Ubiquiti<select value={marker.apModel ?? "u6-plus"} onChange={(e) => {
+            const catalogItem = catalogAccessPointForModel(catalogItems, e.target.value);
+            updateMarker(marker.id, { apModel: e.target.value, range: modelRadius(e.target.value, heatBand), catalogItemId: catalogItem?.id, catalogName: catalogItem?.name, description: catalogItem?.name ?? "Access point Wi-Fi" });
+          }}>{ubiquitiAPs.map((ap) => <option key={ap.id} value={ap.id}>{ap.name}</option>)}</select></label><label className="field">Alcance no plano (m)<input type="range" min="3" max="30" value={marker.range} onChange={(e) => updateMarker(marker.id, { range: Number(e.target.value) })} /><small>~{marker.range} m em {heatBand === "2.4" ? "2,4" : heatBand} GHz · ajuste fino</small></label></>}
           <div className="catalog-suggestions"><div><strong>ITENS COMPATÍVEIS</strong><small>Filtrados pela legenda “{tools.find((tool) => tool.id === marker.type)?.label}”</small></div>{suggestedCatalog.length ? suggestedCatalog.map((item) => <button key={item.id} className={marker.catalogItemId === item.id ? "selected" : ""} onClick={() => updateMarker(marker.id, { catalogItemId: item.id, catalogName: item.name, description: `${item.name} · ${[item.brand, item.model].filter(Boolean).join(" ")}` })}><span><b>{item.name}</b><small>{item.brand} · {item.model}</small></span><i>{marker.catalogItemId === item.id ? "✓" : "+"}</i></button>) : <p>Nenhum item compatível nesta categoria.</p>}</div>
           <button className="delete-marker" onClick={() => { setMarkers((current) => current.filter((item) => item.id !== marker.id)); setSelectedMarker(null); }}>Excluir ponto</button>
         </> : asset ? <><div className="asset-inspector-preview"><img src={asset.src} alt={asset.name} /></div><label className="field">Nome da imagem<input value={asset.name} onChange={(event) => updateAsset(asset.id, { name: event.target.value })} /></label><label className="field">Tamanho<input type="range" min="5" max="95" value={asset.width} onChange={(event) => updateAsset(asset.id, { width: Number(event.target.value) })} /><small>{asset.width}% da largura da planta</small></label><label className="field">Rotação<input type="range" min="-180" max="180" step="1" value={asset.rotation ?? 0} onChange={(event) => updateAsset(asset.id, { rotation: Number(event.target.value) })} /><small>{asset.rotation ?? 0}°</small></label><div className="asset-rotation-actions"><button type="button" onClick={() => updateAsset(asset.id, { rotation: ((asset.rotation ?? 0) - 90 + 180) % 360 - 180 })}>↶ 90°</button><button type="button" onClick={() => updateAsset(asset.id, { rotation: ((asset.rotation ?? 0) + 90 + 180) % 360 - 180 })}>90° ↷</button><button type="button" onClick={() => updateAsset(asset.id, { rotation: 0 })}>Restaurar</button></div><button className="delete-marker" onClick={() => { setAssets((current) => current.filter((item) => item.id !== asset.id)); setSelectedAsset(null); }}>Excluir imagem</button></> : <div className="inspector-empty"><span>⌖</span><p>Selecione um marcador ou uma imagem para mover, editar, aumentar, diminuir ou excluir.</p></div>}
@@ -2370,7 +2406,14 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
 
       <section className="scope-report" aria-hidden="true">
         <DottedFrame /><div className="word-title"><strong>ESCOPO TÉCNICO</strong><b>{project}</b></div><p className="report-address">{address}</p>
-        <div className="report-plan"><div className="report-plan__canvas">{planImage ? <img src={planImage} alt="" /> : <DefaultFloorPlan />}{assets.map((item) => <img className="report-plan__asset" key={item.id} src={item.src} alt="" style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%`, transform: `translate(-50%, -50%) rotate(${item.rotation ?? 0}deg)` }} />)}{markers.map((item) => { const tool = tools.find((entry) => entry.id === item.type) ?? tools[0]; return <span key={item.id} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool.color }}>{item.label}</span>; })}</div></div>
+        <div className="report-plan"><div className="report-plan__canvas">{planImage ? <img src={planImage} alt="" /> : <DefaultFloorPlan />}{assets.map((item) => <img className="report-plan__asset" key={item.id} src={item.src} alt="" style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.width}%`, transform: `translate(-50%, -50%) rotate(${item.rotation ?? 0}deg)` }} />)}{markers.map((item) => {
+          const tool = tools.find((entry) => entry.id === item.type) ?? tools[0];
+          const catalogItem = item.catalogItemId ? catalogItems.find((entry) => entry.id === item.catalogItemId) : undefined;
+          const photo = markerUsesCatalogPhoto(item.type) ? catalogItem?.imageUrl : undefined;
+          return photo
+            ? <img className="report-plan__speaker" key={item.id} src={photo} alt={catalogItem?.name ?? item.label} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size }} />
+            : <span key={item.id} style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, background: tool.color }}>{item.label}</span>;
+        })}</div></div>
         <div className="report-legend">{totals.map(({ tool, qty }) => <div key={tool.id}><i style={{ background: tool.color }}>{tool.code}</i><span>{tool.label}</span><b>{qty}</b></div>)}</div>
         <table className="classic-table"><thead><tr><th>Item / ambiente</th><th>Quantidade</th></tr></thead><tbody>{totals.map(({ tool, qty }) => <tr key={tool.id}><td><strong>{tool.label}</strong><span>{tool.category}</span></td><td>{qty}</td></tr>)}</tbody></table><PageFooter number="1" />
       </section>
