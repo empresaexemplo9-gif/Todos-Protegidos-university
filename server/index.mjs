@@ -369,6 +369,33 @@ async function budgetApi(req, res) {
       await saveData(data);
       return json(res, 200, { item: mapCatalogItem(saved) });
     }
+    if (action === "setCatalogItemImage") {
+      const itemId = clean(body.itemId, 80);
+      const imageUrl = typeof body.imageUrl === "string" ? body.imageUrl.trim() : "";
+      const item = data.catalogItems.find((c) => c.id === itemId);
+      if (!item) return json(res, 404, { error: "Equipamento não encontrado." });
+      if (!/^data:image\/(png|jpe?g|webp|gif);base64,/.test(imageUrl)) return json(res, 400, { error: "Imagem inválida." });
+      if (imageUrl.length > 1_500_000) return json(res, 413, { error: "Imagem muito grande." });
+      item.imageUrl = imageUrl;
+      item.updatedBy = actor.email;
+      item.updatedAt = now;
+      await saveData(data);
+      return json(res, 200, { item: mapCatalogItem(item) });
+    }
+    if (action === "savePlanImage") {
+      const imageUrl = typeof body.imageUrl === "string" ? body.imageUrl.trim() : "";
+      const name = clean(body.name, 120) || "Imagem do projeto";
+      if (!/^data:image\/(png|jpe?g|webp|gif);base64,/.test(imageUrl)) return json(res, 400, { error: "Imagem inválida." });
+      if (imageUrl.length > 3_000_000) return json(res, 413, { error: "Imagem muito grande." });
+      const saved = {
+        id: randomUUID(), kind: "plan-image", name, category: "Plantas do projeto", brand: "", model: "",
+        sku: "", system: "PROJETO", description: clean(body.description, 400), sourceUrl: "", unit: "un",
+        purchasePrice: 0, salePrice: 0, imageUrl, updatedBy: actor.email, createdAt: now, updatedAt: now,
+      };
+      data.catalogItems.push(saved);
+      await saveData(data);
+      return json(res, 200, { item: mapCatalogItem(saved) });
+    }
     if (action === "deleteCatalogItem") {
       const itemId = clean(body.itemId, 80);
       if (!itemId) return json(res, 400, { error: "Item inválido." });

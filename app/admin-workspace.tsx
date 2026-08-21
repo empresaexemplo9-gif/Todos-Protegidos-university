@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toPng } from "html-to-image";
 import AvaBudgetWorkspace from "./budget-workspace";
 
 export type ProposalItem = {
@@ -42,7 +43,7 @@ export type Proposal = {
 export type ScopeTool = { id: string; code: string; label: string; color: string; category: string };
 export type ScopeMarker = { id: number; type: string; label: string; environment: string; description: string; status: "previsto" | "revisar" | "aprovado"; x: number; y: number; size: number; range: number; apModel?: string; catalogItemId?: string; catalogName?: string };
 export type PlanAsset = { id: number; name: string; src: string; x: number; y: number; width: number; rotation?: number };
-type ScopeCatalogItem = { id: string; name: string; category: string; brand: string; model: string; system: string; sku?: string; unit?: string; description?: string; salePrice?: number; purchasePrice?: number; imageUrl?: string };
+type ScopeCatalogItem = { id: string; kind?: string; name: string; category: string; brand: string; model: string; system: string; sku?: string; unit?: string; description?: string; salePrice?: number; purchasePrice?: number; imageUrl?: string; updatedAt?: string };
 export type ScopeReport = { client: string; project: string; address: string; planImage: string | null; markers: ScopeMarker[]; tools: ScopeTool[]; assets: PlanAsset[]; items: ProposalItem[]; itemImages: Record<number, string[]>; productImages: string[]; markerImages: Record<number, string>; equipmentLegend: { image: string; name: string; qty: number }[] };
 
 export type ProposalBundle = {
@@ -336,27 +337,35 @@ function ImageSearchPanel({ defaultQuery, onPick, onClose }: { defaultQuery?: st
 // Inventário de equipamentos: mostra as imagens do catálogo (as mesmas que o time/ChatGPT
 // vai preenchendo em imageUrl) e insere direto na proposta. Itens sem foto podem ganhar uma
 // cópia realista gerada por IA. Usa o mesmo onPick dos dois editores (auto e editável).
-function EquipmentInventoryPanel({ onPick, onClose }: { onPick: (dataUrl: string, label: string) => void; onClose: () => void }) {
+function EquipmentInventoryPanel({ onPick, onClose, initialSource = "equip" }: { onPick: (dataUrl: string, label: string) => void; onClose: () => void; initialSource?: "equip" | "plan" }) {
   const [items, setItems] = useState<ScopeCatalogItem[]>([]);
+  const [source, setSource] = useState<"equip" | "plan">(initialSource);
   const [query, setQuery] = useState("");
   const [onlyWithImage, setOnlyWithImage] = useState(false);
   const [loading, setLoading] = useState(true);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [error, setError] = useState("");
-  useEffect(() => {
-    void fetch("/api/budget")
-      .then((response) => response.json())
-      .then((data: { catalogItems?: ScopeCatalogItem[] }) => setItems((data.catalogItems ?? []).filter((item) => item.name)))
-      .catch(() => setError("Não foi possível carregar o inventário de equipamentos."))
-      .finally(() => setLoading(false));
-  }, []);
+  const reload = () => fetch("/api/budget")
+    .then((response) => response.json())
+    .then((data: { catalogItems?: ScopeCatalogItem[] }) => setItems((data.catalogItems ?? []).filter((item) => item.name)))
+    .catch(() => setError("Não foi possível carregar o inventário."))
+    .finally(() => setLoading(false));
+  useEffect(() => { void reload(); }, []);
+  const isPlan = (item: ScopeCatalogItem) => item.kind === "plan-image";
+  const scoped = useMemo(() => items.filter((item) => source === "plan" ? isPlan(item) : !isPlan(item)), [items, source]);
   const filtered = useMemo(() => {
     const term = query.trim().toLocaleLowerCase("pt-BR");
-    const base = items.filter((item) => (onlyWithImage ? Boolean(item.imageUrl) : true) && (term ? [item.name, item.brand, item.model, item.sku, item.category].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR").includes(term) : true));
-    // Itens com foto aparecem primeiro.
-    return [...base].sort((a, b) => (b.imageUrl ? 1 : 0) - (a.imageUrl ? 1 : 0)).slice(0, 80);
-  }, [items, query, onlyWithImage]);
-  const withImage = useMemo(() => items.filter((item) => item.imageUrl).length, [items]);
+    const base = scoped.filter((item) => (onlyWithImage ? Boolean(item.imageUrl) : true) && (term ? [item.name, item.brand, item.model, item.sku, item.category].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR").includes(term) : true));
+    return [...base].sort((a, b) => (b.imageUrl ? 1 : 0) - (a.imageUrl ? 1 : 0) || String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? ""))).slice(0, 120);
+  }, [scoped, query, onlyWithImage]);
+  const withImage = useMemo(() => scoped.filter((item) => item.imageUrl).length, [scoped]);
+  const removePlanImage = async (item: ScopeCatalogItem) => {
+    if (!window.confirm(`Excluir "${item.name}" do inventário de plantas?`)) return;
+    try {
+      await fetch("/api/budget", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "deleteCatalogItem", itemId: item.id }) });
+      setItems((current) => current.filter((entry) => entry.id !== item.id));
+    } catch { setError("Não foi possível excluir a imagem."); }
+  };
   const generate = async (item: ScopeCatalogItem) => {
     if (generatingId) return;
     setGeneratingId(item.id); setError("");
@@ -366,7 +375,13 @@ function EquipmentInventoryPanel({ onPick, onClose }: { onPick: (dataUrl: string
       const response = await fetch("/api/ai/image", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt }) });
       const data = await response.json().catch(() => ({})) as { image?: string; error?: string };
       if (!response.ok || !data.image) throw new Error(data.error || "Não foi possível gerar a imagem.");
-      onPick(data.image, item.name);
+      const image = data.image;
+      // Persiste no catálogo para reaproveitar depois. Se falhar, ainda insere.
+      try {
+        await fetch("/api/budget", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "setCatalogItemImage", itemId: item.id, imageUrl: image }) });
+        setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, imageUrl: image } : entry));
+      } catch { /* mantém a inserção mesmo se o catálogo não salvar */ }
+      onPick(image, item.name);
       onClose();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Não foi possível gerar a imagem.");
@@ -377,22 +392,24 @@ function EquipmentInventoryPanel({ onPick, onClose }: { onPick: (dataUrl: string
   return (
     <div className="img-search-overlay" onPointerDown={onClose}>
     <div className="img-search inventory-panel" onPointerDown={(event) => event.stopPropagation()}>
-      <div className="img-search__head"><strong>Inventário de equipamentos {items.length > 0 && <em>{withImage}/{items.length} com foto</em>}</strong><button className="img-search__close" onClick={onClose} aria-label="Fechar">×</button></div>
+      <div className="img-search__head"><strong>Inventário da plataforma {scoped.length > 0 && <em>{withImage}/{scoped.length} com foto</em>}</strong><button className="img-search__close" onClick={onClose} aria-label="Fechar">×</button></div>
+      <div className="inventory-tabs"><button className={source === "equip" ? "active" : ""} onClick={() => { setSource("equip"); setQuery(""); }}>▦ Equipamentos</button><button className={source === "plan" ? "active" : ""} onClick={() => { setSource("plan"); setQuery(""); }}>🗺 Plantas do projeto</button></div>
       <div className="img-search__bar">
-        <input autoFocus value={query} placeholder="Buscar por nome, marca, modelo ou SKU…" onChange={(event) => { setQuery(event.target.value); setError(""); }} onKeyDown={(event) => { if (event.key === "Escape") onClose(); }} />
+        <input autoFocus value={query} placeholder={source === "plan" ? "Buscar planta salva…" : "Buscar por nome, marca, modelo ou SKU…"} onChange={(event) => { setQuery(event.target.value); setError(""); }} onKeyDown={(event) => { if (event.key === "Escape") onClose(); }} />
       </div>
-      <label className="img-search__opt"><input type="checkbox" checked={onlyWithImage} onChange={(event) => setOnlyWithImage(event.target.checked)} />Mostrar só equipamentos com foto</label>
+      {source === "equip" && <label className="img-search__opt"><input type="checkbox" checked={onlyWithImage} onChange={(event) => setOnlyWithImage(event.target.checked)} />Mostrar só equipamentos com foto</label>}
       {error && <p className="img-search__error" role="alert">{error}</p>}
-      {loading ? <p className="img-search__hint">Carregando inventário…</p> : filtered.length === 0 ? <p className="img-search__hint">Nenhum equipamento encontrado.</p> : (
+      {loading ? <p className="img-search__hint">Carregando inventário…</p> : filtered.length === 0 ? <p className="img-search__hint">{source === "plan" ? "Nenhuma planta salva ainda. Salve a planta do projeto pela aba Escopo." : "Nenhum equipamento encontrado."}</p> : (
         <div className="inventory-grid">{filtered.map((item) => <div key={item.id} className="inventory-card">
           {item.imageUrl
             ? <button className="inventory-card__pick" title={`Inserir ${item.name}`} onClick={() => { onPick(item.imageUrl!, item.name); onClose(); }}><img src={item.imageUrl} alt={item.name} loading="lazy" /></button>
             : <button className="inventory-card__gen" disabled={generatingId === item.id} onClick={() => void generate(item)} title="Gerar uma foto realista com IA e inserir">{generatingId === item.id ? "Gerando…" : "✦ Gerar foto"}</button>}
           <span className="inventory-card__name" title={item.name}>{item.name}</span>
-          <small>{[item.brand, item.model].filter(Boolean).join(" ") || item.category}</small>
+          <small>{isPlan(item) ? item.category : ([item.brand, item.model].filter(Boolean).join(" ") || item.category)}</small>
+          {isPlan(item) && <button className="inventory-card__del" title="Excluir planta salva" onClick={() => void removePlanImage(item)}>Excluir</button>}
         </div>)}</div>
       )}
-      <span className="img-search__hint">As fotos vêm do catálogo de equipamentos. Itens sem foto podem receber uma cópia realista gerada por IA (ilustrativa) — clique para inserir direto na proposta.</span>
+      <span className="img-search__hint">{source === "plan" ? "Plantas do projeto salvas na plataforma (com mapa de calor e edições) — clique para inserir na proposta." : "Fotos do catálogo de equipamentos. Sem foto, gere uma cópia realista por IA — clique para inserir na proposta."}</span>
     </div>
     </div>
   );
@@ -2021,7 +2038,12 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const [aiScopeRealista, setAiScopeRealista] = useState(true);
   const [photoScopeOpen, setPhotoScopeOpen] = useState(false);
   const [inventoryScopeOpen, setInventoryScopeOpen] = useState(false);
-  const [cropTarget, setCropTarget] = useState<{ kind: "plan" | "asset"; src: string; id?: number; title: string } | null>(null);
+  const [cropTarget, setCropTarget] = useState<{ kind: "plan" | "asset" | "plan-save"; src: string; id?: number; title: string } | null>(null);
+  // Sub-aba "Imagens do projeto": salvar a planta composta (mapa de calor + edições) na plataforma.
+  const [planPanelOpen, setPlanPanelOpen] = useState(false);
+  const [planImagesList, setPlanImagesList] = useState<ScopeCatalogItem[]>([]);
+  const [savingPlan, setSavingPlan] = useState(false);
+  const [planPanelError, setPlanPanelError] = useState("");
   const [planImage, setPlanImage] = useState<string | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
   const [draggingAsset, setDraggingAsset] = useState<number | null>(null);
@@ -2120,7 +2142,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   }, [markers, catalogItems]);
 
   useEffect(() => {
-    void fetch("/api/budget").then((response) => response.json()).then((data: { catalogItems?: ScopeCatalogItem[] }) => setCatalogItems(data.catalogItems ?? [])).catch(() => setCatalogItems([]));
+    void fetch("/api/budget").then((response) => response.json()).then((data: { catalogItems?: ScopeCatalogItem[] }) => setCatalogItems((data.catalogItems ?? []).filter((item) => item.kind !== "plan-image"))).catch(() => setCatalogItems([]));
     const stored = window.localStorage.getItem("sona-scope-draft");
     const timer = window.setTimeout(() => { if (stored) {
       try {
@@ -2280,6 +2302,59 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     setSelectedAsset(id);
     setSelectedMarker(null);
   };
+  // Rasteriza a planta composta (planta + mapa de calor + paredes + marcadores + imagens) num PNG.
+  const capturePlanComposite = async (): Promise<string> => {
+    const node = canvasRef.current;
+    if (!node) throw new Error("Planta indisponível.");
+    return toPng(node, {
+      backgroundColor: "#ffffff",
+      pixelRatio: 2,
+      cacheBust: true,
+      style: { transform: "none", transformOrigin: "0 0" },
+      filter: (el) => !(el instanceof HTMLElement && /canvas-hint|resize-handle|plan-wall-node|plan-wall-hit|scope-ai-panel|calib-panel|wall-panel|quickpick|img-search|plan-images-panel/.test(el.className || "")),
+    });
+  };
+  const loadPlanImages = () => fetch("/api/budget").then((r) => r.json()).then((d: { catalogItems?: ScopeCatalogItem[] }) => setPlanImagesList((d.catalogItems ?? []).filter((i) => i.kind === "plan-image"))).catch(() => undefined);
+  const savePlanImage = async (src: string, name: string) => {
+    setSavingPlan(true); setPlanPanelError("");
+    try {
+      const response = await fetch("/api/budget", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "savePlanImage", imageUrl: src, name }) });
+      const data = await response.json().catch(() => ({})) as { item?: ScopeCatalogItem; error?: string };
+      if (!response.ok || !data.item) throw new Error(data.error || "Não foi possível salvar a imagem.");
+      setPlanImagesList((current) => [data.item as ScopeCatalogItem, ...current]);
+      setToast("Imagem da planta salva no inventário do projeto");
+    } catch (reason) {
+      setPlanPanelError(reason instanceof Error ? reason.message : "Não foi possível salvar a imagem.");
+    } finally {
+      setSavingPlan(false);
+    }
+  };
+  const saveWholePlan = async () => {
+    setSavingPlan(true); setPlanPanelError("");
+    try {
+      const src = await capturePlanComposite();
+      await savePlanImage(src, `${project} · planta ${heatmap ? `+ mapa de calor ${heatBand}GHz` : ""}`.trim());
+    } catch (reason) {
+      setPlanPanelError(reason instanceof Error ? reason.message : "Não foi possível capturar a planta.");
+      setSavingPlan(false);
+    }
+  };
+  const cropAndSavePlan = async () => {
+    setPlanPanelError("");
+    try {
+      const src = await capturePlanComposite();
+      setCropTarget({ kind: "plan-save", src, title: "planta do projeto" });
+    } catch (reason) {
+      setPlanPanelError(reason instanceof Error ? reason.message : "Não foi possível capturar a planta.");
+    }
+  };
+  const deletePlanImage = async (item: ScopeCatalogItem) => {
+    if (!window.confirm(`Excluir "${item.name}" do inventário do projeto?`)) return;
+    try {
+      await fetch("/api/budget", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "deleteCatalogItem", itemId: item.id }) });
+      setPlanImagesList((current) => current.filter((entry) => entry.id !== item.id));
+    } catch { setPlanPanelError("Não foi possível excluir a imagem."); }
+  };
   const generateScopeImage = async () => {
     const prompt = aiScopePrompt.trim();
     if (prompt.length < 5 || aiScopeBusy) {
@@ -2402,7 +2477,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
 
         <div className="plan-card">
           <div className="plan-card__bar">
-            <div><span className="live-dot" /> PLANTA DE MARCAÇÃO</div><div className="plan-bar-actions"><div className="plan-modes"><button className={canvasMode === "marker" ? "active" : ""} onClick={() => setCanvasMode("marker")} title="Inserir pontos">✛ Marcar</button><button className={canvasMode === "pan" ? "active" : ""} onClick={() => setCanvasMode("pan")} title="Arrastar a planta">✋ Mover</button><button className={canvasMode === "wall" ? "active" : ""} onClick={() => setCanvasMode("wall")} title="Desenhar paredes — clique para traçar, 2 cliques finaliza, clique direito cancela">▟ Parede</button><button className={canvasMode === "room" ? "active" : ""} onClick={() => { setCanvasMode("room"); setRoomDraft(null); }} title="Desenhar um cômodo retangular — clique em dois cantos opostos, clique direito cancela">▭ Cômodo</button><button className={canvasMode === "calibrate" ? "active" : ""} onClick={() => { setCanvasMode("calibrate"); setCalibLine([]); }} title="Calibrar escala: trace uma medida conhecida na planta">📏 Escala</button></div>{(canvasMode === "wall" || canvasMode === "room") && <select className="wall-material" value={wallMaterial} onChange={(event) => setWallMaterial(event.target.value as WallMaterial)} title="Material da parede — define a atenuação real do sinal em dB">{wallMaterials.map((material) => <option key={material.id} value={material.id}>{material.label} · {material.db} dB</option>)}</select>}<div className="plan-zoom"><button onClick={() => setZoom((z) => clampZoom(z / 1.2))} title="Diminuir">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom((z) => clampZoom(z * 1.2))} title="Aumentar">＋</button><button onClick={resetView} title="Ajustar à tela">⤢</button>{walls.length > 0 && <button onClick={() => { setWalls([]); setWallDraft([]); }} title="Limpar paredes">🗑</button>}</div><button className={heatmap ? "active" : ""} onClick={() => setHeatmap((value) => !value)}>◉ Mapa de calor</button><select value={heatBand} onChange={(event) => setHeatBand(event.target.value as "2.4" | "5" | "6")}><option value="2.4">2,4 GHz</option><option value="5">5 GHz</option><option value="6">6 GHz</option></select><label className="plan-scale">Escala<input type="number" min="1" max="80" value={planWidthMeters} onChange={(event) => setPlanWidthMeters(Math.max(1, Number(event.target.value) || 1))} title="Largura real da planta, em metros" /><span>m</span></label>{planImage && <button type="button" className="plan-ai" onClick={() => setCropTarget({ kind: "plan", src: planImage, title: "planta do projeto" })} title="Recortar e salvar apenas uma área da planta">✂ Recortar planta</button>}<button type="button" className={aiScopeOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setAiScopeOpen((open) => !open); setPhotoScopeOpen(false); setAiScopeError(""); }} title="Gerar imagem com IA e inserir na planta">✦ IA</button><button type="button" className={photoScopeOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setPhotoScopeOpen((open) => !open); setAiScopeOpen(false); setInventoryScopeOpen(false); }} title="Buscar foto real na web e inserir na planta">🔎 Foto</button><button type="button" className={inventoryScopeOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setInventoryScopeOpen((open) => !open); setPhotoScopeOpen(false); setAiScopeOpen(false); }} title="Inventário de equipamentos: inserir a foto do equipamento do catálogo">▦ Equip.</button><label className="plan-upload"><input type="file" accept="image/*" multiple onChange={(e) => e.target.files && void addOverlayImages(e.target.files)} />＋ Imagens</label><label className="plan-upload"><input type="file" accept="image/*,.pdf,application/pdf" onChange={(e) => e.target.files?.[0] && void loadPlan(e.target.files[0])} />{planImage ? "Trocar planta" : "＋ Carregar planta/PDF"}</label></div>
+            <div><span className="live-dot" /> PLANTA DE MARCAÇÃO</div><div className="plan-bar-actions"><div className="plan-modes"><button className={canvasMode === "marker" ? "active" : ""} onClick={() => setCanvasMode("marker")} title="Inserir pontos">✛ Marcar</button><button className={canvasMode === "pan" ? "active" : ""} onClick={() => setCanvasMode("pan")} title="Arrastar a planta">✋ Mover</button><button className={canvasMode === "wall" ? "active" : ""} onClick={() => setCanvasMode("wall")} title="Desenhar paredes — clique para traçar, 2 cliques finaliza, clique direito cancela">▟ Parede</button><button className={canvasMode === "room" ? "active" : ""} onClick={() => { setCanvasMode("room"); setRoomDraft(null); }} title="Desenhar um cômodo retangular — clique em dois cantos opostos, clique direito cancela">▭ Cômodo</button><button className={canvasMode === "calibrate" ? "active" : ""} onClick={() => { setCanvasMode("calibrate"); setCalibLine([]); }} title="Calibrar escala: trace uma medida conhecida na planta">📏 Escala</button></div>{(canvasMode === "wall" || canvasMode === "room") && <select className="wall-material" value={wallMaterial} onChange={(event) => setWallMaterial(event.target.value as WallMaterial)} title="Material da parede — define a atenuação real do sinal em dB">{wallMaterials.map((material) => <option key={material.id} value={material.id}>{material.label} · {material.db} dB</option>)}</select>}<div className="plan-zoom"><button onClick={() => setZoom((z) => clampZoom(z / 1.2))} title="Diminuir">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom((z) => clampZoom(z * 1.2))} title="Aumentar">＋</button><button onClick={resetView} title="Ajustar à tela">⤢</button>{walls.length > 0 && <button onClick={() => { setWalls([]); setWallDraft([]); }} title="Limpar paredes">🗑</button>}</div><button className={heatmap ? "active" : ""} onClick={() => setHeatmap((value) => !value)}>◉ Mapa de calor</button><select value={heatBand} onChange={(event) => setHeatBand(event.target.value as "2.4" | "5" | "6")}><option value="2.4">2,4 GHz</option><option value="5">5 GHz</option><option value="6">6 GHz</option></select><label className="plan-scale">Escala<input type="number" min="1" max="80" value={planWidthMeters} onChange={(event) => setPlanWidthMeters(Math.max(1, Number(event.target.value) || 1))} title="Largura real da planta, em metros" /><span>m</span></label>{planImage && <button type="button" className="plan-ai" onClick={() => setCropTarget({ kind: "plan", src: planImage, title: "planta do projeto" })} title="Recortar e salvar apenas uma área da planta">✂ Recortar planta</button>}<button type="button" className={aiScopeOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setAiScopeOpen((open) => !open); setPhotoScopeOpen(false); setAiScopeError(""); }} title="Gerar imagem com IA e inserir na planta">✦ IA</button><button type="button" className={photoScopeOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setPhotoScopeOpen((open) => !open); setAiScopeOpen(false); setInventoryScopeOpen(false); }} title="Buscar foto real na web e inserir na planta">🔎 Foto</button><button type="button" className={inventoryScopeOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setInventoryScopeOpen((open) => !open); setPhotoScopeOpen(false); setAiScopeOpen(false); }} title="Inventário de equipamentos: inserir a foto do equipamento do catálogo">▦ Equip.</button><button type="button" className={planPanelOpen ? "plan-ai active" : "plan-ai"} onClick={() => { setPlanPanelOpen((open) => { const next = !open; if (next) void loadPlanImages(); return next; }); setAiScopeOpen(false); setPhotoScopeOpen(false); setInventoryScopeOpen(false); }} title="Salvar a planta (mapa de calor + edições) no inventário do projeto">🗺 Imagens do projeto</button><label className="plan-upload"><input type="file" accept="image/*" multiple onChange={(e) => e.target.files && void addOverlayImages(e.target.files)} />＋ Imagens</label><label className="plan-upload"><input type="file" accept="image/*,.pdf,application/pdf" onChange={(e) => e.target.files?.[0] && void loadPlan(e.target.files[0])} />{planImage ? "Trocar planta" : "＋ Carregar planta/PDF"}</label></div>
           </div>
           <div
             className={`plan-canvas plan-canvas--mode-${canvasMode} ${planImage ? "plan-canvas--image" : ""}`}
@@ -2468,6 +2543,11 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
           {photoScopeOpen && <ImageSearchPanel defaultQuery={project} onPick={(src, label) => { addScopeImageFromData(src, label); setPhotoScopeOpen(false); }} onClose={() => setPhotoScopeOpen(false)} />}
           {inventoryScopeOpen && <EquipmentInventoryPanel onPick={(src, label) => { addScopeImageFromData(src, label); setInventoryScopeOpen(false); }} onClose={() => setInventoryScopeOpen(false)} />}
           {cropTarget && <ImageCropDialog src={cropTarget.src} title={cropTarget.title} onClose={() => setCropTarget(null)} onSave={(src) => {
+            if (cropTarget.kind === "plan-save") {
+              void savePlanImage(src, `${project} · recorte da planta`);
+              setCropTarget(null);
+              return;
+            }
             if (cropTarget.kind === "plan") {
               setPlanImage(src);
               setPlanPages((current) => current.length ? current.map((page, index) => index === activePage ? src : page) : current);
@@ -2475,6 +2555,22 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
             setCropTarget(null);
             setToast("Recorte salvo no projeto");
           }} />}
+          {planPanelOpen && <div className="plan-images-panel" onPointerDown={(event) => event.stopPropagation()}>
+            <div className="plan-images-panel__head"><strong>Imagens do projeto</strong><button onClick={() => setPlanPanelOpen(false)} aria-label="Fechar">×</button></div>
+            <p className="plan-images-panel__hint">Salve a planta atual (com mapa de calor e edições) na plataforma para usar na proposta. Coloque os itens antes de salvar a versão final.</p>
+            <div className="plan-images-panel__actions">
+              <button className="scope-ai-panel__generate" disabled={savingPlan} onClick={() => void saveWholePlan()}>{savingPlan ? "Salvando…" : "💾 Salvar planta inteira"}</button>
+              <button className="scope-ai-panel__cancel" disabled={savingPlan} onClick={() => void cropAndSavePlan()}>✂ Recortar e salvar</button>
+            </div>
+            {planPanelError && <p className="crop-dialog__error" role="alert">{planPanelError}</p>}
+            <div className="plan-images-panel__grid">
+              {planImagesList.length === 0 ? <span className="plan-images-panel__empty">Nenhuma imagem salva ainda.</span> : planImagesList.map((item) => <div key={item.id} className="plan-images-card">
+                <img src={item.imageUrl} alt={item.name} loading="lazy" />
+                <span title={item.name}>{item.name}</span>
+                <button onClick={() => void deletePlanImage(item)} aria-label={`Excluir ${item.name}`}>Excluir</button>
+              </div>)}
+            </div>
+          </div>}
           {canvasMode === "calibrate" && <div className="calib-panel">{calibLine.length < 2 ? <span>Trace uma medida conhecida na planta ({calibLine.length}/2)</span> : <><label>Distância real<input type="number" min="0.1" step="0.1" value={calibMeters} onChange={(e) => setCalibMeters(e.target.value)} autoFocus /><span>m</span></label><button className="calib-apply" onClick={() => applyCalibration(Number(calibMeters))}>Aplicar</button></>}<button className="calib-cancel" onClick={() => { setCalibLine([]); setCalibMeters(""); }}>Limpar</button></div>}
           {(canvasMode === "wall" || canvasMode === "room") && selectedWall !== null && (() => { const wall = walls.find((entry) => entry.id === selectedWall); if (!wall) return null; return <div className="wall-panel"><span className="wall-panel__dot" style={{ background: wallColor(wall.material) }} /><label>Material<select value={wall.material} onChange={(event) => updateWall(wall.id, { material: event.target.value as WallMaterial })}>{wallMaterials.map((material) => <option key={material.id} value={material.id}>{material.label} · {material.db} dB</option>)}</select></label><span className="wall-panel__hint">Arraste os pontos para ajustar</span><button className="wall-panel__delete" onClick={() => removeWall(wall.id)}>Excluir parede</button><button className="calib-cancel" onClick={() => setSelectedWall(null)}>OK</button></div>; })()}
           {canvasMode === "marker" && marker && <div className="quickpick" onPointerDown={(event) => event.stopPropagation()}>
