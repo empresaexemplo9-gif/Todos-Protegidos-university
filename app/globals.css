@@ -393,13 +393,28 @@ button { cursor: pointer; }
     position: absolute;
     z-index: 20;
     top: 7mm;
-    right: 9mm;
+    right: 34mm;
     padding: 1.5mm 0 1.5mm 6mm;
     background: #fff;
     color: #181c22;
     font-size: 6mm;
     line-height: 1;
     letter-spacing: 1.1mm;
+  }
+  .proposal-page::after {
+    content: "tecnologia e inteligência\A para o bem-estar.";
+    white-space: pre;
+    position: absolute;
+    z-index: 20;
+    top: 8.4mm;
+    right: 7mm;
+    width: 25mm;
+    padding: 1mm 0;
+    background: #fff;
+    color: #181c22;
+    font-size: 1.65mm;
+    line-height: 1.2;
+    letter-spacing: 0;
   }
   .contact-card .proposal-brand { display: grid !important; }
   .proposal-page table, .classic-table, .classic-table tbody { break-inside: avoid; page-break-inside: avoid; }
@@ -646,6 +661,7 @@ button { cursor: pointer; }
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  filter: drop-shadow(0 1.5px 1.5px rgba(20, 26, 23, .16));
   object-fit: contain;
 }
 .reference-solution-gallery--1 img { max-width: 100%; max-height: 390px; }
