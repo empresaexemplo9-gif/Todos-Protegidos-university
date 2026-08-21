@@ -49,6 +49,36 @@ export default async function handler(req, res) {
         return json(res, 200, { item: mapCatalogItem(saved) });
       }
 
+      if (action === "setCatalogItemImage") {
+        const itemId = clean(body.itemId, 80);
+        const imageUrl = typeof body.imageUrl === "string" ? body.imageUrl.trim() : "";
+        const existing = itemId ? await findCatalogItem(itemId) : null;
+        if (!existing) return json(res, 404, { error: "Equipamento não encontrado." });
+        if (!/^data:image\/(png|jpe?g|webp|gif);base64,/.test(imageUrl)) return json(res, 400, { error: "Imagem inválida." });
+        if (imageUrl.length > 1_500_000) return json(res, 413, { error: "Imagem muito grande." });
+        const saved = await upsertCatalogItem({
+          id: existing.id, kind: existing.kind, name: existing.name, category: existing.category,
+          brand: existing.brand, model: existing.model, sku: existing.sku, system: existing.system,
+          description: existing.description, sourceUrl: existing.source_url, unit: existing.unit,
+          purchasePrice: existing.purchase_price, salePrice: existing.sale_price,
+          imageUrl, updatedBy: actor.email, updatedAt: now,
+        });
+        return json(res, 200, { item: mapCatalogItem(saved) });
+      }
+
+      if (action === "savePlanImage") {
+        const imageUrl = typeof body.imageUrl === "string" ? body.imageUrl.trim() : "";
+        const name = clean(body.name, 120) || "Imagem do projeto";
+        if (!/^data:image\/(png|jpe?g|webp|gif);base64,/.test(imageUrl)) return json(res, 400, { error: "Imagem inválida." });
+        if (imageUrl.length > 3_000_000) return json(res, 413, { error: "Imagem muito grande." });
+        const saved = await upsertCatalogItem({
+          id: randomUUID(), kind: "plan-image", name, category: "Plantas do projeto", brand: "", model: "",
+          sku: "", system: "PROJETO", description: clean(body.description, 400), sourceUrl: "", unit: "un",
+          purchasePrice: 0, salePrice: 0, imageUrl, updatedBy: actor.email, updatedAt: now,
+        });
+        return json(res, 200, { item: mapCatalogItem(saved) });
+      }
+
       if (action === "deleteCatalogItem") {
         const itemId = clean(body.itemId, 80);
         if (!itemId) return json(res, 400, { error: "Item inválido." });

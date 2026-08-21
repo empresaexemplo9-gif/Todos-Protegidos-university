@@ -140,7 +140,7 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
       const data = await response.json() as ApiData;
       if (!response.ok) throw new Error(data.error || "Não foi possível carregar os orçamentos.");
       const nextBudgets = data.budgets ?? [];
-      setCatalogItems(data.catalogItems ?? []);
+      setCatalogItems((data.catalogItems ?? []).filter((item) => item.kind === "equipment" || item.kind === "service"));
       setBudgets(nextBudgets);
       setActiveId((current) => {
         const candidate = preferredId || current;
