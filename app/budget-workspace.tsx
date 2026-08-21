@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import CatalogImport from "./catalog-import";
 import AvaIntegration from "../src/AvaIntegration";
+import {
+  CATALOG_CATEGORIES,
+  compareCatalogItems,
+  normalizeProposalItems,
+} from "../shared/catalog-classification.mjs";
 
 type CatalogKind = "equipment" | "service";
 type BudgetStatus = "draft" | "sent" | "approved";
@@ -140,7 +145,9 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
       const data = await response.json() as ApiData;
       if (!response.ok) throw new Error(data.error || "Não foi possível carregar os orçamentos.");
       const nextBudgets = data.budgets ?? [];
-      setCatalogItems((data.catalogItems ?? []).filter((item) => item.kind === "equipment" || item.kind === "service"));
+      setCatalogItems((data.catalogItems ?? [])
+        .filter((item) => item.kind === "equipment" || item.kind === "service")
+        .sort(compareCatalogItems));
       setBudgets(nextBudgets);
       setActiveId((current) => {
         const candidate = preferredId || current;
@@ -298,7 +305,7 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
   const openCatalogEditor = (item?: CatalogItem) => setEditor(item ? { ...item } : {
     kind: catalogKind,
     name: "",
-    category: catalogKind === "equipment" ? "Automação" : "Instalação",
+    category: catalogKind === "equipment" ? "Automação" : "Serviço",
     brand: catalogKind === "equipment" ? "" : "SONA",
     model: "",
     sku: "",
@@ -356,14 +363,19 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
         && (!systemFilter || item.system === systemFilter)
         && (!categoryFilter || item.category === categoryFilter)
         && (!term || searchable.includes(term));
-    });
+    }).sort(compareCatalogItems);
   }, [catalogItems, catalogKind, search, systemFilter, categoryFilter]);
 
   const systems = useMemo(() => Array.from(new Set(catalogItems.filter((item) => item.kind === catalogKind).map((item) => item.system))).sort(), [catalogItems, catalogKind]);
-  const categories = useMemo(() => Array.from(new Set(catalogItems.filter((item) => item.kind === catalogKind).map((item) => item.category))).sort(), [catalogItems, catalogKind]);
+  const categories = useMemo(() => {
+    const available = new Set(catalogItems.filter((item) => item.kind === catalogKind).map((item) => item.category));
+    const canonical = CATALOG_CATEGORIES.filter((category) => available.has(category));
+    const extras = Array.from(available).filter((category) => !CATALOG_CATEGORIES.includes(category)).sort();
+    return [...canonical, ...extras];
+  }, [catalogItems, catalogKind]);
   const sendToProposal = () => {
     if (!activeBudget) return;
-    const items = activeBudget.items.map((item, index) => ({
+    const proposalItems = activeBudget.items.map((item, index) => ({
       id: index + 1,
       category: item.category,
       description: `${item.environment} · ${[item.brand, item.model, item.name].filter(Boolean).join(" · ")}`,
@@ -371,10 +383,11 @@ export default function AvaBudgetWorkspace({ onUseInProposal }: { onUseInProposa
       unit: item.unit,
       unitPrice: item.salePrice * (1 - item.discountPercent / 100),
     }));
-    if (activeBudget.adjustment !== 0) items.push({
-      id: items.length + 1, category: "Ajuste comercial", description: "Acréscimo ou ajuste do orçamento",
+    if (activeBudget.adjustment !== 0) proposalItems.push({
+      id: proposalItems.length + 1, category: "Diversos", description: "Acréscimo ou ajuste do orçamento",
       qty: 1, unit: "sv", unitPrice: activeBudget.adjustment,
     });
+    const items = normalizeProposalItems(proposalItems).map((item, index) => ({ ...item, id: index + 1 }));
     onUseInProposal({ items, discountPercent: activeBudget.discountPercent });
   };
 
