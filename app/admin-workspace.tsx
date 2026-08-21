@@ -106,14 +106,15 @@ const normalizeText = (value: string) => value.normalize("NFD").replace(/[\u0300
 type UbiquitiAP = { id: string; name: string; r24: number; r5: number; r6?: number };
 // Raios de cobertura internos aproximados (metros) por faixa \u2014 refer\u00eancia para posicionamento.
 const ubiquitiAPs: UbiquitiAP[] = [
-  { id: "u6-lite", name: "UniFi U6 Lite", r24: 9, r5: 6 },
+  // Mais usados primeiro (aparecem no topo e são o padrão ao inserir um AP).
   { id: "u6-plus", name: "UniFi U6+", r24: 10, r5: 7 },
+  { id: "u7-pro", name: "UniFi U7 Pro", r24: 13, r5: 10, r6: 9 },
+  { id: "u6-lite", name: "UniFi U6 Lite", r24: 9, r5: 6 },
   { id: "u6-pro", name: "UniFi U6 Pro", r24: 12, r5: 9 },
   { id: "u6-lr", name: "UniFi U6 Long-Range", r24: 15, r5: 10 },
   { id: "u6-mesh", name: "UniFi U6 Mesh", r24: 11, r5: 8 },
   { id: "u6-iw", name: "UniFi U6 In-Wall", r24: 8, r5: 6 },
   { id: "u6-enterprise", name: "UniFi U6 Enterprise", r24: 12, r5: 9, r6: 8 },
-  { id: "u7-pro", name: "UniFi U7 Pro", r24: 13, r5: 10, r6: 9 },
   { id: "u7-pro-max", name: "UniFi U7 Pro Max", r24: 14, r5: 11, r6: 10 },
   { id: "u7-pro-xg", name: "UniFi U7 Pro XG", r24: 13, r5: 10, r6: 9 },
   { id: "uap-ac-lite", name: "UniFi AC Lite", r24: 9, r5: 6 },
@@ -123,7 +124,7 @@ const ubiquitiAPs: UbiquitiAP[] = [
   { id: "uap-flexhd", name: "UniFi FlexHD", r24: 10, r5: 8 },
 ];
 function modelRadius(id: string, band: "2.4" | "5" | "6") {
-  const m = ubiquitiAPs.find((a) => a.id === id) ?? ubiquitiAPs[2];
+  const m = ubiquitiAPs.find((a) => a.id === id) ?? ubiquitiAPs[0];
   return band === "2.4" ? m.r24 : band === "6" ? (m.r6 ?? m.r5) : m.r5;
 }
 
@@ -219,7 +220,7 @@ function WifiHeatLayer({ aps, planWidthMeters, walls, band }: {
           for (const ap of aps) {
             const apx = ap.x / 100 * sw;
             const apy = ap.y / 100 * sh;
-            const radius = Math.max(1, ap.range || modelRadius(ap.apModel ?? "u6-pro", band));
+            const radius = Math.max(1, ap.range || modelRadius(ap.apModel ?? "u6-plus", band));
             const distance = Math.max(0.5, Math.hypot(x - apx, y - apy) * metersPerPixel);
             // Perda log-distância ancorada ao alcance do modelo: no raio, RSSI = borda útil.
             let rssi = Math.min(RSSI_MAX, RSSI_EDGE + 10 * exponent * Math.log10(radius / distance));
@@ -1756,7 +1757,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
   const [markers, setMarkers] = useState<ScopeMarker[]>([
     { id: 1, type: "light", label: "L01", environment: "Sala", description: "Circuito principal", status: "previsto", x: 28, y: 31, size: 38, range: 18 },
     { id: 2, type: "climate", label: "AR01", environment: "Sala", description: "Evaporadora", status: "aprovado", x: 67, y: 28, size: 38, range: 18 },
-    { id: 3, type: "access-point", label: "AP01", environment: "Circulação", description: "Cobertura Wi-Fi principal", status: "previsto", x: 53, y: 58, size: 38, range: 9, apModel: "u6-pro" },
+    { id: 3, type: "access-point", label: "AP01", environment: "Circulação", description: "Cobertura Wi-Fi principal", status: "previsto", x: 53, y: 58, size: 38, range: 7, apModel: "u6-plus" },
   ]);
   const [selectedMarker, setSelectedMarker] = useState<number | null>(null);
   const [assets, setAssets] = useState<PlanAsset[]>([]);
@@ -1907,7 +1908,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
     const id = Math.max(0, ...markers.map((item) => item.id)) + 1;
     const count = markers.filter((item) => item.type === tool.id).length + 1;
     const isAp = tool.id === "access-point";
-    const next: ScopeMarker = { id, type: tool.id, label: `${tool.code}${String(count).padStart(2, "0")}`, environment: "Novo ambiente", description: tool.label, status: "previsto", x, y, size: 38, range: isAp ? modelRadius("u6-pro", heatBand) : 18, ...(isAp ? { apModel: "u6-pro" } : {}) };
+    const next: ScopeMarker = { id, type: tool.id, label: `${tool.code}${String(count).padStart(2, "0")}`, environment: "Novo ambiente", description: tool.label, status: "previsto", x, y, size: 38, range: isAp ? modelRadius("u6-plus", heatBand) : 18, ...(isAp ? { apModel: "u6-plus" } : {}) };
     setMarkers((current) => [...current, next]);
     setSelectedMarker(id);
     setSelectedAsset(null);
@@ -2229,7 +2230,7 @@ function ScopeEditor({ onGenerate }: { onGenerate: (report: ScopeReport) => void
           <label className="field">Descrição técnica<textarea rows={3} value={marker.description} onChange={(e) => updateMarker(marker.id, { description: e.target.value })} /></label>
           <label className="field">Status<select value={marker.status} onChange={(e) => updateMarker(marker.id, { status: e.target.value as ScopeMarker["status"] })}><option value="previsto">Previsto</option><option value="revisar">Revisar</option><option value="aprovado">Aprovado</option></select></label>
           <label className="field">Tamanho do símbolo<input type="range" min="26" max="90" value={marker.size} onChange={(e) => updateMarker(marker.id, { size: Number(e.target.value) })} /></label>
-          {marker.type === "access-point" && <><label className="field">Modelo Ubiquiti<select value={marker.apModel ?? "u6-pro"} onChange={(e) => updateMarker(marker.id, { apModel: e.target.value, range: modelRadius(e.target.value, heatBand) })}>{ubiquitiAPs.map((ap) => <option key={ap.id} value={ap.id}>{ap.name}</option>)}</select></label><label className="field">Alcance no plano (m)<input type="range" min="3" max="30" value={marker.range} onChange={(e) => updateMarker(marker.id, { range: Number(e.target.value) })} /><small>~{marker.range} m em {heatBand === "2.4" ? "2,4" : heatBand} GHz · ajuste fino</small></label></>}
+          {marker.type === "access-point" && <><label className="field">Modelo Ubiquiti<select value={marker.apModel ?? "u6-plus"} onChange={(e) => updateMarker(marker.id, { apModel: e.target.value, range: modelRadius(e.target.value, heatBand) })}>{ubiquitiAPs.map((ap) => <option key={ap.id} value={ap.id}>{ap.name}</option>)}</select></label><label className="field">Alcance no plano (m)<input type="range" min="3" max="30" value={marker.range} onChange={(e) => updateMarker(marker.id, { range: Number(e.target.value) })} /><small>~{marker.range} m em {heatBand === "2.4" ? "2,4" : heatBand} GHz · ajuste fino</small></label></>}
           <div className="catalog-suggestions"><div><strong>ITENS COMPATÍVEIS</strong><small>Filtrados pela legenda “{tools.find((tool) => tool.id === marker.type)?.label}”</small></div>{suggestedCatalog.length ? suggestedCatalog.map((item) => <button key={item.id} className={marker.catalogItemId === item.id ? "selected" : ""} onClick={() => updateMarker(marker.id, { catalogItemId: item.id, catalogName: item.name, description: `${item.name} · ${[item.brand, item.model].filter(Boolean).join(" ")}` })}><span><b>{item.name}</b><small>{item.brand} · {item.model}</small></span><i>{marker.catalogItemId === item.id ? "✓" : "+"}</i></button>) : <p>Nenhum item compatível nesta categoria.</p>}</div>
           <button className="delete-marker" onClick={() => { setMarkers((current) => current.filter((item) => item.id !== marker.id)); setSelectedMarker(null); }}>Excluir ponto</button>
         </> : asset ? <><div className="asset-inspector-preview"><img src={asset.src} alt={asset.name} /></div><label className="field">Nome da imagem<input value={asset.name} onChange={(event) => updateAsset(asset.id, { name: event.target.value })} /></label><label className="field">Tamanho<input type="range" min="5" max="95" value={asset.width} onChange={(event) => updateAsset(asset.id, { width: Number(event.target.value) })} /><small>{asset.width}% da largura da planta</small></label><label className="field">Rotação<input type="range" min="-180" max="180" step="1" value={asset.rotation ?? 0} onChange={(event) => updateAsset(asset.id, { rotation: Number(event.target.value) })} /><small>{asset.rotation ?? 0}°</small></label><div className="asset-rotation-actions"><button type="button" onClick={() => updateAsset(asset.id, { rotation: ((asset.rotation ?? 0) - 90 + 180) % 360 - 180 })}>↶ 90°</button><button type="button" onClick={() => updateAsset(asset.id, { rotation: ((asset.rotation ?? 0) + 90 + 180) % 360 - 180 })}>90° ↷</button><button type="button" onClick={() => updateAsset(asset.id, { rotation: 0 })}>Restaurar</button></div><button className="delete-marker" onClick={() => { setAssets((current) => current.filter((item) => item.id !== asset.id)); setSelectedAsset(null); }}>Excluir imagem</button></> : <div className="inspector-empty"><span>⌖</span><p>Selecione um marcador ou uma imagem para mover, editar, aumentar, diminuir ou excluir.</p></div>}
