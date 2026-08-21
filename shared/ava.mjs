@@ -2,6 +2,7 @@
 // Compartilhado entre o servidor local e as funções serverless.
 import { randomUUID } from "node:crypto";
 import { clean } from "./validate.mjs";
+import { normalizeCatalogItem } from "./catalog-classification.mjs";
 
 export function getByPath(obj, path) {
   if (!path) return obj;
@@ -140,7 +141,7 @@ export function mapAvaRecord(record, map, actor, now, baseUrl = "") {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 40);
-  return {
+  return normalizeCatalogItem({
     id: `ava-${sku || slug || randomUUID().slice(0, 8)}`,
     kind: "equipment",
     name,
@@ -157,5 +158,5 @@ export function mapAvaRecord(record, map, actor, now, baseUrl = "") {
     salePrice: map.salePrice ? avaNumber(get(map.salePrice)) : 0,
     updatedBy: actor,
     updatedAt: now,
-  };
+  });
 }
