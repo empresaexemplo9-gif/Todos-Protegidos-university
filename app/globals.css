@@ -382,6 +382,8 @@ button { cursor: pointer; }
   .word-image-resize-handle, .word-image-delete-button, .word-image-background-button, .word-image-move-handle { display: none !important; }
   .proposal-document--editable img[data-word-selected] { outline: none !important; }
   .proposal-document--editable:focus { box-shadow: none !important; }
+  .solution-free-area { border: 0 !important; padding: 0 !important; }
+  .solution-free-area::before { display: none !important; }
   .word-editor-stage { max-width: none; width: auto; margin: 0; }
   .workspace, .preview-panel { margin: 0; padding: 0; border: 0; background: #fff; height: auto; overflow: visible; }
   .builder-layout { display: block; }
@@ -645,6 +647,30 @@ button { cursor: pointer; }
   font-size: 11px;
   font-weight: 400;
   text-align: center;
+}
+
+/* Área livre abaixo da tabela: recebe texto, imagens ou outros blocos pelo editor. */
+.solution-free-area {
+  position: relative;
+  min-height: 120px;
+  margin: 18px 0 0;
+}
+.solution-free-area > p { min-height: 1.5em; margin: 0; }
+.proposal-document--editable .solution-free-area,
+.automatic-document-editor [contenteditable="true"] .solution-free-area {
+  border: 1px dashed #b8c9c1;
+  border-radius: 8px;
+  padding: 14px;
+}
+.proposal-document--editable .solution-free-area:has(> p:only-child br:only-child)::before,
+.automatic-document-editor [contenteditable="true"] .solution-free-area:has(> p:only-child br:only-child)::before {
+  content: "Clique aqui para inserir texto ou posicione o cursor e adicione uma imagem";
+  position: absolute;
+  inset: 14px;
+  color: #8a9690;
+  font-size: 10px;
+  line-height: 1.45;
+  pointer-events: none;
 }
 .reference-solution-gallery {
   width: 100%;
