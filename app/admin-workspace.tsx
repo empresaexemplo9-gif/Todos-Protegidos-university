@@ -1759,7 +1759,16 @@ function WordToolbar({ editorRef, proposal }: { editorRef: React.RefObject<HTMLE
     if (!doc) return;
     const section = document.createElement("section");
     section.className = "proposal-page proposal-page--extra";
-    section.innerHTML = '<div class="solution-heading"><h2>NOVA PÁGINA</h2></div><p>Escreva o conteúdo desta página…</p>';
+    section.innerHTML = `
+      <div class="dot-grid dot-grid--top" aria-hidden="true"><span></span><span></span></div>
+      <div class="proposal-brand" aria-label="SONA — tecnologia e inteligência para o bem-estar">
+        <span class="proposal-brand__name"><b>S</b><i></i><b>N</b><b>A</b></span>
+        <span class="proposal-brand__tagline">tecnologia e inteligência<br>para o bem-estar.</span>
+      </div>
+      <div class="dot-grid dot-grid--bottom" aria-hidden="true"><span></span><span></span></div>
+      <div class="solution-heading"><h2>NOVA PÁGINA</h2></div>
+      <p>Escreva o conteúdo desta página…</p>
+    `;
     doc.appendChild(section);
     section.scrollIntoView({ behavior: "smooth", block: "start" });
   };
@@ -1955,6 +1964,7 @@ export function ProposalSheet({ proposal, subtotal, total, productImages, itemIm
               <td className="solution-item-desc"><strong>{item.description}</strong><span>{item.category}</span></td><td className="solution-item-qty">{String(item.qty).padStart(2, "0")}</td>
             </tr>)}</tbody>
           </table>
+          <div className="solution-free-area"><p><br /></p></div>
           {sectionImages.length > 0 && <div className={`reference-solution-gallery reference-solution-gallery--${Math.min(4, sectionImages.length)}`}>{sectionImages.slice(0, 4).map((src, imageIndex) => <ProposalAssetImage key={`${src}-${imageIndex}`} src={src} alt={`${title} — imagem ${imageIndex + 1}`} />)}</div>}
           <PageFooter number={String(index + 2)} />
         </section>;
